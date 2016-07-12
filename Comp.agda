@@ -220,26 +220,28 @@ evalable {{num}} = record { eval = evalNum {{num}} }
 comp : ∀ {A : Set} -> {{ins : Compilable A}} -> Expr A -> Maybe (CompState × List TAC × Vec Addr (Compilable.compSize ins))
 comp {{co}} expr = Compilable.toIR co (0 , []) expr
 
-fpRun : ∀ {m n} -> {{_ : Prime m}} -> {{num : Num (Fp m)}} -> List TAC × Vec Addr n -> Maybe (Vec ℕ n)
-fpRun {m} {n} {{p}} {{num}} (ir , addr) = run' [] ir
-  where run' : RTEnv -> (List TAC) -> Maybe (Vec ℕ n)
-        run' env [] = Vec.foldr (λ x -> Maybe (Vec ℕ x)) (λ x acc → case acc of
+
+run' : {m n : ℕ} -> {{_ : Prime m}} -> {{num : Num (Fp m)}} -> RTEnv -> (List TAC) -> Vec Addr n -> Maybe (Vec ℕ n)
+run' env [] addr = Vec.foldr (λ x -> Maybe (Vec ℕ x)) (λ x acc → case acc of
                                                      λ { (just acc') -> (case rtLookup x env of
                                                                            (λ { (just result) -> just (Vec._∷_ result acc')
                                                                              ; nothing -> nothing }))
                                                        ; nothing -> nothing
                                                        })  (just Vec.[]) addr
-        run' env (ConstI addr val ∷ ir) = run' (rtInsert (addr , val) env) ir
-        run' env (AddI x x1 x2 ∷ ir) = case rtLookup x1 env , rtLookup x2 env of
+run' {m} {n} {{p}} {{num}} env (ConstI resAddr val ∷ ir) addr = run' {m} {n} {{p}} {{num}} (rtInsert (resAddr , val) env) ir addr
+run' {{p}} {{num}} env (AddI x x1 x2 ∷ ir) addr = case rtLookup x1 env , rtLookup x2 env of
                                           λ { (just val1 , just val2) -> case Num._+_ num (F x1 {{p}}) (F x2 {{p}}) of
-                                                                            λ { (F result) -> run' (rtInsert (x , result) env) ir }
+                                                                            λ { (F result) -> run' {{p}} {{num}} (rtInsert (x , result) env) ir addr }
                                             ; (_ , _) -> nothing
                                             }
-        run' env (MulI x x1 x2 ∷ ir) = case rtLookup x1 env , rtLookup x2 env of
+run' {{p}} {{num}} env (MulI x x1 x2 ∷ ir) addr = case rtLookup x1 env , rtLookup x2 env of
                                           λ { (just val1 , just val2) -> case Num._*_ num (F x1 {{p}}) (F x2 {{p}}) of
-                                                                            λ { (F result) -> run' (rtInsert (x , result) env) ir }
+                                                                            λ { (F result) -> run' {{p}} {{num}} (rtInsert (x , result) env) ir addr }
                                             ; (_ , _) -> nothing
                                             }
+
+fpRun : ∀ {m n} -> {{_ : Prime m}} -> {{num : Num (Fp m)}} -> List TAC × Vec Addr n -> Maybe (Vec ℕ n)
+fpRun {m} {n} {{p}} {{num}} (ir , addr) = run' {{p}} {{num}} [] ir addr
 
 fpRunComp : ∀ {n : ℕ} {{_ : Prime n}} -> {{ins : Compilable (Fp n)}} -> Compilable.compSize ins ≡ 1 -> Expr (Fp n) -> Maybe (Fp n)
 fpRunComp {n} {{p}} {{ins}} sp expr with comp {{ins}} expr
