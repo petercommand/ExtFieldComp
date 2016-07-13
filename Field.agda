@@ -6,7 +6,7 @@ open import Data.List
 open import Data.Sign as Sign
 
 data Fp (n : ℕ) : Set where
-  F : (x : ℕ) -> {{p : Prime n}} -> Fp n
+  F : (x : ℕ) -> .{{p : Prime n}} -> Fp n
 
 data Poly (K : Set) : Set where
   P : List K -> Poly K
