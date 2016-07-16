@@ -2,6 +2,7 @@ open import Agda.Primitive
 open import Relation.Binary.PropositionalEquality
 open import Data.List
 open import Data.Nat
+open import Data.Fin hiding (_+_; _≤_)
 import Data.Nat.Properties.Simple as NS
 open import Data.Nat.Primality
 open import Data.Nat.Show
@@ -31,14 +32,54 @@ data TAC : Set where
 
 data Expr (A : Set) : Set where
   Const : A → Expr A
-  Let : (str : String) -> ¬ (∀ {n : ℕ} -> str ≡ Data.Nat.Show.show n) -> Expr A -> Expr A -> Expr A
-  Var : (str : String) -> ¬ (∀ {n : ℕ} -> str ≡ Data.Nat.Show.show n) -> Expr A
+  Let : (str : String) -> Expr A -> Expr A -> Expr A
+  Var : (str : String) -> Expr A
   Add : Expr A -> Expr A -> Expr A
   Mul : Expr A -> Expr A -> Expr A
+
+data ExprWOConst (A : Set) : Set where
+  LetWO : String -> ExprWOConst A -> ExprWOConst A -> ExprWOConst A
+  LetWOC : String -> A -> ExprWOConst A -> ExprWOConst A
+  VarWO : String -> ExprWOConst A
+  AddWO : ExprWOConst A -> ExprWOConst A -> ExprWOConst A
+  MulWO : ExprWOConst A -> ExprWOConst A -> ExprWOConst A
+
+data Expr1 (A : Set) : ℕ -> Set where
+  Let1 : ∀ {m n} -> Expr1 A m -> Expr1 A n -> Expr1 A (suc n)
+  LetC1 : ∀ {n} -> A -> Expr1 A n -> Expr1 A n
+  Var1 : ∀ {n} -> Fin n -> Expr1 A n
+  Add1 : ∀ {m n} -> Expr1 A m -> Expr1 A n -> Expr1 A (max m n)
+  Mul1 : ∀ {m n} -> Expr1 A m -> Expr1 A n -> Expr1 A (max m n)
+
+
+removeConst : ∀ {A} -> Expr A -> ExprWOConst A
+removeConst (Const x) = LetWOC "x" x (VarWO "x")
+removeConst (Let str expr expr₁) = LetWO str (removeConst expr) (removeConst expr₁)
+removeConst (Var str) = VarWO str
+removeConst (Add expr expr₁) = AddWO (removeConst expr) (removeConst expr₁)
+removeConst (Mul expr expr₁) = MulWO (removeConst expr) (removeConst expr₁)
+
+WOConstVarSize : ∀ {A} -> ExprWOConst A -> ℕ
+WOConstVarSize (LetWO x expr expr₁) = 1 + WOConstVarSize expr₁
+WOConstVarSize (LetWOC x x₁ expr) = 1 + WOConstVarSize expr
+WOConstVarSize (VarWO x) = 0
+WOConstVarSize (AddWO expr expr₁) = max (WOConstVarSize expr) (WOConstVarSize expr₁)
+WOConstVarSize (MulWO expr expr₁) = max (WOConstVarSize expr) (WOConstVarSize expr₁)
+
+exprWOConstToExpr1 : ∀ {A} -> (expr : ExprWOConst A) -> Expr1 A (WOConstVarSize expr)
+exprWOConstToExpr1 (LetWO x expr expr₁) = Let1 (exprWOConstToExpr1 expr) {!exprWOConstToExpr1 expr₁!}
+exprWOConstToExpr1 (LetWOC x x₁ expr) = {!!}
+exprWOConstToExpr1 (VarWO x) = {!!}
+exprWOConstToExpr1 (AddWO expr expr₁) = {!!}
+exprWOConstToExpr1 (MulWO expr expr₁) = {!!}
+
+varSize : ∀ {A} -> Expr A -> ℕ
+varSize expr = WOConstVarSize (removeConst expr)
 
 record Compilable (A : Set) : Set where
   field
     compSize : ℕ
+    preprocess : (expr : Expr A) -> Expr1 A (varSize expr)
     toIR : CompState -> Expr A -> Maybe (CompState × List TAC × Vec ℕ compSize)
 
 record Evalable (A : Set) : Set where
@@ -46,23 +87,17 @@ record Evalable (A : Set) : Set where
     eval : Expr A -> Maybe A
 
 
-{-
-we need to match the things in getConstant and see if it 
-
-
--}
-
 newVar : CompState -> CompState × ℕ
 newVar (varnum , env) = ((suc varnum) , env) , varnum
 
 getConstant : CompState -> ℕ -> CompState × List TAC × Vec ℕ 1
 getConstant (varnum , env) num with lookupLen (Data.Nat.Show.show num) 1 env
 ... | just re = (varnum , env) , [] , re
-... | nothing = ((suc varnum) , (((Data.Nat.Show.show num) , varnum ∷ []) ∷ env)) , ConstI varnum num ∷ [] , Vec._∷_ num Vec.[]
+... | nothing = ((suc varnum) , (((Data.Nat.Show.show num) , varnum ∷ []) ∷ env)) , ConstI varnum num ∷ [] , Vec._∷_ varnum Vec.[]
 
 fpToIR : ∀ {n : ℕ} {_ : Prime n} -> CompState -> Expr (Fp n) -> Maybe (CompState × List TAC × Vec ℕ 1)
 fpToIR compState (Const (F x)) = just $ getConstant compState x
-fpToIR {_} {p} compState (Let x p1 expr expr1) = let fpToIRRet = fpToIR {_} {p} compState expr
+fpToIR {_} {p} compState (Let x expr expr1) = let fpToIRRet = fpToIR {_} {p} compState expr
                                                  in case fpToIRRet of
                                                      λ { (just (compState1 , ir1 , r1)) -> 
                                                             case compState1 of
@@ -78,7 +113,7 @@ fpToIR {_} {p} compState (Let x p1 expr expr1) = let fpToIRRet = fpToIR {_} {p} 
                                                                 }
                                                        ; nothing -> nothing
                                                        }
-fpToIR (varnum , env) (Var x p) = case lookupLen x 1 env of
+fpToIR (varnum , env) (Var x) = case lookupLen x 1 env of
                                   λ { (just r) -> just ((varnum , env) , ([] , r))
                                     ; nothing -> nothing
                                     }
@@ -120,28 +155,28 @@ fpCompilable {_} {p} = record { toIR = fpToIR {_} {p}
 
 evalSubst : ∀ {K : Set} -> String -> K -> Expr K -> Expr K
 evalSubst str val (Const x) = Const x
-evalSubst str val (Let x p exp exp1) with str == x
-... | true = Let x p exp exp1
-... | false = Let x p exp (evalSubst str val exp1)
-evalSubst str val (Var x p) with str == x
+evalSubst str val (Let x exp exp1) with str == x
+... | true = Let x exp exp1
+... | false = Let x exp (evalSubst str val exp1)
+evalSubst str val (Var x) with str == x
 ... | true = Const val
-... | false = Var x p
+... | false = Var x
 evalSubst str val (Add exp exp1) = Add (evalSubst str val exp) (evalSubst str val exp1)
 evalSubst str val (Mul exp exp1) = Mul (evalSubst str val exp) (evalSubst str val exp1)
 
 letSize : ∀ {K : Set} -> Expr K -> ℕ
 letSize (Const x) = 1
-letSize (Let x p expr expr₁) = 1 + letSize expr + letSize expr₁
-letSize (Var x p) = 1
+letSize (Let x expr expr₁) = 1 + letSize expr + letSize expr₁
+letSize (Var x) = 1
 letSize (Add expr expr₁) = 1 + letSize expr + letSize expr₁
 letSize (Mul expr expr₁) = 1 + letSize expr + letSize expr₁
 
 substSize : ∀ {K : Set} -> (s : String) -> (val : K) -> (expr : Expr K) -> (letSize expr ≡ letSize (evalSubst s val expr))
 substSize s val (Const x) = refl
-substSize s val (Let x p expr expr₁) with s == x
+substSize s val (Let x expr expr₁) with s == x
 ... | true = refl
 ... | false rewrite substSize s val expr₁ = refl
-substSize s val (Var x p) with s == x
+substSize s val (Var x) with s == x
 ... | true = refl
 ... | false = refl
 substSize s val (Add expr expr₁) rewrite substSize s val expr
@@ -169,11 +204,10 @@ lem1 {suc a} {suc b} rewrite a+suc-b==suc-a+b a b = (s≤s (s≤s (≤weak $ fst
 lem3 : ∀ {a b c} -> a ≤ b + c -> a ≤ c + b
 lem3 {a} {b} {c} p1 rewrite NS.+-comm b c = p1
 
-
 evalWithSize : ∀ {K : Set} {{_ : Num K}} {size : ℕ} -> (expr : Expr K) -> (size ≡ letSize expr) -> Acc size -> Maybe K
 evalWithSize (Const x) size ac = just x
-evalWithSize {_} {{_}} {zero} (Let x p expr1 expr2) ()
-evalWithSize {K} {{num}} {suc .(letSize expr1 + letSize expr2)} (Let x p expr1 expr2) refl (acc ac) = 
+evalWithSize {_} {{_}} {zero} (Let x expr1 expr2) ()
+evalWithSize {K} {{num}} {suc .(letSize expr1 + letSize expr2)} (Let x expr1 expr2) refl (acc ac) = 
                let r1 = evalWithSize {_} {letSize expr1} expr1 refl (ac (letSize expr1) (s≤s (≤-weakening (letSize expr1) (letSize expr1) (letSize expr2) (≤-refl {letSize expr1}))))
                in f r1
                   where
@@ -187,7 +221,7 @@ evalWithSize {K} {{num}} {suc .(letSize expr1 + letSize expr2)} (Let x p expr1 e
                                (ac (letSize expr2) (s≤s (lem3 {letSize expr2} {letSize expr2} {letSize expr1} $
                                             ≤-weakening (letSize expr2) (letSize expr2) (letSize expr1) (≤-refl {letSize expr2}) )))
                     f nothing = nothing
-evalWithSize {_} {{num}} (Var x p) size ac = nothing
+evalWithSize {_} {{num}} (Var x) size ac = nothing
 evalWithSize {K} {{num}} (Add x1 x2) refl (acc ac) =
   let
      r1 : Maybe K

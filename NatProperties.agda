@@ -1,6 +1,12 @@
 open import Data.Nat
 open import Relation.Binary.PropositionalEquality
 import Data.Nat.Properties.Simple as NS
+
+max : ℕ -> ℕ -> ℕ
+max zero b = b
+max (suc a) zero = suc a
+max (suc a) (suc b) = suc (max a b)
+
 suc-<-elim : (a b : ℕ) -> (suc a ≤ suc b) -> (a ≤ b)
 suc-<-elim zero zero = λ x → z≤n
 suc-<-elim zero (suc b) = λ x → z≤n
