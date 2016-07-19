@@ -17,11 +17,13 @@ open import Comp
 open import Field
 open import Num
 
-fpVerify : ∀ {n : ℕ} {p : Prime n} -> {{compilable : Compilable (Fp n)}}
-                                   -> {{evalable : Evalable (Fp n)}}
-                                   -> (sp : Compilable.compSize compilable ≡ 1)
+open import Function
+
+fpVerify : ∀ {n : ℕ} {p : Prime n} -> (sp : Compilable.compSize (fpCompilable {n} {p}) ≡ 1)
                                    -> (expr : Expr1 (Fp n) 0)
-                                   -> just (eval {{evalable}} expr) ≡ fpRunComp {{p}} {{compilable}} sp expr
-fpVerify {n} {p} {{compilable = record { compSize = .1 ; toIR = toIR }}} refl expr with fpRun {n} {1} {{p}} {{numFp {_} {p} {{numℕ}}}} (snd (comp {n} {{record { compSize = 1; toIR = toIR}}} expr))
-fpVerify {n} {p} {{record { compSize = _ ; toIR = toIR }}} refl expr | just (x ∷ []) = {!!}
-fpVerify {n} {p} {{record { compSize = _ ; toIR = toIR }}} refl expr | nothing = {!!}
+                                   -> just (evalNum {{numFp {_} {p} {{numℕ}}}} expr) ≡ fpRunComp {{p}} {{fpCompilable {n} {p}}} sp expr
+fpVerify refl (Let1 expr expr₁) = {!!}
+fpVerify refl (LetC1 (F x) expr) = {!!}
+fpVerify refl (Var1 ())
+fpVerify refl (Add1 expr expr₁) = {!!}
+fpVerify refl (Mul1 expr expr₁) = {!!}

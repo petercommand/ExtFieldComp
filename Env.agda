@@ -29,13 +29,6 @@ lookup (suc num) (x Vec.∷ env) = lookup num env
 evalLookup : {K : Set}{n : ℕ} -> Fin n -> EvalEnv K n -> K
 evalLookup zero (x Vec.∷ env) = x
 evalLookup (suc n) (x Vec.∷ env) = evalLookup n env
-{-
-Maybe is still required in lookupLen..
-lookupLen : {m : ℕ} -> Fin m -> (n : ℕ) -> Env m -> Maybe $ Vec ℕ n
-lookupLen () n Vec.[]
-lookupLen zero n₁ ((proj₁ , proj₂) Vec.∷ env) = {!!}
-lookupLen (suc num) n₁ (x Vec.∷ env) = {!!}
--}
 
 putEnvVal : ∀ {m n} -> Vec ℕ m -> Env m n -> Env m (suc n)
 putEnvVal x env = x Vec.∷ env

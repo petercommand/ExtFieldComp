@@ -135,9 +135,10 @@ fpRun : ∀ {m n} -> {{_ : Prime m}} -> {{num : Num (Fp m)}} -> List TAC × Vec 
 fpRun {m} {n} {{p}} {{num}} (ir , addr) = run' {{p}} {{num}} [] ir addr
 
 fpRunComp : ∀ {n : ℕ} {{_ : Prime n}} -> {{ins : Compilable (Fp n)}} -> Compilable.compSize ins ≡ 1 -> Expr1 (Fp n) 0 -> Maybe (Fp n)
-fpRunComp {n} {{p}} {{record { toIR = toIR ; compSize = .1 }}} refl expr with fpRun {n} {1} {{p}} {{numFp {_} {p} {{numℕ}}}} (snd (comp {n} {{record { toIR = toIR ; compSize = 1 } }} expr))
-fpRunComp {n} {{p}} {{record { compSize = _ ; toIR = toIR }}} refl expr | just (x ∷ []) = just (F x)
-fpRunComp {n} {{p}} {{record { compSize = _ ; toIR = toIR }}} refl expr | nothing = nothing
+fpRunComp {n} {{p}} {{record { toIR = toIR ; compSize = .1 }}} refl expr = case fpRun {n} {1} {{p}} {{numFp {_} {p} {{numℕ}}}} (snd (comp {n} {{record { toIR = toIR ; compSize = 1 } }} expr)) of
+                                                                            λ { (just (x ∷ [])) -> just (F x)
+                                                                              ; nothing -> nothing
+                                                                              }
 
 eval : {A : Set} -> {{_ : Evalable A}} -> Expr1 A 0 -> A
 eval {{ev}} expr = Evalable.eval ev expr
