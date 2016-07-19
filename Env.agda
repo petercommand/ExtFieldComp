@@ -2,6 +2,7 @@ module _ where
 open import Data.Nat
 open import Data.Nat.Base
 open import Data.Nat.Show
+open import Data.Fin
 open import Data.Integer using (ℤ)
 open import Data.List
 open import Data.Sum
@@ -14,53 +15,32 @@ open import Function
 open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Relation.Binary.PropositionalEquality
 
-module ListEquality where
-  L== : ∀ {A : Set} -> (A -> A -> Bool) -> List A -> List A -> Bool
-  L== op [] [] = true
-  L== op [] (x ∷ list2) = false
-  L== op (x ∷ list1) [] = false
-  L== op (x ∷ list1) (x₁ ∷ list2) with op x x₁
-  ... | true = L== op list1 list2
-  ... | false = false
+Env : ℕ -> ℕ -> Set
+Env m n = Vec (Vec ℕ m) n -- List of [Address]
 
-Env : Set
-Env = List (String × List ℕ) -- List of (symbol × List address)
+EvalEnv : Set -> ℕ -> Set
+EvalEnv K n = Vec K n
 
 
-lookup : String -> Env -> Maybe $ List ℕ
-lookup n [] = nothing
-lookup n ((proj₁ , proj₂) ∷ list) with n == proj₁
-... | true = just proj₂
-... | false = lookup n list
+lookup : {m n : ℕ} -> Fin n -> Env m n -> Vec ℕ m
+lookup zero (x Vec.∷ env) = x
+lookup (suc num) (x Vec.∷ env) = lookup num env
 
-lookupLen : String -> (n : ℕ) -> Env -> Maybe $ Vec ℕ n
-lookupLen str n [] = nothing
-lookupLen str n ((proj₁ , proj₂) ∷ env) with Data.String._≟_ str proj₁ | Data.Nat._≟_ n (Data.List.length proj₂)
-lookupLen str .(foldr (λ _ → suc) 0 proj₂) ((.str , proj₂) ∷ env) | yes refl | yes refl = just (Data.Vec.fromList proj₂)
-lookupLen str n ((.str , proj₂) ∷ env) | yes refl | no p = lookupLen str n env
-... | no p | m = lookupLen str n env
+evalLookup : {K : Set}{n : ℕ} -> Fin n -> EvalEnv K n -> K
+evalLookup zero (x Vec.∷ env) = x
+evalLookup (suc n) (x Vec.∷ env) = evalLookup n env
+{-
+Maybe is still required in lookupLen..
+lookupLen : {m : ℕ} -> Fin m -> (n : ℕ) -> Env m -> Maybe $ Vec ℕ n
+lookupLen () n Vec.[]
+lookupLen zero n₁ ((proj₁ , proj₂) Vec.∷ env) = {!!}
+lookupLen (suc num) n₁ (x Vec.∷ env) = {!!}
+-}
 
-putEnvVal : ℕ × List ℕ -> Env -> Env
-putEnvVal (proj₁ , proj₂) env = (Data.Nat.Show.show proj₁ , proj₂) ∷ env
+putEnvVal : ∀ {m n} -> Vec ℕ m -> Env m n -> Env m (suc n)
+putEnvVal x env = x Vec.∷ env
 
-putEnvConst : String × List ℕ -> Env -> Env
-putEnvConst x env = x ∷ env
-
-removeEnvConst : String × List ℕ -> Env -> Env
-removeEnvConst _ [] = []
-removeEnvConst (proj₁ , proj₂) ((proj₃ , proj₄) ∷ env) with ListEquality.L== (λ x y -> case x Data.Nat.≟ y of
-                                                                                     λ { (yes m) -> true
-                                                                                       ; (no _) -> false }) proj₂ proj₄ | proj₁ Data.String.≟ proj₃
-
-... | true | yes _ = env
-... | _    | _ = removeEnvConst (proj₁ , proj₂) env
-
-
-removeEnvVal : ℕ × List ℕ -> Env -> Env
-removeEnvVal (proj₁ , proj₂) env = removeEnvConst (Data.Nat.Show.show proj₁ , proj₂) env
-
-
-CompState : Set
-CompState = ℕ × Env
+CompState : ℕ -> ℕ -> Set
+CompState m n = ℕ × Env m n
 
 
