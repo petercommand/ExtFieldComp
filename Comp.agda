@@ -139,8 +139,8 @@ fpRun {m} {{p}} {{num}} (ir , addr) = case run' {{p}} {{num}} [] ir of
                                               ; nothing -> nothing
                                               }
 
-fpRunWRTEnv : ∀ {m} -> {{_ : Prime m}} -> {{num : Num (Fp m)}} -> RTEnv -> List TAC × Vec Addr 1 -> Maybe (Fp m)
-fpRunWRTEnv {m} {{p}} {{num}} rtenv (ir , addr) = case run' {{p}} {{num}} rtenv ir of
+fpRunWRTEnvIR : ∀ {m} -> {{_ : Prime m}} -> {{num : Num (Fp m)}} -> RTEnv -> List TAC -> List TAC × Vec Addr 1 -> Maybe (Fp m)
+fpRunWRTEnvIR {m} {{p}} {{num}} rtenv ir' (ir , addr) = case run' {{p}} {{num}} rtenv (ir' ++ ir) of
                                                     λ { (just env) -> case runGetResult env addr of
                                                                         λ { (just (r ∷ [])) -> just (F r)
                                                                           ; nothing -> nothing

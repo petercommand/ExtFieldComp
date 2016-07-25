@@ -91,20 +91,21 @@ addrMonoInc {m} {n} {o} {{p}} env (Mul1 expr expr₁) = let t = fpToIR (suc n , 
 
 compEq : ∀ {m n varnum : ℕ}{{p : Prime n}}
                            (rtenv : RTEnv)
+                           (ir : List TAC)
                            (env : Env 1 m)
                            (expr : Expr1 (Fp n) m)
                            -> let compResult = fpToIR (varnum , env) expr
-                              in fpRunWRTEnv {{p}} {{numFp {_} {p} {{numℕ}}}} rtenv (proj₂ compResult) ≡
+                              in fpRunWRTEnvIR {{p}} {{numFp {_} {p} {{numℕ}}}} rtenv ir (proj₂ compResult) ≡
                                  (case fpEnvToEvalEnv {{p}} env rtenv of
                                    λ { (just evalEnv) -> just (evalNum' {{numFp {_} {p} {{numℕ}}}} evalEnv expr)
                                      ; nothing -> nothing
-                                     })
-compEq rtenv env (Let1 expr expr₁) = {!compEq env!}
-compEq {varnum = varnum} rtenv env (LetC1 (F x) expr) = {!compEq {_} {_} {suc varnum} ((varnum , x) ∷ rtenv) ((varnum ∷ []) ∷ env) expr!}
-compEq rtenv [] (Var1 ())
-compEq rtenv (env ∷ env₁) (Var1 x) = {!!}
-compEq rtenv env (Add1 expr expr₁) = {!!}
-compEq rtenv env (Mul1 expr expr₁) = {!!}
+                                     })                                     
+compEq rtenv ir env (Let1 expr expr₁) = {!!}
+compEq {varnum = varnum} rtenv ir env (LetC1 (F x) expr) = {!compEq {_} {_} {suc varnum} ((varnum , x) ∷ rtenv) (ConstI varnum x ∷ ir) ((varnum ∷ []) ∷ env) expr!}
+compEq rtenv ir [] (Var1 ())
+compEq rtenv ir (env ∷ env₁) (Var1 x) = {!!}
+compEq rtenv ir env (Add1 expr expr₁) = {!!}
+compEq rtenv ir env (Mul1 expr expr₁) = {!!}
 
 {-
  compPreserve : ∀ {n : ℕ} {p : Prime n} -> (sp : Compilable.compSize (fpCompilable {n} {p}) ≡ 1)
