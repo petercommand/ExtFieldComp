@@ -139,6 +139,15 @@ fpRun {m} {{p}} {{num}} (ir , addr) = case run' {{p}} {{num}} [] ir of
                                               ; nothing -> nothing
                                               }
 
+fpRunWRTEnv : ∀ {m} -> {{_ : Prime m}} -> {{num : Num (Fp m)}} -> RTEnv -> List TAC × Vec Addr 1 -> Maybe (Fp m)
+fpRunWRTEnv {m} {{p}} {{num}} rtenv (ir , addr) = case run' {{p}} {{num}} rtenv ir of
+                                                    λ { (just env) -> case runGetResult env addr of
+                                                                        λ { (just (r ∷ [])) -> just (F r)
+                                                                          ; nothing -> nothing
+                                                                          }
+                                                      ; nothing -> nothing
+                                                      }
+
 fpRunComp : ∀ {n : ℕ} {{_ : Prime n}} -> {{ins : Compilable (Fp n)}} -> Compilable.compSize ins ≡ 1 -> Expr1 (Fp n) 0 -> Maybe (Fp n)
 fpRunComp {n} {{p}} {{record { toIR = toIR ; compSize = .1 }}} refl expr = fpRun {n} {{p}} {{numFp {_} {p} {{numℕ}}}} (snd (comp {{record { toIR = toIR ; compSize = 1 } }} expr))
 

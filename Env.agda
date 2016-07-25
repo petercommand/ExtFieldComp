@@ -11,7 +11,7 @@ open import Data.String
 open import Data.Maybe
 open import Data.Bool
 open import Data.Nat.Primality
-open import Data.Vec using (Vec)
+open import Data.Vec using (Vec; foldr)
 open import Function
 open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Relation.Binary.PropositionalEquality
@@ -26,13 +26,15 @@ Env m n = Vec (Vec ℕ m) n -- List of [Address]
 EvalEnv : Set -> ℕ -> Set
 EvalEnv K n = Vec K n
 
-fpEvalEnvToEnv : {m : ℕ}{n : ℕ}{{_ : Prime m}} -> EvalEnv (Fp m) n -> Env 1 n
-fpEvalEnvToEnv Vec.[] = Vec.[]
-fpEvalEnvToEnv ((F m) Vec.∷ evalEnv) = (m Vec.∷ Vec.[]) Vec.∷ (fpEvalEnvToEnv evalEnv)
+fpEnvToEvalEnv : {m : ℕ}{n : ℕ}{{_ : Prime m}} -> Env 1 n -> RTEnv -> Maybe (EvalEnv (Fp m) n)
+fpEnvToEvalEnv {m} env rtenv = Data.Vec.foldr (λ x -> Maybe (EvalEnv (Fp m) x)) (λ x acc → case acc of
+                                                     λ { (just acc') -> (case rtLookup x rtenv of
+                                                                           (λ { (just result) -> just (Vec._∷_ (F result) acc')
+                                                                             ; nothing -> nothing }))
+                                                       ; nothing -> nothing
+                                                       })  (just Vec.[]) (Data.Vec.map Data.Vec.head env)
 
-fpEnvToEvalEnv : {m : ℕ}{n : ℕ}{{_ : Prime m}} -> Env 1 n -> EvalEnv (Fp m) n
-fpEnvToEvalEnv Vec.[] = Vec.[]
-fpEnvToEvalEnv ((x Vec.∷ env) Vec.∷ env₁) = (F x) Vec.∷ fpEnvToEvalEnv env₁
+-- (F x) Vec.∷ fpEnvToEvalEnv env₁ rtenv
 
 lookup : {m n : ℕ} -> Fin n -> Env m n -> Vec ℕ m
 lookup zero (x Vec.∷ env) = x

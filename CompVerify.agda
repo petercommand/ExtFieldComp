@@ -90,18 +90,27 @@ addrMonoInc {m} {n} {o} {{p}} env (Mul1 expr expr₁) = let t = fpToIR (suc n , 
 
 
 compEq : ∀ {m n varnum : ℕ}{{p : Prime n}}
+                           (rtenv : RTEnv)
                            (env : Env 1 m)
                            (expr : Expr1 (Fp n) m)
                            -> let compResult = fpToIR (varnum , env) expr
-                              in fpRun {{p}} {{numFp {_} {p} {{numℕ}}}} (proj₂ compResult) ≡
-                                 just (evalNum' {{numFp {_} {p} {{numℕ}}}} (fpEnvToEvalEnv {{p}} env) expr)
-compEq env (Let1 expr expr₁) = {!!}
-compEq env (LetC1 x expr) = {!!}
-compEq env (Var1 x) = {!!}
-compEq env (Add1 expr expr₁) = {!!}
-compEq env (Mul1 expr expr₁) = {!!}
--- compPreserve : ∀ {n : ℕ} {p : Prime n} -> (sp : Compilable.compSize (fpCompilable {n} {p}) ≡ 1)
+                              in fpRunWRTEnv {{p}} {{numFp {_} {p} {{numℕ}}}} rtenv (proj₂ compResult) ≡
+                                 (case fpEnvToEvalEnv {{p}} env rtenv of
+                                   λ { (just evalEnv) -> just (evalNum' {{numFp {_} {p} {{numℕ}}}} evalEnv expr)
+                                     ; nothing -> nothing
+                                     })
+compEq rtenv env (Let1 expr expr₁) = {!compEq env!}
+compEq {varnum = varnum} rtenv env (LetC1 (F x) expr) = {!compEq {_} {_} {suc varnum} ((varnum , x) ∷ rtenv) ((varnum ∷ []) ∷ env) expr!}
+compEq rtenv [] (Var1 ())
+compEq rtenv (env ∷ env₁) (Var1 x) = {!!}
+compEq rtenv env (Add1 expr expr₁) = {!!}
+compEq rtenv env (Mul1 expr expr₁) = {!!}
+
+{-
+ compPreserve : ∀ {n : ℕ} {p : Prime n} -> (sp : Compilable.compSize (fpCompilable {n} {p}) ≡ 1)
 
 fpVerify : ∀ {n : ℕ} {p : Prime n} -> (expr : Expr1 (Fp n) 0)
                                    -> just (evalNum {{numFp {_} {p} {{numℕ}}}} expr) ≡ fpRunComp {{p}} {{fpCompilable {n} {p}}} refl expr
-fpVerify {n} {p} expr = sym (compEq {{p}} [] expr) 
+fpVerify {n} {p} expr = sym (compEq {{p}} [] [] expr) 
+ prove that fpToIR (.varnum , env) (LetC1 (F x) expr) ≡ fpToIR (_varnum_244 env x expr , (x ∷ []) ∷ env) expr
+-}
