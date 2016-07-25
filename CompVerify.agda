@@ -101,7 +101,7 @@ compEq : ∀ {m n varnum : ℕ}{{p : Prime n}}
                                      ; nothing -> nothing
                                      })                                     
 compEq rtenv ir env (Let1 expr expr₁) = {!!}
-compEq {varnum = varnum} rtenv ir env (LetC1 (F x) expr) = {!compEq {_} {_} {suc varnum} ((varnum , x) ∷ rtenv) (ConstI varnum x ∷ ir) ((varnum ∷ []) ∷ env) expr!}
+compEq {varnum = varnum} rtenv ir env (LetC1 (F x) expr) = {!compEq {_} {_} {suc varnum} ((varnum , x) ∷ rtenv) (ir Data.List.++ (ConstI varnum x ∷ [])) ((varnum ∷ []) ∷ env) expr!}
 compEq rtenv ir [] (Var1 ())
 compEq rtenv ir (env ∷ env₁) (Var1 x) = {!!}
 compEq rtenv ir env (Add1 expr expr₁) = {!!}
