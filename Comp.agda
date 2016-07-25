@@ -130,17 +130,17 @@ runGetResult' (just env) addr = Vec.foldr (λ x -> Maybe (Vec ℕ x)) (λ x acc 
                                                        ; nothing -> nothing
                                                        })  (just Vec.[]) addr
 runGetResult' nothing _ = nothing
-fpRun : ∀ {m n} -> {{_ : Prime m}} -> {{num : Num (Fp m)}} -> List TAC × Vec Addr n -> Maybe (Vec ℕ n)
-fpRun {m} {n} {{p}} {{num}} (ir , addr) = case run' {{p}} {{num}} [] ir of
-                                            λ { (just env) -> runGetResult env addr
+fpRun : ∀ {m} -> {{_ : Prime m}} -> {{num : Num (Fp m)}} -> List TAC × Vec Addr 1 -> Maybe (Fp m)
+fpRun {m} {{p}} {{num}} (ir , addr) = case run' {{p}} {{num}} [] ir of
+                                            λ { (just env) -> case runGetResult env addr of
+                                                                λ { (just (r ∷ [])) -> just (F r)
+                                                                  ; nothing -> nothing
+                                                                  }
                                               ; nothing -> nothing
                                               }
 
 fpRunComp : ∀ {n : ℕ} {{_ : Prime n}} -> {{ins : Compilable (Fp n)}} -> Compilable.compSize ins ≡ 1 -> Expr1 (Fp n) 0 -> Maybe (Fp n)
-fpRunComp {n} {{p}} {{record { toIR = toIR ; compSize = .1 }}} refl expr = case fpRun {n} {1} {{p}} {{numFp {_} {p} {{numℕ}}}} (snd (comp {{record { toIR = toIR ; compSize = 1 } }} expr)) of
-                                                                             λ { (just (x ∷ [])) -> just (F x)
-                                                                               ; nothing -> nothing
-                                                                               }
+fpRunComp {n} {{p}} {{record { toIR = toIR ; compSize = .1 }}} refl expr = fpRun {n} {{p}} {{numFp {_} {p} {{numℕ}}}} (snd (comp {{record { toIR = toIR ; compSize = 1 } }} expr))
 
 eval : {A : Set} -> {{_ : Evalable A}} -> Expr1 A 0 -> A
 eval {{ev}} expr = Evalable.eval ev expr

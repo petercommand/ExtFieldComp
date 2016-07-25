@@ -21,29 +21,24 @@ open import NatProperties
 open import Expr
 
 open import Function
-
-data Consistent {k : ℕ} {{_ : Prime k}} : {m n : ℕ} -> (varnum : ℕ) -> EvalEnv (Fp k) n -> Env 1 n -> Vec Addr m -> RTEnv -> Set where
-  Cbase : ∀ {rtenv : RTEnv} -> Consistent 0 [] [] [] rtenv
-  Cinc : ∀ {n : ℕ}{varnum : ℕ} -> (evalEnv : EvalEnv (Fp k) n)
-                               -> (env : Env 1 n)
+{-
+data Consistent {k : ℕ} {{_ : Prime k}} : {m n : ℕ} -> (varnum : ℕ) -> Env 1 n -> Vec Addr m -> Set where
+  Cbase : ∀ {rtenv : RTEnv} -> Consistent 0 [] [] []
+  Cinc : ∀ {n : ℕ}{varnum : ℕ} -> (env : Env 1 n)
                                -> (addr : Vec Addr n)
-                               -> (rtEnv : RTEnv)
-                               -> Consistent varnum evalEnv env addr rtEnv
+                               -> Consistent varnum env addr
                                -> (Svarnum : ℕ)
                                -> Svarnum > varnum
-                               -> Consistent Svarnum evalEnv env addr rtEnv
-  Cind : ∀ {m n o : ℕ}{evalEnv : EvalEnv (Fp k) n}
-                      {newEvalEnv : Fp k}
-                      {env : Env 1 n}
+                               -> Consistent Svarnum env env addr
+  Cind : ∀ {m n o : ℕ}{env : Env 1 n}
                       {newEnv : Env 1 1}
-                      {rtenv newRtenv : RTEnv}
                       (varnum newVarnum : ℕ)
                       -> newVarnum > varnum
                       -> (addr : Vec Addr m)
                       -> (newAddr : Addr)
-                      -> Consistent varnum evalEnv env addr rtenv
+                      -> Consistent varnum env addr
                       -> rtLookup newAddr (newRtenv Data.List.++ rtenv) ≡ just (Data.Vec.head $ Env.lookup Data.Fin.zero (newEnv Data.Vec.++ env))
-                      -> Consistent newVarnum (newEvalEnv ∷ evalEnv) (newEnv Data.Vec.++ env) (newAddr Data.Vec.∷ addr) (newRtenv Data.List.++ rtenv)
+                      -> Consistent newVarnum (newEnv Data.Vec.++ env) (newAddr Data.Vec.∷ addr) (newRtenv Data.List.++ rtenv)
 
 fpToVec : {k : ℕ} -> Fp k -> Vec ℕ 1
 fpToVec (F x) = x ∷ []
@@ -62,7 +57,7 @@ consistent->correct : ∀ {n k : ℕ}
                            runGetResult' (run' {k} {{p}} {{numFp {_} {p} {{numℕ}}}} rtenv (getCompResultIR (fpToIR (varnum , env) expr))) addr
 consistent->correct refl varnum evalEnv env addr rtenv consist expr = {!!}
 
-{-
+
 fpVerify' : ∀ {m n : ℕ} {p : Prime n} -> (sp : Compilable.compSize (fpCompilable {n} {p}) ≡ 1)
                                       -> (expr : Expr1 (Fp n) m)
                                       -> EvalEnv (Fp n) m
@@ -94,13 +89,19 @@ addrMonoInc {m} {n} {o} {{p}} env (Mul1 expr expr₁) = let t = fpToIR (suc n , 
                                                                       (addrMonoInc {n = suc (getCompResultVarnum t)} env expr₁))
 
 
+compEq : ∀ {m n varnum : ℕ}{{p : Prime n}}
+                           (env : Env 1 m)
+                           (expr : Expr1 (Fp n) m)
+                           -> let compResult = fpToIR (varnum , env) expr
+                              in fpRun {{p}} {{numFp {_} {p} {{numℕ}}}} (proj₂ compResult) ≡
+                                 just (evalNum' {{numFp {_} {p} {{numℕ}}}} (fpEnvToEvalEnv {{p}} env) expr)
+compEq env (Let1 expr expr₁) = {!!}
+compEq env (LetC1 x expr) = {!!}
+compEq env (Var1 x) = {!!}
+compEq env (Add1 expr expr₁) = {!!}
+compEq env (Mul1 expr expr₁) = {!!}
+-- compPreserve : ∀ {n : ℕ} {p : Prime n} -> (sp : Compilable.compSize (fpCompilable {n} {p}) ≡ 1)
 
-
-fpVerify : ∀ {n : ℕ} {p : Prime n} -> (sp : Compilable.compSize (fpCompilable {n} {p}) ≡ 1)
-                                   -> (expr : Expr1 (Fp n) 0)
-                                   -> just (evalNum {{numFp {_} {p} {{numℕ}}}} expr) ≡ fpRunComp {{p}} {{fpCompilable {n} {p}}} sp expr
-fpVerify {n} {p} refl (Let1 expr expr₁) = {!!}
-fpVerify refl (LetC1 (F x) expr) = {!!}
-fpVerify refl (Var1 ())
-fpVerify refl (Add1 expr expr₁) = {!!}
-fpVerify refl (Mul1 expr expr₁) = {!!}
+fpVerify : ∀ {n : ℕ} {p : Prime n} -> (expr : Expr1 (Fp n) 0)
+                                   -> just (evalNum {{numFp {_} {p} {{numℕ}}}} expr) ≡ fpRunComp {{p}} {{fpCompilable {n} {p}}} refl expr
+fpVerify {n} {p} expr = sym (compEq {{p}} [] expr) 

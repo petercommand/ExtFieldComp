@@ -10,11 +10,13 @@ open import Data.Product
 open import Data.String
 open import Data.Maybe
 open import Data.Bool
+open import Data.Nat.Primality
 open import Data.Vec using (Vec)
 open import Function
 open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Relation.Binary.PropositionalEquality
 
+open import Field
 open import Expr
 open import RTEnv
 
@@ -24,6 +26,13 @@ Env m n = Vec (Vec ℕ m) n -- List of [Address]
 EvalEnv : Set -> ℕ -> Set
 EvalEnv K n = Vec K n
 
+fpEvalEnvToEnv : {m : ℕ}{n : ℕ}{{_ : Prime m}} -> EvalEnv (Fp m) n -> Env 1 n
+fpEvalEnvToEnv Vec.[] = Vec.[]
+fpEvalEnvToEnv ((F m) Vec.∷ evalEnv) = (m Vec.∷ Vec.[]) Vec.∷ (fpEvalEnvToEnv evalEnv)
+
+fpEnvToEvalEnv : {m : ℕ}{n : ℕ}{{_ : Prime m}} -> Env 1 n -> EvalEnv (Fp m) n
+fpEnvToEvalEnv Vec.[] = Vec.[]
+fpEnvToEvalEnv ((x Vec.∷ env) Vec.∷ env₁) = (F x) Vec.∷ fpEnvToEvalEnv env₁
 
 lookup : {m n : ℕ} -> Fin n -> Env m n -> Vec ℕ m
 lookup zero (x Vec.∷ env) = x
@@ -41,6 +50,9 @@ CompState m n = ℕ × Env m n
 
 getCompResultVarnum : {n o : ℕ} -> CompState n o × List TAC × Vec Addr n -> ℕ
 getCompResultVarnum ((varnum , _) , _ , _) = varnum
+
+getCompResultEnv : {n o : ℕ} -> CompState n o × List TAC × Vec Addr n -> Env n o
+getCompResultEnv ((_ , env) , _ , _) = env
 
 getCompResultIR : {n o : ℕ} -> CompState n o × List TAC × Vec Addr n -> List TAC
 getCompResultIR (_ , ir , _) = ir
