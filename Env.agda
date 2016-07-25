@@ -15,6 +15,9 @@ open import Function
 open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Relation.Binary.PropositionalEquality
 
+open import Expr
+open import RTEnv
+
 Env : ℕ -> ℕ -> Set
 Env m n = Vec (Vec ℕ m) n -- List of [Address]
 
@@ -36,4 +39,12 @@ putEnvVal x env = x Vec.∷ env
 CompState : ℕ -> ℕ -> Set
 CompState m n = ℕ × Env m n
 
+getCompResultVarnum : {n o : ℕ} -> CompState n o × List TAC × Vec Addr n -> ℕ
+getCompResultVarnum ((varnum , _) , _ , _) = varnum
+
+getCompResultIR : {n o : ℕ} -> CompState n o × List TAC × Vec Addr n -> List TAC
+getCompResultIR (_ , ir , _) = ir
+
+getCompResultAddr : {n o : ℕ} -> CompState n o × List TAC × Vec Addr n -> Vec Addr n
+getCompResultAddr (_ , _ , r) = r
 

@@ -8,8 +8,10 @@ open import Data.List.Any
 open import Data.Maybe
 open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Relation.Binary.PropositionalEquality
+Addr : Set
+Addr = ℕ
 RTEnv : Set
-RTEnv = List (ℕ × ℕ)
+RTEnv = List (Addr × ℕ)
 
 
 rtLookup : (n : ℕ) -> (env : RTEnv) -> Maybe ℕ

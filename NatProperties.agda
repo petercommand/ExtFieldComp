@@ -77,6 +77,9 @@ lem (suc b) (suc c) (suc d) z≤n (s≤s p3) = s≤s (lem b c (suc d) z≤n (s�
 +preserve< (suc a) (suc b) (suc c) (suc d) (s≤s p1) (s≤s p2) rewrite a+suc-b==suc-a+b b d
                                                                    | a+suc-b==suc-a+b a c = s≤s (s≤s (+preserve< a b c d p1 p2))
 
+≤-refl : ∀ {a} -> a ≤ a
+≤-refl {zero} = z≤n
+≤-refl {suc a} = s≤s (≤-refl {a})
 
 ≤-trans : ∀ {a b c} -> a ≤ b -> b ≤ c -> a ≤ c
 ≤-trans z≤n z≤n = z≤n
