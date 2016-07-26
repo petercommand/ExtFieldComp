@@ -5,6 +5,7 @@ open import Data.Nat
 open import Data.Nat.Primality
 open import Data.Product
 open import Data.Maybe
+open import MaybeUtil
 open import Data.Vec
 open import Data.String
 open import Data.List
@@ -21,6 +22,40 @@ open import NatProperties
 open import Expr
 
 open import Function
+
+
+evalNum'->big : ∀ {K : Set} -> {{ins : Num K}}
+                            -> {m : ℕ}
+                            -> (env : EvalEnv K m)
+                            -> (expr : Expr1 K m)
+                            -> (r : K)
+                            -> evalNum' env expr ≡ r
+                            -> ins ∙ env $ expr ↓ r
+evalNum'->big {{ins}} env (Let1 expr expr₁) .(evalNum' (evalNum' env expr ∷ env) expr₁) refl =
+  let r = evalNum' env expr
+  in bigLet1 (evalNum'->big env expr r refl) (evalNum'->big (r ∷ env) expr₁ (evalNum' (r ∷ env) expr₁) refl)
+evalNum'->big env (LetC1 x expr) r ev rewrite sym ev = bigLetC1 $ evalNum'->big (x ∷ env) expr (evalNum' (x ∷ env) expr) refl
+evalNum'->big env (Var1 x) .(evalLookup x env) refl = bigVar1 x
+evalNum'->big env (Add1 expr expr₁) _ refl = bigAdd1 (evalNum'->big env expr (evalNum' env expr) refl) (evalNum'->big env expr₁ (evalNum' env expr₁) refl)
+evalNum'->big env (Mul1 expr expr₁) _ refl = bigMul1 (evalNum'->big env expr (evalNum' env expr) refl) (evalNum'->big env expr₁ (evalNum' env expr₁) refl)
+
+big->evalNum' : ∀ {K : Set} -> {{ins : Num K}}
+                            -> {m : ℕ}
+                            -> (env : EvalEnv K m)
+                            -> (expr : Expr1 K m)
+                            -> (r : K)
+                            -> ins ∙ env $ expr ↓ r
+                            -> evalNum' env expr ≡ r
+big->evalNum' {_} {{_}} {m} env (Let1 expr expr₁) r (bigLet1 big big₁) rewrite big->evalNum' env expr _ big
+                                                                             | big->evalNum' (_ ∷ env) expr₁ r big₁ = refl
+big->evalNum' env (LetC1 x expr) r (bigLetC1 big) rewrite big->evalNum' (x ∷ env) expr r big = refl
+big->evalNum' env (Var1 n) .(evalLookup n env) (bigVar1 .n) = refl
+big->evalNum' env (Add1 expr expr₁) _ (bigAdd1 big big₁) rewrite big->evalNum' env expr _ big
+                                                               | big->evalNum' env expr₁ _ big₁ = refl
+big->evalNum' env (Mul1 expr expr₁) _ (bigMul1 big big₁) rewrite big->evalNum' env expr _ big
+                                                               | big->evalNum' env expr₁ _ big₁ = refl
+
+
 {-
 data Consistent {k : ℕ} {{_ : Prime k}} : {m n : ℕ} -> (varnum : ℕ) -> Env 1 n -> Vec Addr m -> Set where
   Cbase : ∀ {rtenv : RTEnv} -> Consistent 0 [] [] []
@@ -89,23 +124,20 @@ addrMonoInc {m} {n} {o} {{p}} env (Mul1 expr expr₁) = let t = fpToIR (suc n , 
                                                                       (addrMonoInc {n = suc (getCompResultVarnum t)} env expr₁))
 
 
+
 compEq : ∀ {m n varnum : ℕ}{{p : Prime n}}
                            (rtenv : RTEnv)
-                           (ir : List TAC)
                            (env : Env 1 m)
                            (expr : Expr1 (Fp n) m)
                            -> let compResult = fpToIR (varnum , env) expr
-                              in fpRunWRTEnvIR {{p}} {{numFp {_} {p} {{numℕ}}}} rtenv ir (proj₂ compResult) ≡
-                                 (case fpEnvToEvalEnv {{p}} env rtenv of
-                                   λ { (just evalEnv) -> just (evalNum' {{numFp {_} {p} {{numℕ}}}} evalEnv expr)
-                                     ; nothing -> nothing
-                                     })                                     
-compEq rtenv ir env (Let1 expr expr₁) = {!!}
-compEq {varnum = varnum} rtenv ir env (LetC1 (F x) expr) = {!compEq {_} {_} {suc varnum} ((varnum , x) ∷ rtenv) (ir Data.List.++ (ConstI varnum x ∷ [])) ((varnum ∷ []) ∷ env) expr!}
-compEq rtenv ir [] (Var1 ())
-compEq rtenv ir (env ∷ env₁) (Var1 x) = {!!}
-compEq rtenv ir env (Add1 expr expr₁) = {!!}
-compEq rtenv ir env (Mul1 expr expr₁) = {!!}
+                              in fpRunWRTEnv {{p}} {{numFp {_} {p} {{numℕ}}}} rtenv (proj₂ compResult) ≡
+                                 (maybeComb (fpEnvToEvalEnv {{p}} env rtenv) (\evalEnv -> just (evalNum' {{numFp {_} {p} {{numℕ}}}} evalEnv expr)))
+compEq rtenv env (Let1 expr expr₁) = {!!}
+compEq {varnum = varnum} rtenv env (LetC1 (F x) expr) = {!compEq {_} {_} {suc varnum} ((varnum , x) ∷ rtenv) ((varnum ∷ []) ∷ env) expr!}
+compEq rtenv [] (Var1 ())
+compEq rtenv (env ∷ env₁) (Var1 x) = {!!}
+compEq rtenv env (Add1 expr expr₁) = {!!}
+compEq rtenv env (Mul1 expr expr₁) = {!!}
 
 {-
  compPreserve : ∀ {n : ℕ} {p : Prime n} -> (sp : Compilable.compSize (fpCompilable {n} {p}) ≡ 1)

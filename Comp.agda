@@ -21,6 +21,7 @@ open import Num
 open import Env
 open import RTEnv
 open import Expr
+open import MaybeUtil
 
 module Comp where
 
@@ -81,6 +82,35 @@ fst (a , b) = a
 snd : {A B : Set} -> A × B -> B
 snd (a , b) = b
 
+
+data _∙_$_↓_ {K : Set} (num : Num K) : {m : ℕ} -> EvalEnv K m -> Expr1 K m -> K -> Set where
+  bigLet1 : ∀ {m} {env : EvalEnv K m} -> {exp : Expr1 K m}
+                                      -> {r : K}
+                                      -> {exp1 : Expr1 K (suc m)}
+                                      -> {r1 : K}
+                                      -> num ∙ env $ exp ↓ r
+                                      -> num ∙ (r ∷ env) $ exp1 ↓ r1
+                                      -> num ∙ env $ Let1 exp exp1 ↓ r1
+  bigLetC1 : ∀ {m} {env : EvalEnv K m} -> {const : K}
+                                       -> {exp : Expr1 K (suc m)}
+                                       -> {r : K}
+                                       -> num ∙ (const ∷ env) $ exp ↓ r
+                                       -> num ∙ env $ LetC1 const exp ↓ r
+  bigVar1 : ∀ {m : ℕ} {env : EvalEnv K m} -> (n : Fin m)
+                                      -> num ∙ env $ Var1 n ↓ evalLookup n env
+  bigAdd1 : ∀ {m} {env : EvalEnv K m}
+                                  -> {exp exp1 : Expr1 K m}
+                                  -> {r r1 : K}
+                                  -> num ∙ env $ exp ↓ r
+                                  -> num ∙ env $ exp1 ↓ r1
+                                  -> num ∙ env $ Add1 exp exp1 ↓ Num._+_ num r r1
+  bigMul1 : ∀ {m} {env : EvalEnv K m}
+                                  -> {exp exp1 : Expr1 K m}
+                                  -> {r r1 : K}
+                                  -> num ∙ env $ exp ↓ r
+                                  -> num ∙ env $ exp1 ↓ r1
+                                  -> num ∙ env $ Mul1 exp exp1 ↓ Num._*_ num r r1
+
 evalNum' : ∀ {m : ℕ} {K : Set} -> {{_ : Num K}} -> EvalEnv K m -> Expr1 K m -> K
 evalNum' {m} {_} {{num}} env (Let1 expr expr₁) = case evalNum' env expr of
                                                    λ { res -> evalNum' (res Vec.∷ env) expr₁
@@ -131,22 +161,13 @@ runGetResult' (just env) addr = Vec.foldr (λ x -> Maybe (Vec ℕ x)) (λ x acc 
                                                        })  (just Vec.[]) addr
 runGetResult' nothing _ = nothing
 fpRun : ∀ {m} -> {{_ : Prime m}} -> {{num : Num (Fp m)}} -> List TAC × Vec Addr 1 -> Maybe (Fp m)
-fpRun {m} {{p}} {{num}} (ir , addr) = case run' {{p}} {{num}} [] ir of
-                                            λ { (just env) -> case runGetResult env addr of
-                                                                λ { (just (r ∷ [])) -> just (F r)
-                                                                  ; nothing -> nothing
-                                                                  }
-                                              ; nothing -> nothing
-                                              }
+fpRun {m} {{p}} {{num}} (ir , addr) = maybeComb (run' {{p}} {{num}} [] ir) (\env ->
+                                      maybeComb (runGetResult env addr) (\r -> just (F (Vec.head r))))
 
-fpRunWRTEnvIR : ∀ {m} -> {{_ : Prime m}} -> {{num : Num (Fp m)}} -> RTEnv -> List TAC -> List TAC × Vec Addr 1 -> Maybe (Fp m)
-fpRunWRTEnvIR {m} {{p}} {{num}} rtenv ir' (ir , addr) = case run' {{p}} {{num}} rtenv (ir' ++ ir) of
-                                                    λ { (just env) -> case runGetResult env addr of
-                                                                        λ { (just (r ∷ [])) -> just (F r)
-                                                                          ; nothing -> nothing
-                                                                          }
-                                                      ; nothing -> nothing
-                                                      }
+
+fpRunWRTEnv : ∀ {m} -> {{_ : Prime m}} -> {{num : Num (Fp m)}} -> RTEnv -> List TAC × Vec Addr 1 -> Maybe (Fp m)
+fpRunWRTEnv {m} {{p}} {{num}} rtenv (ir , addr) = maybeComb (run' {{p}} {{num}} rtenv ir) (\env ->
+                                                  maybeComb (runGetResult env addr) (\r -> just (F (Vec.head r))))
 
 fpRunComp : ∀ {n : ℕ} {{_ : Prime n}} -> {{ins : Compilable (Fp n)}} -> Compilable.compSize ins ≡ 1 -> Expr1 (Fp n) 0 -> Maybe (Fp n)
 fpRunComp {n} {{p}} {{record { toIR = toIR ; compSize = .1 }}} refl expr = fpRun {n} {{p}} {{numFp {_} {p} {{numℕ}}}} (snd (comp {{record { toIR = toIR ; compSize = 1 } }} expr))
