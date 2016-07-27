@@ -34,6 +34,17 @@ data TAC : Set where
   store : ℕ → Addr → TAC
   add   : Addr → Addr → Addr → TAC
 
+target : TAC -> Addr
+target (store x addr) = addr
+target (add addr1 addr2 addr3) = addr3
+
+data CodeAddrIrrelevance : List TAC → Addr → Set where
+  ⟦⟧ : ∀ {addr} -> CodeAddrIrrelevance [] addr
+  _∶∶∶_ : ∀ {addr} {code : TAC} {code' : List TAC}
+                               → (notequal : ¬ (target code ≡ addr))
+                               → CodeAddrIrrelevance code' addr
+                               → CodeAddrIrrelevance (code ∷ code') addr
+
 SymTab : ℕ → Set
 SymTab = Vec Addr
 
@@ -161,9 +172,11 @@ comp-correct (var i) env c stab h cons = consist cons i
 comp-correct (e₀ ∔ e₁) env c₀ stab h cons
     with comp-correct e₀ env c₀ stab h cons
 ... | a₀↦e₀↓
+    with run-preserve-consist e₀ env c₀ stab h cons
+... | pre-e₀
     with compile c₀ stab e₀
 ... | p₀ , a₀ , c₁
-    with comp-correct e₁ env c₁ stab (run p₀ h) {!   !}
+    with comp-correct e₁ env c₁ stab (run p₀ h) pre-e₀ 
 ... | a₁↦e₁↓
     with compile c₁ stab e₁
 ... | p₁ , a₁ , c₂
@@ -171,13 +184,18 @@ comp-correct (e₀ ∔ e₁) env c₀ stab h cons
         | run-compose p₁ (add a₀ a₁ c₂ ∷ []) (run p₀ h)
         | get-put c₂ (getHeap a₀ (run p₁ (run p₀ h)) +
                       getHeap a₁ (run p₁ (run p₀ h))) (run p₁ (run p₀ h))
-        | a₁↦e₁↓ = {!   !}
-comp-correct (lett e₀ e₁) env c₀ stab h cons with
-     comp-correct e₀ env c₀ stab h cons
-... | a₀↦e₀↓        with compile c₀ stab e₀
-... | p₀ , a₀ , c₁  with
-     comp-correct e₁ (eval env e₀ ∷ env) c₁ (a₀ ∷ stab) (run p₀ h)
-         (a₀↦e₀↓ ∷ {!   !})
-... | a₁↦e₁↓        with compile c₁ (a₀ ∷ stab) e₁
-... | p₁ , a₁ , c₂ rewrite run-compose p₀ p₁ h
+        | a₁↦e₁↓ = {!!}
+comp-correct (lett e₀ e₁) env c₀ stab h cons
+    with comp-correct e₀ env c₀ stab h cons
+... | a₀↦e₀↓
+    with run-preserve-consist e₀ env c₀ stab h cons
+... | pre1
+    with compile c₀ stab e₀
+... | p₀ , a₀ , c₁
+    with comp-correct e₁ (eval env e₀ ∷ env) c₁ (a₀ ∷ stab) (run p₀ h)
+         (a₀↦e₀↓ ∷ pre1)
+... | a₁↦e₁↓
+    with compile c₁ (a₀ ∷ stab) e₁
+... | p₁ , a₁ , c₂
+    rewrite run-compose p₀ p₁ h
    = a₁↦e₁↓
