@@ -27,14 +27,13 @@ EvalEnv : Set -> ℕ -> Set
 EvalEnv K n = Vec K n
 
 fpEnvToEvalEnv : {m : ℕ}{n : ℕ}{{_ : Prime m}} -> Env 1 n -> RTEnv -> Maybe (EvalEnv (Fp m) n)
-fpEnvToEvalEnv {m} env rtenv = Data.Vec.foldr (λ x -> Maybe (EvalEnv (Fp m) x)) (λ x acc → case acc of
-                                                     λ { (just acc') -> (case rtLookup x rtenv of
-                                                                           (λ { (just result) -> just (Vec._∷_ (F result) acc')
-                                                                             ; nothing -> nothing }))
-                                                       ; nothing -> nothing
-                                                       })  (just Vec.[]) (Data.Vec.map Data.Vec.head env)
+fpEnvToEvalEnv Vec.[] rtenv = just Vec.[]
+fpEnvToEvalEnv ((x Vec.∷ Vec.[]) Vec.∷ env) rtenv with rtLookup x rtenv
+fpEnvToEvalEnv {m} {{p}} ((x Vec.∷ Vec.[]) Vec.∷ env) rtenv | just result with fpEnvToEvalEnv {m} {_} {{p}} env rtenv
+fpEnvToEvalEnv ((x Vec.∷ Vec.[]) Vec.∷ env) rtenv | just result | just x₂ = just (F result Vec.∷ x₂)
+fpEnvToEvalEnv ((x Vec.∷ Vec.[]) Vec.∷ env) rtenv | just result | nothing = nothing
+fpEnvToEvalEnv ((x Vec.∷ Vec.[]) Vec.∷ env) rtenv | nothing = nothing
 
--- (F x) Vec.∷ fpEnvToEvalEnv env₁ rtenv
 
 lookup : {m n : ℕ} -> Fin n -> Env m n -> Vec ℕ m
 lookup zero (x Vec.∷ env) = x
