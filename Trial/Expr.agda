@@ -43,7 +43,7 @@ data CodeAddrIrrelevance : List TAC → Addr → Set where
   _∶∶∶_ : ∀ {addr} {code : TAC} {code' : List TAC}
                                → (notequal : ¬ (target code ≡ addr))
                                → CodeAddrIrrelevance code' addr
-                               → CodeAddrIrrelevance (code ∷ code') addr
+                               → CodeAddrIrrelevance (code' ++ (code ∷ [])) addr
 
 SymTab : ℕ → Set
 SymTab = Vec Addr
@@ -159,6 +159,36 @@ run-preserve-consist (num k) env c stab h cons = {!!}
 run-preserve-consist (var i) env c stab h cons = {!!}
 run-preserve-consist (e ∔ e₁) env c stab h cons = {!!}
 run-preserve-consist (lett e e₁) env c stab h cons = {!!}
+
+
+codeAddrIrrelevance->ignorable : ∀ code code' addr h
+                            -> CodeAddrIrrelevance code addr
+                            -> getHeap addr (run code (run code' h)) ≡
+                               getHeap addr (run code' h)
+codeAddrIrrelevance->ignorable .[] code' addr h ⟦⟧ = refl
+codeAddrIrrelevance->ignorable .(store x x₁ ∷ []) code'' addr h
+      (_∶∶∶_ {code = store x x₁} {[]} notequal irre)
+        rewrite get-put' {x} addr x₁ (run code'' h) (λ x₂ → notequal (sym x₂))
+           = refl
+codeAddrIrrelevance->ignorable .(x₂ ∷ code' ++ store x x₁ ∷ []) code'' addr h
+      (_∶∶∶_ {code = store x x₁} {x₂ ∷ code'} notequal irre)
+        rewrite run-compose (x₂ ∷ code') (store x x₁ ∷ []) (run code'' h)
+              | get-put' {x} addr x₁ (run (x₂ ∷ code') (run code'' h))
+                                     (λ x₃ → notequal (sym x₃))
+                 = codeAddrIrrelevance->ignorable (x₂ ∷ code') code'' addr h irre
+codeAddrIrrelevance->ignorable .(add x x₁ x₂ ∷ []) code'' addr h
+      (_∶∶∶_ {code = add x x₁ x₂} {[]} notequal irre)
+         rewrite get-put' {getHeap x (run code'' h) + getHeap x₁ (run code'' h)}
+                            addr x₂ (run code'' h) (λ x₃ → notequal (sym x₃))
+         = refl
+codeAddrIrrelevance->ignorable .(x₃ ∷ code' ++ add x x₁ x₂ ∷ []) code'' addr h
+      (_∶∶∶_ {code = add x x₁ x₂} {x₃ ∷ code'} notequal irre)
+          rewrite run-compose (x₃ ∷ code') (add x x₁ x₂ ∷ []) (run code'' h)
+                | get-put' {getHeap x (run (x₃ ∷ code') (run code'' h)) +
+                             getHeap x₁ (run (x₃ ∷ code') (run code'' h))}
+                          addr x₂ (run (x₃ ∷ code') (run code'' h))
+                              (λ x₄ → notequal (sym x₄))
+                  = codeAddrIrrelevance->ignorable (x₃ ∷ code') code'' addr h irre
 
 comp-correct : ∀ {n}
    → (e : Expr n) (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
