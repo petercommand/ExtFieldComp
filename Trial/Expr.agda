@@ -53,7 +53,13 @@ data CodeAddrIrrelevance : List TAC → Addr → Set where
 postulate
   irreInterchange : ∀ {addr code code'} → CodeAddrIrrelevance (code ++ code') addr
                                         → CodeAddrIrrelevance (code' ++ code) addr
-
+  irreSplit : ∀ {addr} code code' → CodeAddrIrrelevance (code ++ code') addr
+                                  → CodeAddrIrrelevance code addr ×
+                                    CodeAddrIrrelevance code' addr
+  irreComb : ∀ {addr code code'}
+       → CodeAddrIrrelevance code addr
+       → CodeAddrIrrelevance code' addr
+       → CodeAddrIrrelevance (code ++ code') addr
 aux : ∀ {K : Set} (list : List K) → list ++ [] ≡ list
 aux [] = refl
 aux (x ∷ list) = cong (_∷_ x) (aux list)
@@ -63,8 +69,14 @@ listAux : ∀ {K : Set} (list : List K) (elem : K)
 listAux [] elem ()
 listAux (x ∷ list) elem ()
 
-listAux' : ∀ {K : Set} (elem : K) -> ¬ elem ∷ [] ≡ List K :> []
+listAux' : ∀ {K : Set} (elem : K) → ¬ elem ∷ [] ≡ List K :> []
 listAux' elem ()
+
+listAux'' : ∀ {K : Set} (elem elem' : K) (list1 list2 : List K)
+     → (elem ∷ (list1 ++ list2)) ++ elem' ∷ [] ≡
+        elem ∷ list1 ++ list2 ++ elem' ∷ []
+listAux'' elem elem' [] list2 = refl
+listAux'' elem elem' (x ∷ list1) list2 = cong (λ y → elem ∷ x ∷ y) (sym (++-assoc list1 list2 (elem' ∷ [])))
 
 aux' : ∀ {addr code} → CodeAddrIrrelevance (code ++ []) addr
                    → CodeAddrIrrelevance code addr
@@ -80,46 +92,14 @@ aux'' : ∀ code code' addr → ¬ target code ≡ addr
 aux'' code code' addr ¬≡ irre = (irreInterchange {_} {code'} {code ∷ []}
                                       (_∶∶∶_ {_} {code} {code'} ¬≡ irre)) 
 
-combAux : ∀ addr code code' code''
-        → (¬ (target code ≡ addr))
-        → CodeAddrIrrelevance (code' ++ code'') addr
-        → CodeAddrIrrelevance ((code' ++ code ∷ []) ++ code'') addr
-combAux addr code code' [] notequal irre rewrite aux (code' ++ code ∷ [])
-    = notequal ∶∶∶ aux' {addr} {code'} irre
-combAux addr code [] code'' notequal irre
-    = irreInterchange {_} {code''} {code ∷ []}
-        (_∶∶∶_ {_} {code} {code''} notequal irre)
-combAux addr code (x ∷ code') code'' notequal irre
-    = {!!}
+aux''' : (elem elem' : TAC) (list1 list2 : List TAC) (addr : Addr)
+                     → CodeAddrIrrelevance
+                          (elem ∷ (list1 ++ list2) ++ elem' ∷ []) addr
+                     → CodeAddrIrrelevance
+                          ((elem ∷ list1) ++ list2 ++ (elem' ∷ [])) addr
+aux''' elem elem' list1 list2 addr irre rewrite listAux'' elem elem' list1 list2 = irre
 
-codeAddrIrrelevanceComb : ∀ {addr code code'}
-   → CodeAddrIrrelevance code addr
-   → CodeAddrIrrelevance code' addr
-   → CodeAddrIrrelevance (code ++ code') addr
-codeAddrIrrelevanceComb ⟦⟧ irre2 = irre2
-codeAddrIrrelevanceComb {addr} {code' = []}
-   (_∶∶∶_ {code = store x x₁} {[]} notequal irre1) irre2
-     = notequal ∶∶∶ irre2
-codeAddrIrrelevanceComb {addr} {code' = x₂ ∷ code'}
-   (_∶∶∶_ {code = store x x₁} {[]} notequal irre1) irre2
-     = combAux addr (store x x₁) [] (x₂ ∷ code') notequal irre2
-codeAddrIrrelevanceComb {addr} {code' = code''}
-   (_∶∶∶_ {code = store x x₁} {x₂ ∷ code'} notequal irre1) irre2
-     = combAux addr (store x x₁) (x₂ ∷ code') code'' notequal
-          (codeAddrIrrelevanceComb irre1 irre2)
-codeAddrIrrelevanceComb {addr} {code' = []}
-   (_∶∶∶_ {code = add x x₁ x₂} {[]} notequal irre1) irre2
-     = notequal ∶∶∶ irre2
-codeAddrIrrelevanceComb {addr} {code' = x₃ ∷ code'}
-   (_∶∶∶_ {code = add x x₁ x₂} {[]} notequal irre1) irre2
-     = combAux addr (add x x₁ x₂) [] (x₃ ∷ code') notequal irre2
-codeAddrIrrelevanceComb {addr} {code' = []}
-   (_∶∶∶_ {code = add x x₁ x₂} {x₃ ∷ code'} notequal irre1) irre2
-     = combAux addr (add x x₁ x₂) (x₃ ∷ code') [] notequal (aux'-re irre1)
-codeAddrIrrelevanceComb {addr} {code' = x₄ ∷ code''}
-   (_∶∶∶_ {code = add x x₁ x₂} {x₃ ∷ code'} notequal irre1) irre2
-     = combAux addr (add x x₁ x₂) (x₃ ∷ code') (x₄ ∷ code'') notequal
-          (codeAddrIrrelevanceComb irre1 irre2)
+
 SymTab : ℕ → Set
 SymTab = Vec Addr
 
@@ -216,7 +196,7 @@ comp-irrelevance zero (suc c₀) (s≤s 0≤c₀) (e ∔ e₁) stab
 ... | inc2
     with comp-irrelevance zero c₁ (≤-trans (suc-<-intro 0≤c₀) inc1) e₁ stab
 ... | irre2
-    with codeAddrIrrelevanceComb irre1 irre2
+    with irreComb irre1 irre2
 ... | irre3
     with compile c₁ stab e₁
 ... | p₁ , a₁ , c₂ rewrite ++-assoc p₀ p₁ (add a₀ a₁ c₂ ∷ [])
@@ -232,7 +212,7 @@ comp-irrelevance zero (suc c₀) (s≤s 0<c₀) (lett e e₁) stab
 ... | inc2
     with comp-irrelevance zero c₁ (≤-trans (suc-<-intro 0<c₀) inc1) e₁ (a₀ ∷ stab)
 ... | irre2
-    with codeAddrIrrelevanceComb irre1 irre2
+    with irreComb irre1 irre2
 ... | irre3
     with compile c₁ (a₀ ∷ stab) e₁
 ... | p₁ , a₁ , c₂ = irre3
@@ -250,7 +230,7 @@ comp-irrelevance (suc c₀) (suc c₁) (s≤s c₀<c₁) (e ∔ e₁) stab
 ... | inc2
     with comp-irrelevance (suc c₀) c₂ (≤-trans (suc-<-intro c₀<c₁) inc1) e₁ stab
 ... | irre2
-    with codeAddrIrrelevanceComb irre1 irre2
+    with irreComb irre1 irre2
 ... | irre3
     with compile c₂ stab e₁
 ... | p₁ , a₁ , c₃ rewrite ++-assoc p₀ p₁ (add a₀ a₁ c₃ ∷ [])
@@ -268,7 +248,7 @@ comp-irrelevance (suc c₀) (suc c₁) (s≤s c₀<c₁) (lett e e₁) stab
     with comp-irrelevance (suc c₀) c₂ (≤-trans (suc-<-intro c₀<c₁) inc1)
                         e₁ (a₀ ∷ stab)
 ... | irre2
-    with codeAddrIrrelevanceComb irre1 irre2
+    with irreComb irre1 irre2
 ... | irre3
     with compile c₂ (a₀ ∷ stab) e₁
 ... | p₁ , a₁ , c₃ rewrite ++-assoc p₀ p₁ (add a₀ a₁ c₃ ∷ [])
