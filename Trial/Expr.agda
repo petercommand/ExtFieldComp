@@ -8,9 +8,14 @@ open import Data.Vec hiding (_++_)
 open import Data.Empty
 
 open import NatProperties
+open import ListProperties
 
 open import Relation.Nullary
 open import Relation.Binary.PropositionalEquality
+
+_:>_ : ∀ {l} (K : Set l) (a : K) -> K
+a :> b = b
+
 
 data Expr : ℕ → Set where
   num : ∀ {n} → (k : ℕ) → Expr n
@@ -45,6 +50,81 @@ data CodeAddrIrrelevance : List TAC → Addr → Set where
                                → CodeAddrIrrelevance code' addr
                                → CodeAddrIrrelevance (code' ++ (code ∷ [])) addr
 
+aux : ∀ {K : Set} (list : List K) → list ++ [] ≡ list
+aux [] = refl
+aux (x ∷ list) = cong (_∷_ x) (aux list)
+
+listAux : ∀ {K : Set} (list : List K) (elem : K)
+     → ¬ (list ++ elem ∷ [] ≡ [])
+listAux [] elem ()
+listAux (x ∷ list) elem ()
+
+listAux' : ∀ {K : Set} (elem : K) -> ¬ elem ∷ [] ≡ List K :> []
+listAux' elem ()
+
+aux' : ∀ {addr code} → CodeAddrIrrelevance (code ++ []) addr
+                   → CodeAddrIrrelevance code addr
+aux' {addr} {code} irre rewrite aux code = irre
+
+aux'-re : ∀ {addr code} → CodeAddrIrrelevance code addr
+                        → CodeAddrIrrelevance (code ++ []) addr
+aux'-re {addr} {code} irre rewrite aux code = irre
+
+-- code ∷ code' ≡ code ∷ [] ++  code' ≡ code' ++ code ∷ []
+irreComm' : ∀ code code' addr → CodeAddrIrrelevance (code ++ code') addr
+                              → CodeAddrIrrelevance (code' ++ code) addr
+irreComm' code [] addr irre = {!!}
+irreComm' code (x ∷ code') addr irre = {!!}
+
+aux''' : ∀ code code' addr → ¬ target code ≡ addr
+                           → CodeAddrIrrelevance code' addr
+                           → CodeAddrIrrelevance (code' ++ (code ∷ [])) addr
+aux'''  code code' addr noteq irre = noteq ∶∶∶ irre
+
+aux'' : ∀ code code' addr → ¬ target code ≡ addr
+                          → CodeAddrIrrelevance code' addr
+                          → CodeAddrIrrelevance (code ∷ code') addr
+aux'' code [] addr ¬≡ irre = ¬≡ ∶∶∶ ⟦⟧
+aux'' (store x x₁) (x₂ ∷ code') addr ¬≡ irre = {!!}
+aux'' (add x x₁ x₂) (x₃ ∷ code') addr ¬≡ irre = {!!}
+
+combAux : ∀ addr code code' code''
+        → (¬ (target code ≡ addr))
+        → CodeAddrIrrelevance (code' ++ code'') addr
+        → CodeAddrIrrelevance ((code' ++ code ∷ []) ++ code'') addr
+combAux addr code code' [] notequal irre rewrite aux (code' ++ code ∷ [])
+    = notequal ∶∶∶ aux' {addr} {code'} irre
+combAux addr code [] code'' notequal irre = {!!}
+combAux addr code (x ∷ code') code'' notequal irre = {!!}
+
+codeAddrIrrelevanceComb : ∀ {addr code code'}
+   → CodeAddrIrrelevance code addr
+   → CodeAddrIrrelevance code' addr
+   → CodeAddrIrrelevance (code ++ code') addr
+codeAddrIrrelevanceComb ⟦⟧ irre2 = irre2
+codeAddrIrrelevanceComb {addr} {code' = []}
+   (_∶∶∶_ {code = store x x₁} {[]} notequal irre1) irre2
+     = notequal ∶∶∶ irre2
+codeAddrIrrelevanceComb {addr} {code' = x₂ ∷ code'}
+   (_∶∶∶_ {code = store x x₁} {[]} notequal irre1) irre2
+     = combAux addr (store x x₁) [] (x₂ ∷ code') notequal irre2
+codeAddrIrrelevanceComb {addr} {code' = code''}
+   (_∶∶∶_ {code = store x x₁} {x₂ ∷ code'} notequal irre1) irre2
+     = combAux addr (store x x₁) (x₂ ∷ code') code'' notequal
+          (codeAddrIrrelevanceComb irre1 irre2)
+codeAddrIrrelevanceComb {addr} {code' = []}
+   (_∶∶∶_ {code = add x x₁ x₂} {[]} notequal irre1) irre2
+     = notequal ∶∶∶ irre2
+codeAddrIrrelevanceComb {addr} {code' = x₃ ∷ code'}
+   (_∶∶∶_ {code = add x x₁ x₂} {[]} notequal irre1) irre2
+     = combAux addr (add x x₁ x₂) [] (x₃ ∷ code') notequal irre2
+codeAddrIrrelevanceComb {addr} {code' = []}
+   (_∶∶∶_ {code = add x x₁ x₂} {x₃ ∷ code'} notequal irre1) irre2
+     = combAux addr (add x x₁ x₂) (x₃ ∷ code') [] notequal (aux'-re irre1)
+codeAddrIrrelevanceComb {addr} {code' = x₄ ∷ code''}
+   (_∶∶∶_ {code = add x x₁ x₂} {x₃ ∷ code'} notequal irre1) irre2
+     = combAux addr (add x x₁ x₂) (x₃ ∷ code') (x₄ ∷ code'') notequal
+          (codeAddrIrrelevanceComb irre1 irre2)
 SymTab : ℕ → Set
 SymTab = Vec Addr
 
@@ -75,6 +155,22 @@ run [] h = h
 run (store v a ∷ p) h = run p (putHeap a v h)
 run (add a₀ a₁ a₂ ∷ p) h =
   run p (putHeap a₂ (getHeap a₀ h + getHeap a₁ h) h)
+
+comp-a<c : ∀ {n}
+   → (e : Expr n) (c : Addr) (stab : SymTab n)
+   → let p , a , c = compile c stab e
+     in a < c
+comp-a<c (num k) c stab = s≤s ≤-refl
+comp-a<c (var i) c stab = {!!}
+comp-a<c (e ∔ e₁) c stab = s≤s ≤-refl
+comp-a<c (lett e e₁) c stab
+    with compile c stab e
+... | p₀ , a₀ , c₀
+    with comp-a<c e₁ c₀ (a₀ ∷ stab)
+... | a<c
+    with compile c₀ (a₀ ∷ stab) e₁
+... | p₁ , a₁ , c₁ = a<c
+
 
 run-compose : ∀ p₀ p₁ h →
     run (p₀ ++ p₁) h ≡ run p₁ (run p₀ h)
@@ -121,6 +217,81 @@ heap-inc (lett e e₁) c₀ stab
     with compile c₁ (a₀ ∷ stab) e₁
 ... | p₁ , a₁ , c₂
     = ≤-trans c₁≥c₀ c₂≥c₁
+
+comp-irrelevance : ∀ {n} c₀ c₁ → c₀ < c₁
+   → (e : Expr n) (stab : SymTab n)
+   → CodeAddrIrrelevance (proj₁ (compile c₁ stab e)) c₀
+comp-irrelevance zero zero () e stab
+comp-irrelevance (suc c₀) zero () e stab
+comp-irrelevance zero _ (s≤s 0≤c₀) (num k) stab = (λ ()) ∶∶∶ ⟦⟧
+comp-irrelevance zero _ (s≤s 0≤c₀) (var i) stab = ⟦⟧
+comp-irrelevance zero (suc c₀) (s≤s 0≤c₀) (e ∔ e₁) stab
+    with heap-inc e (suc c₀) stab
+... | inc1
+    with comp-irrelevance zero (suc c₀) (s≤s z≤n) e stab
+... | irre1
+    with compile (suc c₀) stab e
+... | p₀ , a₀ , c₁
+    with heap-inc e₁ c₁ stab
+... | inc2
+    with comp-irrelevance zero c₁ (≤-trans (suc-<-intro 0≤c₀) inc1) e₁ stab
+... | irre2
+    with codeAddrIrrelevanceComb irre1 irre2
+... | irre3
+    with compile c₁ stab e₁
+... | p₁ , a₁ , c₂ rewrite ++-assoc p₀ p₁ (add a₀ a₁ c₂ ∷ [])
+    =  (a<c->¬c≡a 0 c₂ (≤-trans (suc-<-intro 0≤c₀) (≤-trans inc1 inc2))) ∶∶∶ irre3
+comp-irrelevance zero (suc c₀) (s≤s 0<c₀) (lett e e₁) stab
+    with heap-inc e (suc c₀) stab
+... | inc1
+    with comp-irrelevance zero (suc c₀) (s≤s 0<c₀) e stab
+... | irre1
+    with compile (suc c₀) stab e
+... | p₀ , a₀ , c₁
+    with heap-inc e₁ c₁ (a₀ ∷ stab)
+... | inc2
+    with comp-irrelevance zero c₁ (≤-trans (suc-<-intro 0<c₀) inc1) e₁ (a₀ ∷ stab)
+... | irre2
+    with codeAddrIrrelevanceComb irre1 irre2
+... | irre3
+    with compile c₁ (a₀ ∷ stab) e₁
+... | p₁ , a₁ , c₂ = irre3
+comp-irrelevance (suc c₀) (suc c₁) (s≤s c₀<c₁) (num k) stab
+    = a<c->¬c≡a (suc c₀) (suc c₁) (s≤s c₀<c₁) ∶∶∶ ⟦⟧
+comp-irrelevance (suc c₀) (suc c₁) (s≤s c₀<c₁) (var i) stab = ⟦⟧
+comp-irrelevance (suc c₀) (suc c₁) (s≤s c₀<c₁) (e ∔ e₁) stab
+    with heap-inc e (suc c₁) stab
+... | inc1
+    with comp-irrelevance (suc c₀) (suc c₁) (s≤s c₀<c₁) e stab
+... | irre1
+    with compile (suc c₁) stab e
+... | p₀ , a₀ , c₂
+    with heap-inc e₁ c₂ stab
+... | inc2
+    with comp-irrelevance (suc c₀) c₂ (≤-trans (suc-<-intro c₀<c₁) inc1) e₁ stab
+... | irre2
+    with codeAddrIrrelevanceComb irre1 irre2
+... | irre3
+    with compile c₂ stab e₁
+... | p₁ , a₁ , c₃ rewrite ++-assoc p₀ p₁ (add a₀ a₁ c₃ ∷ [])
+    = (a<c->¬c≡a (suc c₀) c₃ (≤-trans (suc-<-intro c₀<c₁)
+                              (≤-trans inc1 inc2))) ∶∶∶ irre3
+comp-irrelevance (suc c₀) (suc c₁) (s≤s c₀<c₁) (lett e e₁) stab
+    with heap-inc e (suc c₁) stab
+... | inc1
+    with comp-irrelevance (suc c₀) (suc c₁) (s≤s c₀<c₁) e stab
+... | irre1
+    with compile (suc c₁) stab e
+... | p₀ , a₀ , c₂
+    with heap-inc e₁ c₂ (a₀ ∷ stab)
+... | inc2
+    with comp-irrelevance (suc c₀) c₂ (≤-trans (suc-<-intro c₀<c₁) inc1) e₁ (a₀ ∷ stab)
+... | irre2
+    with codeAddrIrrelevanceComb irre1 irre2
+... | irre3
+    with compile c₂ (a₀ ∷ stab) e₁
+... | p₁ , a₁ , c₃ rewrite ++-assoc p₀ p₁ (add a₀ a₁ c₃ ∷ [])
+    = irre3
 
 comp-preserve-heap-content : ∀ {n}
    → (e : Expr n) (c : Addr) (stab : SymTab n) (h : Heap)
@@ -204,6 +375,13 @@ comp-correct (e₀ ∔ e₁) env c₀ stab h cons
 ... | a₀↦e₀↓
     with run-preserve-consist e₀ env c₀ stab h cons
 ... | pre-e₀
+    with heap-inc e₀ c₀ stab
+... | inc1
+    with
+         let p₀ , a₀ , c₁ = compile c₀ stab e₀
+             p₁ , a₁ , c₂ = compile c₁ stab e₁
+         in comp-irrelevance a₀ c₁ (comp-a<c e₀ c₀ stab) e₁ stab
+... | irre1
     with compile c₀ stab e₀
 ... | p₀ , a₀ , c₁
     with comp-correct e₁ env c₁ stab (run p₀ h) pre-e₀ 
@@ -214,7 +392,9 @@ comp-correct (e₀ ∔ e₁) env c₀ stab h cons
         | run-compose p₁ (add a₀ a₁ c₂ ∷ []) (run p₀ h)
         | get-put c₂ (getHeap a₀ (run p₁ (run p₀ h)) +
                       getHeap a₁ (run p₁ (run p₀ h))) (run p₁ (run p₀ h))
-        | a₁↦e₁↓ = {!!}
+        | a₁↦e₁↓
+        | codeAddrIrrelevance->ignorable p₁ p₀ a₀ h irre1
+        | a₀↦e₀↓ = refl
 comp-correct (lett e₀ e₁) env c₀ stab h cons
     with comp-correct e₀ env c₀ stab h cons
 ... | a₀↦e₀↓

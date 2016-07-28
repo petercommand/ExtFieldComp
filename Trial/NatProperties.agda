@@ -14,6 +14,10 @@ suc-<-elim zero (suc b) = λ x → z≤n
 suc-<-elim (suc a) zero (s≤s ())
 suc-<-elim (suc a) (suc b) (s≤s p) = p
 
+suc-≤-elim' : (a b : ℕ) -> (suc a ≤ b) -> a ≤ b
+suc-≤-elim' zero _ (s≤s p) = z≤n
+suc-≤-elim' (suc a) _ (s≤s p) = s≤s (suc-≤-elim' a _ p)
+
 suc-<-intro : {a b : ℕ} -> (a ≤ b) -> (suc a ≤ suc b)
 suc-<-intro = s≤s
 
@@ -96,6 +100,8 @@ a<c->¬a≡c _ (suc _) (s≤s (s≤s a≤c₁)) a≡c = a<c->¬a≡c _ _ (suc-<-
                                           (cong (λ { (suc n) -> n
                                                    ; zero -> zero }) a≡c)
 
+a<c->¬c≡a : ∀ (a c : ℕ) -> a < c -> ¬ (c ≡ a)
+a<c->¬c≡a a c a<c = λ x → a<c->¬a≡c a c a<c (sym x)
 
 data Acc (n : ℕ) : Set where
   acc : (∀ m → m < n → Acc m) → Acc n
