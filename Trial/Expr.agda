@@ -60,45 +60,6 @@ postulate
        → CodeAddrIrrelevance code addr
        → CodeAddrIrrelevance code' addr
        → CodeAddrIrrelevance (code ++ code') addr
-aux : ∀ {K : Set} (list : List K) → list ++ [] ≡ list
-aux [] = refl
-aux (x ∷ list) = cong (_∷_ x) (aux list)
-
-listAux : ∀ {K : Set} (list : List K) (elem : K)
-     → ¬ (list ++ elem ∷ [] ≡ [])
-listAux [] elem ()
-listAux (x ∷ list) elem ()
-
-listAux' : ∀ {K : Set} (elem : K) → ¬ elem ∷ [] ≡ List K :> []
-listAux' elem ()
-
-listAux'' : ∀ {K : Set} (elem elem' : K) (list1 list2 : List K)
-     → (elem ∷ (list1 ++ list2)) ++ elem' ∷ [] ≡
-        elem ∷ list1 ++ list2 ++ elem' ∷ []
-listAux'' elem elem' [] list2 = refl
-listAux'' elem elem' (x ∷ list1) list2 = cong (λ y → elem ∷ x ∷ y) (sym (++-assoc list1 list2 (elem' ∷ [])))
-
-aux' : ∀ {addr code} → CodeAddrIrrelevance (code ++ []) addr
-                   → CodeAddrIrrelevance code addr
-aux' {addr} {code} irre rewrite aux code = irre
-
-aux'-re : ∀ {addr code} → CodeAddrIrrelevance code addr
-                        → CodeAddrIrrelevance (code ++ []) addr
-aux'-re {addr} {code} irre rewrite aux code = irre
-
-aux'' : ∀ code code' addr → ¬ target code ≡ addr
-                          → CodeAddrIrrelevance code' addr
-                          → CodeAddrIrrelevance (code ∷ code') addr
-aux'' code code' addr ¬≡ irre = (irreInterchange {_} {code'} {code ∷ []}
-                                      (_∶∶∶_ {_} {code} {code'} ¬≡ irre)) 
-
-aux''' : (elem elem' : TAC) (list1 list2 : List TAC) (addr : Addr)
-                     → CodeAddrIrrelevance
-                          (elem ∷ (list1 ++ list2) ++ elem' ∷ []) addr
-                     → CodeAddrIrrelevance
-                          ((elem ∷ list1) ++ list2 ++ (elem' ∷ [])) addr
-aux''' elem elem' list1 list2 addr irre rewrite listAux'' elem elem' list1 list2 = irre
-
 
 SymTab : ℕ → Set
 SymTab = Vec Addr
