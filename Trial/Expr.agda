@@ -101,15 +101,20 @@ run-compose (store v a ∷ p₀) p₁ h
 run-compose (add a₀ a₁ a₂ ∷ p₀) p₁ h
   rewrite run-compose p₀ p₁ (putHeap a₂ (getHeap a₀ h + getHeap a₁ h) h) = refl
 
-data Consist (h : Heap) : ∀ {n} → Env n → SymTab n → Set where
-  [] : Consist h [] []
-  _∷_ : ∀ {a v n} {env : Env n} {stab : SymTab n}
-      → getHeap a h ≡ v → Consist h env stab
-      → Consist h (v ∷ env) (a ∷ stab)
+data Consist (h : Heap) : ∀ {n} → Env n → SymTab n → ℕ → Set where
+  [] : Consist h [] [] 0
+  _∷_ : ∀ {a v n o p} {env : Env n} {stab : SymTab n}
+      → getHeap a h ≡ v × a < o × o ≤ p
+      → Consist h env stab o
+      → Consist h (v ∷ env) (a ∷ stab) p
+  inc : ∀ {n o} {env : Env n} {stab : SymTab n}
+        → Consist h env stab o
+        → ∀ p → o ≤ p → Consist h env stab p
+
 
 postulate
-  consist : ∀ {h n} {env : Env n} {stab : SymTab n}
-          → Consist h env stab
+  consist : ∀ {h n o} {env : Env n} {stab : SymTab n}
+          → Consist h env stab o
           → ∀ i → getHeap (lookup i stab) h ≡ lookup i env
 
 heap-inc : ∀ {n}
@@ -216,15 +221,13 @@ comp-irrelevance (suc c₀) (suc c₁) (s≤s c₀<c₁) (lett e e₁) stab
     = irre3
 
 
-run-preserve-consist : ∀ {n}
+run-preserve-consist : ∀ {n o}
    → (e : Expr n) (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
-   → Consist h env stab
-   → let res = compile c stab e
-         p = proj₁ res
-         a = proj₁ (proj₂ res)
-     in Consist (run p h) env stab
+   → Consist h env stab o
+   → let p , a , c = compile c stab e
+     in Consist (run p h) env stab o
 run-preserve-consist (num k) env c stab h cons = {!!}
-run-preserve-consist (var i) env c stab h cons = {!!}
+run-preserve-consist {_} {o} (var i) env c stab h cons = cons
 run-preserve-consist (e ∔ e₁) env c stab h cons = {!!}
 run-preserve-consist (lett e e₁) env c stab h cons = {!!}
 
@@ -308,14 +311,28 @@ comp-preserve-heap-content (lett e e₁) (suc c) stab h m (s≤s a<c)
           | codeAddrIrrelevance->ignorable p₁ p₀ m h irre2
           = pre1
 
+found-><c : ∀ {n}
+   → (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
+   → Consist h env stab c
+   → ∀ (i : Fin n) → lookup i stab < c
+found-><c .[] .0 .[] h [] ()
+found-><c _ c _ h ((proj₁ , proj₂ , proj₃) ∷ cons) zero
+   = ≤-trans proj₂ proj₃
+found-><c _ c _ h ((proj₁ , proj₂ , proj₃) ∷ cons) (suc i)
+   = found-><c _ c _ h (inc cons c proj₃) i
+found-><c env c stab h (inc {o = o} cons .c x) zero
+   = ≤-trans (found-><c _ o _ h cons zero) x 
+found-><c env c stab h (inc {o = o} cons .c x) (suc i)
+   = ≤-trans (found-><c _ o _ h cons (suc i)) x
+
 
 comp-correct : ∀ {n}
    → (e : Expr n) (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
-   → Consist h env stab
-   → let p , a , c = compile c stab e
-     in getHeap a (run p h) ≡ eval env e × a < c
+   → Consist h env stab c
+   → let p , a , c₀ = compile c stab e
+     in getHeap a (run p h) ≡ eval env e × a < c₀
 comp-correct (num k) env c stab h cons = get-put c k h , s≤s ≤-refl
-comp-correct (var i) env c stab h cons = consist cons i , {!!}
+comp-correct (var i) env c stab h cons = consist cons i , found-><c env c stab h (inc cons c ≤-refl) i
 comp-correct (e₀ ∔ e₁) env c₀ stab h cons
     with comp-correct e₀ env c₀ stab h cons
 ... | a₀↦e₀↓ , a₀<c₁
@@ -330,7 +347,7 @@ comp-correct (e₀ ∔ e₁) env c₀ stab h cons
 ... | irre1
     with compile c₀ stab e₀
 ... | p₀ , a₀ , c₁
-    with comp-correct e₁ env c₁ stab (run p₀ h) pre-e₀ 
+    with comp-correct e₁ env c₁ stab (run p₀ h) (inc pre-e₀ c₁ inc1) 
 ... | a₁↦e₁↓ , a₁<c₂
     with compile c₁ stab e₁
 ... | p₁ , a₁ , c₂
@@ -341,15 +358,17 @@ comp-correct (e₀ ∔ e₁) env c₀ stab h cons
         | a₁↦e₁↓
         | codeAddrIrrelevance->ignorable p₁ p₀ a₀ h irre1
         | a₀↦e₀↓ = refl , ≤-refl
-comp-correct (lett e₀ e₁) env c₀ stab h cons
+comp-correct {_} (lett e₀ e₁) env c₀ stab h cons
     with comp-correct e₀ env c₀ stab h cons
 ... | a₀↦e₀↓ , a₀<c₁
     with run-preserve-consist e₀ env c₀ stab h cons
 ... | pre1
+    with heap-inc e₀ c₀ stab
+... | inc1
     with compile c₀ stab e₀
 ... | p₀ , a₀ , c₁
-    with comp-correct e₁ (eval env e₀ ∷ env) c₁ (a₀ ∷ stab) (run p₀ h)
-         (a₀↦e₀↓ ∷ pre1)
+    with comp-correct {_} e₁ (eval env e₀ ∷ env) c₁ (a₀ ∷ stab) (run p₀ h)
+         (_∷_ {o = c₁} (a₀↦e₀↓ , (a₀<c₁ , ≤-refl)) (inc pre1 c₁ inc1))
 ... | a₁↦e₁↓ , a₁<c₂
     with compile c₁ (a₀ ∷ stab) e₁
 ... | p₁ , a₁ , c₂

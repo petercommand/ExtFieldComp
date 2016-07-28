@@ -103,6 +103,10 @@ a<c->¬a≡c _ (suc _) (s≤s (s≤s a≤c₁)) a≡c = a<c->¬a≡c _ _ (suc-<-
 a<c->¬c≡a : ∀ (a c : ℕ) -> a < c -> ¬ (c ≡ a)
 a<c->¬c≡a a c a<c = λ x → a<c->¬a≡c a c a<c (sym x)
 
+a≤suc-a : ∀ (a : ℕ) -> a ≤ suc a
+a≤suc-a zero = z≤n
+a≤suc-a (suc a) = s≤s (a≤suc-a a)
+
 data Acc (n : ℕ) : Set where
   acc : (∀ m → m < n → Acc m) → Acc n
 
