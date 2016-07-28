@@ -101,7 +101,7 @@ run-compose (store v a ∷ p₀) p₁ h
 run-compose (add a₀ a₁ a₂ ∷ p₀) p₁ h
   rewrite run-compose p₀ p₁ (putHeap a₂ (getHeap a₀ h + getHeap a₁ h) h) = refl
 
-data Consist : Heap → ∀ {n} → Env n → SymTab n → ℕ → Set where
+data Consist : ∀ {n} → Heap → Env n → SymTab n → ℕ → Set where
   [] : ∀ {h} → Consist h [] [] 0
   _∷_ : ∀ {h a v n o p} {env : Env n} {stab : SymTab n}
       → getHeap a h ≡ v × a < o × o ≤ p
@@ -114,10 +114,6 @@ data Consist : Heap → ∀ {n} → Env n → SymTab n → ℕ → Set where
   put : ∀ {h n o k v} {env : Env n} {stab : SymTab n}
         → Consist h env stab o
         → Consist (putHeap k v h) env stab o
-postulate
-  consist : ∀ {h n o} {env : Env n} {stab : SymTab n}
-          → Consist h env stab o
-          → ∀ i → getHeap (lookup i stab) h ≡ lookup i env
 
 heap-inc : ∀ {n}
    → (e : Expr n) (c : Addr) (stab : SymTab n)
@@ -362,6 +358,13 @@ found-><c env c stab h (inc {o = o} cons .c x) (suc i)
    = ≤-trans (found-><c _ o _ h cons (suc i)) x
 found-><c env c stab _ (put cons) x = found-><c env c stab _ cons x
 
+consist : ∀ h n env stab c i → Consist {n} h env stab c → getHeap (lookup i stab) h ≡ lookup i env
+consist h .0 .[] .[] .0 () []
+consist h _ _ _ c zero ((proj₁ , proj₂) ∷ cons) = proj₁
+consist h _ _ _ c (suc i) (x ∷ cons) = consist h _ _ _ _ i cons
+consist h n env stab c i (inc cons .c x) = consist h n env stab _ i cons
+consist _ n env stab c i (put cons) = {!!}
+
 comp-correct : ∀ {n}
    → (e : Expr n) (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
    → Consist h env stab c
@@ -369,7 +372,7 @@ comp-correct : ∀ {n}
      in getHeap a (run p h) ≡ eval env e × a < c₀
 comp-correct (num k) env c stab h cons = get-put c k h , s≤s ≤-refl
 comp-correct (var i) env c stab h cons
-    = consist cons i , found-><c env c stab h (inc cons c ≤-refl) i
+    = consist h _ env stab c i cons , found-><c env c stab h (inc cons c ≤-refl) i
 comp-correct (e₀ ∔ e₁) env c₀ stab h cons
     with comp-correct e₀ env c₀ stab h cons
 ... | a₀↦e₀↓ , a₀<c₁
