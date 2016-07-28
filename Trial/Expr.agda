@@ -156,21 +156,6 @@ run (store v a ∷ p) h = run p (putHeap a v h)
 run (add a₀ a₁ a₂ ∷ p) h =
   run p (putHeap a₂ (getHeap a₀ h + getHeap a₁ h) h)
 
-comp-a<c : ∀ {n}
-   → (e : Expr n) (c : Addr) (stab : SymTab n)
-   → let p , a , c = compile c stab e
-     in a < c
-comp-a<c (num k) c stab = s≤s ≤-refl
-comp-a<c (var i) c stab = {!!}
-comp-a<c (e ∔ e₁) c stab = s≤s ≤-refl
-comp-a<c (lett e e₁) c stab
-    with compile c stab e
-... | p₀ , a₀ , c₀
-    with comp-a<c e₁ c₀ (a₀ ∷ stab)
-... | a<c
-    with compile c₀ (a₀ ∷ stab) e₁
-... | p₁ , a₁ , c₁ = a<c
-
 
 run-compose : ∀ p₀ p₁ h →
     run (p₀ ++ p₁) h ≡ run p₁ (run p₀ h)
@@ -293,31 +278,6 @@ comp-irrelevance (suc c₀) (suc c₁) (s≤s c₀<c₁) (lett e e₁) stab
 ... | p₁ , a₁ , c₃ rewrite ++-assoc p₀ p₁ (add a₀ a₁ c₃ ∷ [])
     = irre3
 
-comp-preserve-heap-content : ∀ {n}
-   → (e : Expr n) (c : Addr) (stab : SymTab n) (h : Heap)
-   → (a : ℕ)
-   → a < c
-   → let (p , _ , _) = compile c stab e
-     in getHeap a h ≡ getHeap a (run p h)
-comp-preserve-heap-content (num k) (suc c) stab h a (s≤s a<c) =
-    sym (get-put' a (suc c) h (a<c->¬a≡c a (suc c) (s≤s a<c)))
-comp-preserve-heap-content (var i) (suc c) stab h m (s≤s a<c) = refl
-comp-preserve-heap-content (e ∔ e₁) (suc c) stab h m (s≤s a<c)
-    with comp-preserve-heap-content e (suc c) stab h m (s≤s a<c)
-... | pre1
-    with heap-inc e (suc c) stab
-... | inc1
-    with compile (suc c) stab e
-... | p₀ , a₀ , c₁
-    with heap-inc e₁ c₁ stab
-... | inc2
-    with comp-preserve-heap-content e₁ c₁ stab h m (≤-trans (suc-<-intro a<c) inc1)
-... | pre2
-    with compile c₁ stab e₁
-... | p₁ , a₁ , c₂ rewrite run-compose p₀ (p₁ ++ add a₀ a₁ c₂ ∷ []) h
-                         | run-compose p₁ (add a₀ a₁ c₂ ∷ []) (run p₀ h)
-                         = {!!}
-comp-preserve-heap-content (lett e e₁) (suc c) stab h m (s≤s a<c) = {!!}
 
 run-preserve-consist : ∀ {n}
    → (e : Expr n) (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
@@ -361,18 +321,43 @@ codeAddrIrrelevance->ignorable .(x₃ ∷ code' ++ add x x₁ x₂ ∷ []) code'
                               (λ x₄ → notequal (sym x₄))
                   = codeAddrIrrelevance->ignorable (x₃ ∷ code') code'' addr h irre
 
+comp-preserve-heap-content : ∀ {n}
+   → (e : Expr n) (c : Addr) (stab : SymTab n) (h : Heap)
+   → (a : ℕ)
+   → a < c
+   → let (p , _ , _) = compile c stab e
+     in getHeap a h ≡ getHeap a (run p h)
+comp-preserve-heap-content (num k) (suc c) stab h a (s≤s a<c) =
+    sym (get-put' a (suc c) h (a<c->¬a≡c a (suc c) (s≤s a<c)))
+comp-preserve-heap-content (var i) (suc c) stab h m (s≤s a<c) = refl
+comp-preserve-heap-content (e ∔ e₁) (suc c) stab h m (s≤s a<c)
+    with comp-preserve-heap-content e (suc c) stab h m (s≤s a<c)
+... | pre1
+    with heap-inc e (suc c) stab
+... | inc1
+    with compile (suc c) stab e
+... | p₀ , a₀ , c₁
+    with heap-inc e₁ c₁ stab
+... | inc2
+    with comp-preserve-heap-content e₁ c₁ stab h m (≤-trans (suc-<-intro a<c) inc1)
+... | pre2
+    with compile c₁ stab e₁
+... | p₁ , a₁ , c₂ rewrite run-compose p₀ (p₁ ++ add a₀ a₁ c₂ ∷ []) h
+                         | run-compose p₁ (add a₀ a₁ c₂ ∷ []) (run p₀ h)
+                         = {!c!}
+comp-preserve-heap-content (lett e e₁) (suc c) stab h m (s≤s a<c) = {!!}
+
+
 comp-correct : ∀ {n}
    → (e : Expr n) (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
    → Consist h env stab
-   → let res = compile c stab e
-         p = proj₁ res
-         a = proj₁ (proj₂ res)
-     in getHeap a (run p h) ≡ eval env e
-comp-correct (num k) env c stab h cons = get-put c k h
-comp-correct (var i) env c stab h cons = consist cons i
+   → let p , a , c = compile c stab e
+     in getHeap a (run p h) ≡ eval env e × a < c
+comp-correct (num k) env c stab h cons = get-put c k h , s≤s ≤-refl
+comp-correct (var i) env c stab h cons = consist cons i , {!!}
 comp-correct (e₀ ∔ e₁) env c₀ stab h cons
     with comp-correct e₀ env c₀ stab h cons
-... | a₀↦e₀↓
+... | a₀↦e₀↓ , a₀<c₁
     with run-preserve-consist e₀ env c₀ stab h cons
 ... | pre-e₀
     with heap-inc e₀ c₀ stab
@@ -380,12 +365,12 @@ comp-correct (e₀ ∔ e₁) env c₀ stab h cons
     with
          let p₀ , a₀ , c₁ = compile c₀ stab e₀
              p₁ , a₁ , c₂ = compile c₁ stab e₁
-         in comp-irrelevance a₀ c₁ (comp-a<c e₀ c₀ stab) e₁ stab
+         in comp-irrelevance a₀ c₁ a₀<c₁ e₁ stab
 ... | irre1
     with compile c₀ stab e₀
 ... | p₀ , a₀ , c₁
     with comp-correct e₁ env c₁ stab (run p₀ h) pre-e₀ 
-... | a₁↦e₁↓
+... | a₁↦e₁↓ , a₁<c₂
     with compile c₁ stab e₁
 ... | p₁ , a₁ , c₂
   rewrite run-compose p₀ (p₁ ++ add a₀ a₁ c₂ ∷ []) h
@@ -394,18 +379,18 @@ comp-correct (e₀ ∔ e₁) env c₀ stab h cons
                       getHeap a₁ (run p₁ (run p₀ h))) (run p₁ (run p₀ h))
         | a₁↦e₁↓
         | codeAddrIrrelevance->ignorable p₁ p₀ a₀ h irre1
-        | a₀↦e₀↓ = refl
+        | a₀↦e₀↓ = refl , ≤-refl
 comp-correct (lett e₀ e₁) env c₀ stab h cons
     with comp-correct e₀ env c₀ stab h cons
-... | a₀↦e₀↓
+... | a₀↦e₀↓ , a₀<c₁
     with run-preserve-consist e₀ env c₀ stab h cons
 ... | pre1
     with compile c₀ stab e₀
 ... | p₀ , a₀ , c₁
     with comp-correct e₁ (eval env e₀ ∷ env) c₁ (a₀ ∷ stab) (run p₀ h)
          (a₀↦e₀↓ ∷ pre1)
-... | a₁↦e₁↓
+... | a₁↦e₁↓ , a₁<c₂
     with compile c₁ (a₀ ∷ stab) e₁
 ... | p₁ , a₁ , c₂
     rewrite run-compose p₀ p₁ h
-   = a₁↦e₁↓
+   = a₁↦e₁↓ , a₁<c₂
