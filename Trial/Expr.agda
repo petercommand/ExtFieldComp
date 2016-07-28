@@ -235,16 +235,16 @@ run-preserve-consist : ∀ {n o}
    → Consist h env stab o
    → let p , a , c = compile c stab e
      in Consist (run p h) env stab o
-run-preserve-consist (num k) env c stab h c>o cons = {!!}
-run-preserve-consist {_} {o} (var i) env c stab h c>o cons = cons
-run-preserve-consist (e ∔ e₁) env c stab h c>o cons
+run-preserve-consist (num k) env c stab h c≥o cons = {!!}
+run-preserve-consist {_} {o} (var i) env c stab h c≥o cons = cons
+run-preserve-consist (e ∔ e₁) env c stab h c≥o cons
     with heap-inc e c stab
 ... | inc1
-    with run-preserve-consist e env c stab h c>o cons
+    with run-preserve-consist e env c stab h c≥o cons
 ... | cons1
     with compile c stab e
 ... | p₀ , a₀ , c₀
-    with run-preserve-consist e₁ env c₀ stab h (≤-trans c>o inc1) cons
+    with run-preserve-consist e₁ env c₀ stab h (≤-trans c≥o inc1) cons
 ... | cons2
     with heap-inc e₁ c₀ stab
 ... | inc2
@@ -253,10 +253,10 @@ run-preserve-consist (e ∔ e₁) env c stab h c>o cons
     rewrite run-compose p₀ (p₁ ++ add a₀ a₁ c₁ ∷ []) h
           | run-compose p₁ (add a₀ a₁ c₁ ∷ []) (run p₀ h)
           = {!!}
-run-preserve-consist (lett e e₁) env c stab h c>o cons
+run-preserve-consist (lett e e₁) env c stab h c≥o cons
     with heap-inc e c stab
 ... | inc1
-    with run-preserve-consist e env c stab h c>o cons
+    with run-preserve-consist e env c stab h c≥o cons
 ... | cons1
     with compile c stab e
 ... | p₀ , a₀ , c₀
