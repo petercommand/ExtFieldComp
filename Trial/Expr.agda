@@ -111,10 +111,6 @@ data Consist : ∀ {n} → Heap → Env n → SymTab n → ℕ → Set where
         → Consist h env stab o
         → ∀ p → o ≤ p → Consist h env stab p
 
-  put : ∀ {h n o k v} {env : Env n} {stab : SymTab n}
-        → Consist h env stab o
-        → Consist (putHeap k v h) env stab o
-
 heap-inc : ∀ {n}
    → (e : Expr n) (c : Addr) (stab : SymTab n)
    → let c₀ = proj₂ (proj₂ (compile c stab e))
@@ -217,7 +213,7 @@ comp-irrelevance (suc c₀) (suc c₁) (s≤s c₀<c₁) (lett e e₁) stab
     with compile c₂ (a₀ ∷ stab) e₁
 ... | p₁ , a₁ , c₃ rewrite ++-assoc p₀ p₁ (add a₀ a₁ c₃ ∷ [])
     = irre3
-
+{-
 rpc-aux : ∀ {n o}
    → (env : Env n) (stab : SymTab n) (h : Heap)
    → Consist h env stab o
@@ -225,13 +221,14 @@ rpc-aux : ∀ {n o}
 rpc-aux env stab h cons [] = cons
 rpc-aux env stab h cons (store x x₁ ∷ p) = rpc-aux env stab (putHeap x₁ x h) (put cons) p
 rpc-aux env stab h cons (add x x₁ x₂ ∷ p) = rpc-aux env stab (putHeap x₂ (getHeap x h + getHeap x₁ h) h) (put cons) p
+-}
 
 run-preserve-consist : ∀ {n o}
    → (e : Expr n) (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
    → Consist h env stab o
    → let p , a , c = compile c stab e
      in Consist (run p h) env stab o
-run-preserve-consist (num k) env c stab h cons = put cons
+run-preserve-consist (num k) env c stab h cons = {!!}
 run-preserve-consist {_} {o} (var i) env c stab h cons = cons
 run-preserve-consist (e ∔ e₁) env c stab h cons
     with heap-inc e c stab
@@ -248,7 +245,7 @@ run-preserve-consist (e ∔ e₁) env c stab h cons
 ... | p₁ , a₁ , c₁
     rewrite run-compose p₀ (p₁ ++ add a₀ a₁ c₁ ∷ []) h
           | run-compose p₁ (add a₀ a₁ c₁ ∷ []) (run p₀ h)
-          = put (rpc-aux env stab (run p₀ h) cons1 p₁)
+          = ?
 run-preserve-consist (lett e e₁) env c stab h cons
     with heap-inc e c stab
 ... | inc1
@@ -261,7 +258,7 @@ run-preserve-consist (lett e e₁) env c stab h cons
     with compile c₀ (a₀ ∷ stab) e₁
 ... | p₁ , a₁ , c₁
     rewrite run-compose p₀ p₁ h
-    = rpc-aux env stab (run p₀ h) cons1 p₁
+    = ?
 
 
 codeAddrIrrelevance->ignorable : ∀ code code' addr h
@@ -356,14 +353,12 @@ found-><c env c stab h (inc {o = o} cons .c x) zero
    = ≤-trans (found-><c _ o _ h cons zero) x 
 found-><c env c stab h (inc {o = o} cons .c x) (suc i)
    = ≤-trans (found-><c _ o _ h cons (suc i)) x
-found-><c env c stab _ (put cons) x = found-><c env c stab _ cons x
 
 consist : ∀ h n env stab c i → Consist {n} h env stab c → getHeap (lookup i stab) h ≡ lookup i env
 consist h .0 .[] .[] .0 () []
 consist h _ _ _ c zero ((proj₁ , proj₂) ∷ cons) = proj₁
 consist h _ _ _ c (suc i) (x ∷ cons) = consist h _ _ _ _ i cons
 consist h n env stab c i (inc cons .c x) = consist h n env stab _ i cons
-consist _ n env stab c i (put cons) = {!!}
 
 comp-correct : ∀ {n}
    → (e : Expr n) (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
