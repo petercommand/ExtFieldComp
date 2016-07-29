@@ -53,6 +53,7 @@ a-suc-b==b-suc-a (suc x) (suc y) = trans (cong suc (a-suc-b==b-suc-a x (suc y)))
                                             | trans (a-suc-b==b-suc-a b (suc c)) (NS.+-comm (suc c) (suc b))
                                             = suc-<-intro (+<weakening a b (suc c) (suc-<-elim (suc a) b p))
 
+
 ≤-weakening : (a b c : ℕ) -> a ≤ b -> a ≤ b + c
 ≤-weakening .0 zero zero z≤n = z≤n
 ≤-weakening .0 zero (suc c) z≤n = z≤n
@@ -63,6 +64,9 @@ a-suc-b==b-suc-a (suc x) (suc y) = trans (cong suc (a-suc-b==b-suc-a x (suc y)))
 ≤weak {zero} {_} (s≤s p) = z≤n
 ≤weak {suc a} {suc b} (s≤s p) = s≤s (≤weak {a} {b} p)
 
+≤-suc : (a b : ℕ) -> a ≤ b -> a ≤ suc b
+≤-suc zero b p = z≤n
+≤-suc (suc a) b p = s≤s (≤weak p)
 
 
 lem : (b c d : ℕ) -> (_ : 0 ≤ b) -> (_ : suc c ≤ d) -> suc c ≤ b + d
