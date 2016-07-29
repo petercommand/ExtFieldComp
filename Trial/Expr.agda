@@ -221,59 +221,6 @@ comp-irrelevance (suc c₀) (suc c₁) (s≤s c₀<c₁) (lett e e₁) stab
     with compile c₂ (a₀ ∷ stab) e₁
 ... | p₁ , a₁ , c₃ rewrite ++-assoc p₀ p₁ (add a₀ a₁ c₃ ∷ [])
     = irre3
-
-rpc-aux : ∀ {c d k n o}
-   → (env : Env n) (stab : SymTab n) (h : Heap)
-   → c ≥ o
-   → d ≥ c
-   → Consist h env stab o
-   → Consist (putHeap c k h) env stab d
-rpc-aux .[] .[] h _ _ [] = inc [] _ z≤n
-rpc-aux {o = o} _ _ h c>o d>c ((proj₁ , proj₂ , proj₃) ∷ cons)
-    = (trans (get-put' _ _ h (a<c->¬a≡c _ _ (≤-trans (≤-trans proj₂ proj₃) c>o))) proj₁ ,
-        ((≤-trans (≤-trans proj₂ proj₃) c>o) , d>c)) ∷ rpc-aux _ _ h (≤-trans proj₃ c>o) ≤-refl cons
-rpc-aux env stab h c≥o d≥c (inc cons o x)
-    = rpc-aux env stab h (≤-trans x c≥o) d≥c cons
-
-run-preserve-consist : ∀ {n o}
-   → (e : Expr n) (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
-   → c ≥ o
-   → Consist h env stab o
-   → let p , _ , c = compile c stab e
-     in Consist (run p h) env stab c
-run-preserve-consist (num k) env c stab h c≥o cons = rpc-aux _ _ h c≥o (a≤suc-a c) cons
-run-preserve-consist {_} {o} (var i) env c stab h c≥o cons = inc cons c c≥o
-run-preserve-consist (e ∔ e₁) env c stab h c≥o cons
-    with heap-inc e c stab
-... | inc1
-    with run-preserve-consist e env c stab h c≥o cons
-... | cons1
-    with compile c stab e
-... | p₀ , a₀ , c₀
-    with run-preserve-consist e₁ env c₀ stab (run p₀ h) ≤-refl (inc cons1 _ ≤-refl)
-... | cons2
-    with heap-inc e₁ c₀ stab
-... | inc2
-    with compile c₀ stab e₁
-... | p₁ , a₁ , c₁
-    rewrite run-compose p₀ (p₁ ++ add a₀ a₁ c₁ ∷ []) h
-          | run-compose p₁ (add a₀ a₁ c₁ ∷ []) (run p₀ h)
-            = rpc-aux env stab (run p₁ (run p₀ h)) ≤-refl (a≤suc-a c₁) cons2
-run-preserve-consist (lett e e₁) env c stab h c≥o cons
-    with heap-inc e c stab
-... | inc1
-    with run-preserve-consist e env c stab h c≥o cons
-... | cons1
-    with compile c stab e
-... | p₀ , a₀ , c₀
-    with heap-inc e₁ c₀ (a₀ ∷ stab)
-... | inc2
-    with compile c₀ (a₀ ∷ stab) e₁
-... | p₁ , a₁ , c₁
-    rewrite run-compose p₀ p₁ h
-    = {!!}
-
-
 codeAddrIrrelevance->ignorable : ∀ code code' addr h
                             -> CodeAddrIrrelevance code addr
                             -> getHeap addr (run code (run code' h)) ≡
@@ -353,6 +300,21 @@ comp-preserve-heap-content (lett e e₁) (suc c) stab h m (s≤s a<c)
           | codeAddrIrrelevance->ignorable p₁ p₀ m h irre2
           = pre1
 
+
+rpc-aux : ∀ {c d k n o}
+   → (env : Env n) (stab : SymTab n) (h : Heap)
+   → c ≥ o
+   → d ≥ c
+   → Consist h env stab o
+   → Consist (putHeap c k h) env stab d
+rpc-aux .[] .[] h _ _ [] = inc [] _ z≤n
+rpc-aux {o = o} _ _ h c>o d>c ((proj₁ , proj₂ , proj₃) ∷ cons)
+    = (trans (get-put' _ _ h (a<c->¬a≡c _ _ (≤-trans (≤-trans proj₂ proj₃) c>o))) proj₁ ,
+        ((≤-trans (≤-trans proj₂ proj₃) c>o) , d>c)) ∷ rpc-aux _ _ h (≤-trans proj₃ c>o) ≤-refl cons
+rpc-aux env stab h c≥o d≥c (inc cons o x)
+    = rpc-aux env stab h (≤-trans x c≥o) d≥c cons
+
+
 found-><c : ∀ {n}
    → (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
    → Consist h env stab c
@@ -367,19 +329,26 @@ found-><c env c stab h (inc {o = o} cons .c x) zero
 found-><c env c stab h (inc {o = o} cons .c x) (suc i)
    = ≤-trans (found-><c _ o _ h cons (suc i)) x
 
+consist-reduce : ∀ {e₀ a₀ n}
+   → (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
+   → Consist h (e₀ ∷ env) (a₀ ∷ stab) c
+   → Consist h env stab c
+consist-reduce env c [] h ((proj₁ , proj₂ , proj₃) ∷ cons) = inc cons c proj₃
+consist-reduce env c (x ∷ stab) h ((proj₁ , proj₂ , proj₃) ∷ cons) = inc cons c proj₃
+consist-reduce env c stab h (inc cons .c x) = inc (consist-reduce env _ stab h cons) c x
+
+
 comp-correct : ∀ {n}
    → (e : Expr n) (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
    → Consist h env stab c
    → let p , a , c₀ = compile c stab e
-     in getHeap a (run p h) ≡ eval env e × a < c₀
-comp-correct (num k) env c stab h cons = get-put c k h , s≤s ≤-refl
+     in getHeap a (run p h) ≡ eval env e × a < c₀ × Consist (run p h) env stab c₀
+comp-correct (num k) env c stab h cons = get-put c k h , s≤s ≤-refl , rpc-aux env stab h ≤-refl (a≤suc-a c) cons
 comp-correct (var i) env c stab h cons
-    = consist h _ env stab c i cons , found-><c env c stab h (inc cons c ≤-refl) i
+    = consist h _ env stab c i cons , found-><c env c stab h (inc cons c ≤-refl) i , cons
 comp-correct (e₀ ∔ e₁) env c₀ stab h cons
     with comp-correct e₀ env c₀ stab h cons
-... | a₀↦e₀↓ , a₀<c₁
-    with run-preserve-consist e₀ env c₀ stab h ≤-refl cons
-... | pre-e₀
+... | a₀↦e₀↓ , a₀<c₁ , con_e0
     with heap-inc e₀ c₀ stab
 ... | inc1
     with
@@ -389,8 +358,10 @@ comp-correct (e₀ ∔ e₁) env c₀ stab h cons
 ... | irre1
     with compile c₀ stab e₀
 ... | p₀ , a₀ , c₁
-    with comp-correct e₁ env c₁ stab (run p₀ h) pre-e₀ 
-... | a₁↦e₁↓ , a₁<c₂
+    with comp-correct e₁ env c₁ stab (run p₀ h) con_e0
+... | a₁↦e₁↓ , a₁<c₂ , con_e1
+    with heap-inc e₁ c₁ stab
+... | inc2
     with compile c₁ stab e₁
 ... | p₁ , a₁ , c₂
   rewrite run-compose p₀ (p₁ ++ add a₀ a₁ c₂ ∷ []) h
@@ -399,20 +370,18 @@ comp-correct (e₀ ∔ e₁) env c₀ stab h cons
                       getHeap a₁ (run p₁ (run p₀ h))) (run p₁ (run p₀ h))
         | a₁↦e₁↓
         | codeAddrIrrelevance->ignorable p₁ p₀ a₀ h irre1
-        | a₀↦e₀↓ = refl , ≤-refl
+        | a₀↦e₀↓ = refl , ≤-refl , rpc-aux env stab (run p₁ (run p₀ h)) ≤-refl (a≤suc-a c₂) con_e1
 comp-correct {_} (lett e₀ e₁) env c₀ stab h cons
     with comp-correct e₀ env c₀ stab h cons
-... | a₀↦e₀↓ , a₀<c₁
-    with run-preserve-consist e₀ env c₀ stab h ≤-refl cons
-... | pre1
+... | a₀↦e₀↓ , a₀<c₁ , cons_e0
     with heap-inc e₀ c₀ stab
 ... | inc1
     with compile c₀ stab e₀
 ... | p₀ , a₀ , c₁
     with comp-correct {_} e₁ (eval env e₀ ∷ env) c₁ (a₀ ∷ stab) (run p₀ h)
-         (_∷_ {o = c₁} (a₀↦e₀↓ , (a₀<c₁ , ≤-refl)) pre1)
-... | a₁↦e₁↓ , a₁<c₂
+         (_∷_ {o = c₁} (a₀↦e₀↓ , (a₀<c₁ , ≤-refl)) cons_e0)
+... | a₁↦e₁↓ , a₁<c₂ , cons_e1
     with compile c₁ (a₀ ∷ stab) e₁
 ... | p₁ , a₁ , c₂
     rewrite run-compose p₀ p₁ h
-   = a₁↦e₁↓ , a₁<c₂
+   = a₁↦e₁↓ , a₁<c₂ , consist-reduce env c₂ stab _ cons_e1
