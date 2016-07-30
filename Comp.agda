@@ -49,24 +49,12 @@ fpToIR (varnum , env) (Let1 expr expr₁) with fpToIR (suc varnum , env) expr
 fpToIR (varnum , env) (LetC1 (F x) expr) with fpToIR (suc varnum , putEnvVal (varnum Vec.∷ Vec.[]) env) expr
 ... | ((varnum1 , env1) , ir1 , r1) = ((varnum1 , env) , ConstI varnum x ∷ ir1 , r1)
 fpToIR (varnum , env) (Var1 x) = (suc varnum , env) , [] , Env.lookup x env
-fpToIR (varnum , env) (Add1 expr expr₁) = let t1 = fpToIR (suc varnum , env) expr
-                                              varnum1 = getCompResultVarnum t1
-                                              ir1 = getCompResultIR t1
-                                              r1 = getCompResultAddr t1
-                                              t2 = fpToIR (suc varnum1 , env) expr₁
-                                              varnum2 = getCompResultVarnum t2
-                                              ir2 = getCompResultIR t2
-                                              r2 = getCompResultAddr t2
+fpToIR (varnum , env) (Add1 expr expr₁) = let (varnum1 , env1) , ir1 , r1 = fpToIR (suc varnum , env) expr
+                                              (varnum2 , env2) , ir2 , r2 = fpToIR (suc varnum1 , env) expr₁
                                           in
                                               (suc varnum2 , env) , ir1 ++ ir2 ++ (AddI varnum2 (Vec.head r1) (Vec.head r2) ∷ []) , (varnum2 Vec.∷ Vec.[])
-fpToIR (varnum , env) (Mul1 expr expr₁) = let t1 = fpToIR (suc varnum , env) expr
-                                              varnum1 = getCompResultVarnum t1
-                                              ir1 = getCompResultIR t1
-                                              r1 = getCompResultAddr t1
-                                              t2 = fpToIR (suc varnum1 , env) expr₁
-                                              varnum2 = getCompResultVarnum t2
-                                              ir2 = getCompResultIR t2
-                                              r2 = getCompResultAddr t2
+fpToIR (varnum , env) (Mul1 expr expr₁) = let (varnum1 , env1) , ir1 , r1 = fpToIR (suc varnum , env) expr
+                                              (varnum2 , env2) , ir2 , r2 = fpToIR (suc varnum1 , env) expr₁
                                           in
                                               (suc varnum2 , env) , ir1 ++ ir2 ++ (MulI varnum2 (Vec.head r1) (Vec.head r2) ∷ []) , (varnum2 Vec.∷ Vec.[])
 
@@ -112,9 +100,8 @@ data _∙_$_↓_ {K : Set} (num : Num K) : {m : ℕ} -> EvalEnv K m -> Expr1 K m
                                   -> num ∙ env $ Mul1 exp exp1 ↓ Num._*_ num r r1
 
 evalNum' : ∀ {m : ℕ} {K : Set} -> {{_ : Num K}} -> EvalEnv K m -> Expr1 K m -> K
-evalNum' {m} {_} {{num}} env (Let1 expr expr₁) = case evalNum' env expr of
-                                                   λ { res -> evalNum' (res Vec.∷ env) expr₁
-                                                     }
+evalNum' {m} {_} {{num}} env (Let1 expr expr₁) = evalNum' ((evalNum' env expr) Vec.∷ env) expr₁
+
 evalNum' env (LetC1 x₁ expr) = evalNum' (x₁ Vec.∷ env) expr
 evalNum' env (Var1 x₁) = evalLookup x₁ env
 evalNum' {{num}} env (Add1 expr expr₁) = Num._+_ num (evalNum' env expr) (evalNum' env expr₁)

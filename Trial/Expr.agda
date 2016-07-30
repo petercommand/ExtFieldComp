@@ -308,9 +308,10 @@ rpc-aux : ∀ {c d k n o}
    → Consist h env stab o
    → Consist (putHeap c k h) env stab d
 rpc-aux .[] .[] h _ _ [] = inc [] _ z≤n
-rpc-aux {o = o} _ _ h c>o d>c ((proj₁ , proj₂ , proj₃) ∷ cons)
-    = (trans (get-put' _ _ h (a<c->¬a≡c _ _ (≤-trans (≤-trans proj₂ proj₃) c>o))) proj₁ ,
-        ((≤-trans (≤-trans proj₂ proj₃) c>o) , d>c)) ∷ rpc-aux _ _ h (≤-trans proj₃ c>o) ≤-refl cons
+rpc-aux {o = o} _ _ h c≥o d≥c ((proj₁ , proj₂ , proj₃) ∷ cons)
+    = (trans (get-put' _ _ h (a<c->¬a≡c _ _ (≤-trans (≤-trans proj₂ proj₃) c≥o))) proj₁ ,
+        ((≤-trans (≤-trans proj₂ proj₃) c≥o) , d≥c)) ∷
+                   rpc-aux _ _ h (≤-trans proj₃ c≥o) ≤-refl cons
 rpc-aux env stab h c≥o d≥c (inc cons o x)
     = rpc-aux env stab h (≤-trans x c≥o) d≥c cons
 
@@ -343,7 +344,8 @@ comp-correct : ∀ {n}
    → Consist h env stab c
    → let p , a , c₀ = compile c stab e
      in getHeap a (run p h) ≡ eval env e × a < c₀ × Consist (run p h) env stab c₀
-comp-correct (num k) env c stab h cons = get-put c k h , s≤s ≤-refl , rpc-aux env stab h ≤-refl (a≤suc-a c) cons
+comp-correct (num k) env c stab h cons
+    = get-put c k h , s≤s ≤-refl , rpc-aux env stab h ≤-refl (a≤suc-a c) cons
 comp-correct (var i) env c stab h cons
     = consist h _ env stab c i cons , found-><c env c stab h (inc cons c ≤-refl) i , cons
 comp-correct (e₀ ∔ e₁) env c₀ stab h cons
@@ -370,7 +372,8 @@ comp-correct (e₀ ∔ e₁) env c₀ stab h cons
                       getHeap a₁ (run p₁ (run p₀ h))) (run p₁ (run p₀ h))
         | a₁↦e₁↓
         | codeAddrIrrelevance->ignorable p₁ p₀ a₀ h irre1
-        | a₀↦e₀↓ = refl , ≤-refl , rpc-aux env stab (run p₁ (run p₀ h)) ≤-refl (a≤suc-a c₂) con_e1
+        | a₀↦e₀↓ = refl , ≤-refl ,
+             rpc-aux env stab (run p₁ (run p₀ h)) ≤-refl (a≤suc-a c₂) con_e1
 comp-correct {_} (lett e₀ e₁) env c₀ stab h cons
     with comp-correct e₀ env c₀ stab h cons
 ... | a₀↦e₀↓ , a₀<c₁ , cons_e0
