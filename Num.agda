@@ -9,7 +9,7 @@ open import Data.List
 open Data.Nat hiding (_+_; _*_)
 open Data.Integer using (ℤ; _◃_)
 open import ListProperties
-
+open import NatProperties
 record Num (A : Set) : Set where
   field
     +-id : A
@@ -48,27 +48,57 @@ numFp {_} {{p}} {{numℕ}} = record {
                          }
 
 private
+  plus : {K : Set} -> {{num : Num K}} -> List K -> List K -> List K
+  plus [] b = b
+  plus (x ∷ a) [] = x ∷ a
+  plus {{num}} (x ∷ a) (x₁ ∷ b) = Num._+_ num x x₁ ∷ plus a b
+
+  plus>0 : ∀ {K} {{num : Num K}}
+                  -> (num1 num2 : List K)
+                  -> (length num1 ≥ 0)
+                  -> (length num2 > 0)
+                  -> length (plus num1 num2) > 0
+  plus>0 [] num3 p3 p4 = p4
+  plus>0 (x ∷ num3) [] p3 p4 = s≤s z≤n
+  plus>0 (x ∷ num3) (x₁ ∷ num4) z≤n (s≤s p4) = s≤s z≤n
+
+
   _Poly+_ : {K : Set} -> {{_ : Num K}} -> Poly K -> Poly K -> Poly K
   _Poly+_ {K} {{num}} (P num1 p1) (P num2 p2)
       = P (plus num1 num2) (plus>0 num1 num2 z≤n p2)
        where
-         plus : List K -> List K -> List K
-         plus [] b = b
-         plus (x ∷ a) [] = x ∷ a
-         plus (x ∷ a) (x₁ ∷ b) = Num._+_ num x x₁ ∷ plus a b
-
-         plus>0 : ∀ (num1 num2 : List K)
-                  -> (length num1 ≥ 0)
-                  -> (length num2 > 0)
-                  -> length (plus num1 num2) > 0
-         plus>0 [] num3 p3 p4 = p4
-         plus>0 (x ∷ num3) [] p3 p4 = s≤s z≤n
-         plus>0 (x ∷ num3) (x₁ ∷ num4) z≤n (s≤s p4) = s≤s z≤n
   _Poly*_ : {K : Set} -> {{_ : Num K}} -> Poly K -> Poly K -> Poly K
   P [] () Poly* p2
   P (x₁ ∷ x₂) x₃ Poly* P [] ()
-  P (x₁ ∷ x₂) x₃ Poly* P (x₄ ∷ x₅) x₆ = {!!}
+  _Poly*_ {K} (P (x₁ ∷ x₂) x₃) (P (x₄ ∷ x₅) x₆)
+       = P (mul (x₁ ∷ x₂) (x₄ ∷ x₅)) (mul>0 (x₁ ∷ x₂) (x₄ ∷ x₅) x₃ x₆)
+    where
+      mul' : {K : Set} -> {{_ : Num K}} -> List K -> K -> List K
+      mul' [] elem = []
+      mul' {{num}} (x ∷ list) elem = Num._*_ num x elem ∷ mul' list elem
 
+      mul : {K : Set} -> {{_ : Num K}} -> List K -> List K -> List K
+      mul [] b = []
+      mul (x ∷ a) [] = []
+      mul {{num}} (x₁ ∷ a) (x₂ ∷ b)
+           = let r1l = mul' a x₂
+                 r1 = Num._*_ num x₁ x₂
+             in r1 ∷ plus r1l (mul (x₁ ∷ a) b)
+      mul'>0 : ∀ {K} {{num : Num K}}
+                  -> (num1 : List K)
+                  -> length num1 > 0
+                  -> (elem : K)
+                  -> length (mul' num1 elem) > 0
+      mul'>0 [] () elem
+      mul'>0 (x₇ ∷ num1) (s≤s p) elem = s≤s z≤n
+      mul>0 : ∀ {K} {{num : Num K}}
+                   -> (num1 num2 : List K)
+                   -> (length num1 > 0)
+                   -> (length num2 > 0)
+                   -> (length (mul num1 num2) > 0)
+      mul>0 [] num2 () p2
+      mul>0 (x₇ ∷ num1) [] p1 ()
+      mul>0 (x₇ ∷ num1) (x₈ ∷ num2) p1 p2 = s≤s z≤n
 numPoly : ∀ {K : Set}{{_ : Num K}} -> Num (Poly K)
 numPoly {{num}} = record {
                          _+_ = _Poly+_;
@@ -81,5 +111,5 @@ _^'_ : ∀ {A : Set} {{_ : Num A}} -> A -> ℕ -> A
 _^'_ {{num}} x y = ^-int x y (Num.*-id num)
   where
     ^-int : {A : Set} {{_ : Num A}} -> A -> ℕ -> A -> A
-    ^-int x ℕ.zero acc = acc
-    ^-int {{num}} x (ℕ.suc y) acc = ^-int x y ((Num._*_ num) acc x)
+    ^-int x ℕ.zero ac = ac
+    ^-int {{num}} x (ℕ.suc y) ac = ^-int x y ((Num._*_ num) ac x)
