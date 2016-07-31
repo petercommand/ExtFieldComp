@@ -10,6 +10,11 @@ data TAC : Set where
   AddI : Addr -> Addr -> Addr -> TAC
   MulI : Addr -> Addr -> Addr -> TAC
 
+target : TAC -> Addr
+target (ConstI x x₁) = x
+target (AddI x x₁ x₂) = x
+target (MulI x x₁ x₂) = x
+
 data Expr (A : Set) : Set where
   Const : A → Expr A
   Let : (str : String) -> Expr A -> Expr A -> Expr A

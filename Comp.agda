@@ -31,7 +31,7 @@ record Compilable (A : Set) : Set where
 
 record Evalable (A : Set) : Set where
   field
-    eval : Expr1 A 0 -> A
+    eval : ∀ {n} -> EvalEnv A n -> Expr1 A n -> A
 
 newVar : ∀ {m n} -> CompState m n -> CompState m n × ℕ
 newVar (varnum , env) = ((suc varnum) , env) , varnum
@@ -88,7 +88,7 @@ evalNum : ∀ {K : Set} -> {{_ : Num K}} -> Expr1 K 0 -> K
 evalNum {{num}} expr = evalNum' Vec.[] expr
 
 evalable : ∀ {K : Set} -> {{_ : Num K}} -> Evalable K
-evalable {{num}} = record { eval = evalNum {{num}} }
+evalable {{num}} = record { eval = evalNum' {{num}} }
 
 comp : ∀ {A : Set} -> {{ins : Compilable A}}
                    -> Expr1 A 0
@@ -96,23 +96,20 @@ comp : ∀ {A : Set} -> {{ins : Compilable A}}
 comp {{co}} expr = Compilable.toIR co (0 , []) expr
 
 
+run : RTEnv -> (List TAC) -> RTEnv
+run env [] = env
+run env (ConstI resAddr val ∷ ir)
+    = run (putRTEnv resAddr val env) ir
+run env (AddI x x1 x2 ∷ ir)
+    = let val1 = getRTEnv x1 env
+          val2 = getRTEnv x2 env
+          r = val1 + val2
+      in run (putRTEnv x r env) ir
+run env (MulI x x1 x2 ∷ ir)
+    = let val1 = getRTEnv x1 env
+          val2 = getRTEnv x2 env
+          r = val1 * val2
+      in run (putRTEnv x r env) ir
 
-runGetResult : {n : ℕ} -> RTEnv -> Vec Addr n -> Maybe (Vec ℕ n)
-runGetResult env addr = Vec.foldr (λ x -> Maybe (Vec ℕ x)) (λ x acc → case acc of
-                                                     λ { (just acc') -> (case rtLookup x env of
-                                                                           (λ { (just result) -> just (Vec._∷_ result acc')
-                                                                             ; nothing -> nothing }))
-                                                       ; nothing -> nothing
-                                                       })  (just Vec.[]) addr
-
-runGetResult' : {n : ℕ} -> Maybe RTEnv -> Vec Addr n -> Maybe (Vec ℕ n)
-runGetResult' (just env) addr = Vec.foldr (λ x -> Maybe (Vec ℕ x)) (λ x acc → case acc of
-                                                     λ { (just acc') -> (case rtLookup x env of
-                                                                           (λ { (just result) -> just (Vec._∷_ result acc')
-                                                                             ; nothing -> nothing }))
-                                                       ; nothing -> nothing
-                                                       })  (just Vec.[]) addr
-runGetResult' nothing _ = nothing
-
-eval : {A : Set} -> {{_ : Evalable A}} -> Expr1 A 0 -> A
-eval {{ev}} expr = Evalable.eval ev expr
+evalTopLevel : {A : Set} -> {{_ : Evalable A}} -> Expr1 A 0 -> A
+evalTopLevel {{ev}} expr = Evalable.eval ev Vec.[] expr
