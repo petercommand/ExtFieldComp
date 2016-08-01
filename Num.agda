@@ -5,9 +5,14 @@ import Data.Sign as Sign
 open import Field
 open import Function
 open import Data.List
--- open import Data.Vec
+open import Data.Product
+open import Data.Bool
 open Data.Nat hiding (_+_; _*_)
 open Data.Integer using (ℤ; _◃_)
+
+open import Relation.Binary.PropositionalEquality
+
+open import Frac
 open import ListProperties
 open import NatProperties
 record Num (A : Set) : Set where
@@ -15,8 +20,9 @@ record Num (A : Set) : Set where
     +-id : A
     *-id : A
     _+_ : A -> A -> A
+    _-_ : A -> A -> A
     _*_ : A -> A -> A
-
+{-
 numℕ : Num ℕ
 numℕ = record {
               _+_ = Data.Nat._+_;
@@ -24,34 +30,41 @@ numℕ = record {
               +-id = 0;
               *-id = 1
        }
+
+-}
+
+ℕ- : (a b : ℕ) -> a ≥ b -> ℕ
+ℕ- a .0 z≤n = a
+ℕ- (suc m) (suc n) (s≤s p) = ℕ- m n p
 numℤ : Num ℤ
 numℤ = record {
               _+_ = Data.Integer._+_;
+              _-_ = Data.Integer._-_;
               _*_ = Data.Integer._*_;
               +-id = ℤ.pos 0;
               *-id = ℤ.pos 1
        }
 
 private
-  _Fp+_ : {n : ℕ} -> {{p : Prime n}} -> {{_ : Num ℕ}} -> Fp n p -> Fp n p -> Fp n p
-  _Fp+_ {{_}} {{numℕ}} (F x) (F y) = (F $ (Num._+_ numℕ) x y)
+  _Fp+_ : {n : ℕ} -> {{p : Prime n}} -> {{_ : Num ℤ}} -> Fp n p -> Fp n p -> Fp n p
+  _Fp+_ {{_}} {{numℤ}} (F x) (F y) = (F $ (Num._+_ numℤ) x y)
 
-  _Fp*_ : {n : ℕ} -> {{p : Prime n}} -> {{_ : Num ℕ}} -> Fp n p -> Fp n p -> Fp n p
-  _Fp*_ {{_}} {{numℕ}} (F x) (F y) = (F $ (Num._*_ numℕ) x y)
-
-numFp : ∀ {n : ℕ}{{p : Prime n}}{{numℕ : Num ℕ}} -> Num (Fp n p)
-numFp {_} {{p}} {{numℕ}} = record {
-                                _+_ = _Fp+_;
-                                _*_ = _Fp*_;
-                                +-id = F 0;
-                                *-id = F 1
-                         }
+  _Fp*_ : {n : ℕ} -> {{p : Prime n}} -> {{_ : Num ℤ}} -> Fp n p -> Fp n p -> Fp n p
+  _Fp*_ {{_}} {{numℤ}} (F x) (F y) = (F $ (Num._*_ numℤ) x y)
 
 private
   plus : {K : Set} -> {{num : Num K}} -> List K -> List K -> List K
   plus [] b = b
   plus (x ∷ a) [] = x ∷ a
   plus {{num}} (x ∷ a) (x₁ ∷ b) = Num._+_ num x x₁ ∷ plus a b
+
+  minus : {K : Set} -> {{num : Num K}} -> List K -> List K -> List K
+  minus a [] = a
+  minus {{num}} [] (x ∷ b) = let _-_ = Num._-_ num
+                                 +id = Num.+-id num
+                             in +id - x ∷ minus [] b
+  minus {{num}} (x ∷ a) (x₁ ∷ b) = let _-_ = Num._-_ num
+                                   in x - x₁ ∷ minus a b       
 
   plus>0 : ∀ {K} {{num : Num K}}
                   -> (num1 num2 : List K)
@@ -62,11 +75,21 @@ private
   plus>0 (x ∷ num3) [] p3 p4 = s≤s z≤n
   plus>0 (x ∷ num3) (x₁ ∷ num4) z≤n (s≤s p4) = s≤s z≤n
 
+  minus>0 : ∀ {K} {{num : Num K}}
+                -> (num1 num2 : List K)
+                -> length num2 > 0
+                -> length (minus num1 num2) > 0
+  minus>0 num1 [] ()
+  minus>0 [] (x ∷ num2) (s≤s p) = s≤s z≤n
+  minus>0 (x ∷ num1) (x₁ ∷ num2) (s≤s p) = s≤s z≤n
 
   _Poly+_ : {K : Set} -> {{_ : Num K}} -> Poly K -> Poly K -> Poly K
   _Poly+_ {K} {{num}} (P num1 p1) (P num2 p2)
       = P (plus num1 num2) (plus>0 num1 num2 z≤n p2)
-       where
+
+  _Poly-_ : {K : Set} -> {{_ : Num K}} -> Poly K -> Poly K -> Poly K
+  P num1 p1 Poly- P num2 p2 = P (minus num1 num2) (minus>0 num1 num2 p2)
+
   _Poly*_ : {K : Set} -> {{_ : Num K}} -> Poly K -> Poly K -> Poly K
   P [] () Poly* p2
   P (x₁ ∷ x₂) x₃ Poly* P [] ()
@@ -102,10 +125,94 @@ private
 numPoly : ∀ {K : Set}{{_ : Num K}} -> Num (Poly K)
 numPoly {{num}} = record {
                          _+_ = _Poly+_;
+                         _-_ = _Poly-_;
                          _*_ = _Poly*_;
                          +-id = P (Num.+-id num ∷ []) (s≤s z≤n);
                          *-id = P (Num.*-id num ∷ []) (s≤s z≤n)
                   }
+
+-- From http://hackage.haskell.org/package/HaskellForMaths-0.4.8/docs/src/Math-Algebra-Field-Extension.html#ExtensionField
+-- Division algorithm
+deg : {K : Set} -> Poly K -> ℕ
+deg (P x x₁) = length x
+
+-- leading term
+lt : {K : Set} -> Poly K -> K
+lt (P x x₁) = last x x₁
+
+lessThan : ℕ -> ℕ -> Bool
+lessThan _ zero = false
+lessThan zero (suc b) = true
+lessThan (suc a) (suc b) = lessThan a b
+
+lessThan' : (a b : ℕ) -> lessThan a b ≡ false -> a ≥ b
+lessThan' a zero refl = z≤n
+lessThan' zero (suc b) ()
+lessThan' (suc a) (suc b) p = s≤s (lessThan' a b p)
+
+monomial : {K : Set} {{_ : Num K}} -> K -> ℕ -> Poly K
+monomial {{num}} a i
+   = P (replicate i (Num.+-id num) ++ (a ∷ []))
+                  (++-length (replicate i (Num.+-id num)) (a ∷ []) z≤n (s≤s z≤n))
+
+{-# TERMINATING #-}
+quotRemUP : ∀ {K : Set} {{_ : Num K}} {{poly : Num (Poly K)}} {{_ : Frac K}}
+           -> Poly K
+           -> Poly K
+           -> Poly K × Poly K
+quotRemUP {K} {{num}} {{poly}} {{frac}} f g = qr (Num.+-id poly) f
+    where
+      _+_ = Num._+_ num
+      _*_ = Num._*_ num
+      _-_ = Num._-_ num
+      _P+_ = Num._+_ poly
+      _P-_ = Num._-_ poly
+      _P*_ = Num._*_ poly
+      _ℕ*_ = Data.Nat._*_
+      recip = Frac.recip frac
+      deg_g = deg g
+      lt_g = lt g
+      
+      qr : Poly K -> Poly K -> Poly K × Poly K
+      qr q r
+          with lessThan' (deg r) deg_g
+      ... | t
+          with lessThan (deg r) deg_g
+      ... | true = q , r
+      ... | false = let s = monomial ((lt r) * recip lt_g) (ℕ- (deg r) deg_g (t refl))
+                    in qr (q P+ s) (r P- (s P* g))
+modUP : ∀ {K : Set} {{_ : Num K}} {{poly : Num (Poly K)}} {{_ : Frac K}}
+           -> Poly K
+           -> Poly K
+           -> Poly K
+modUP f g = proj₂ (quotRemUP f g)
+
+
+ExtF+ : ∀ {K : Set}{x : Poly K}{{_ : Num (Poly K)}}
+      -> ExtF K x -> ExtF K x -> ExtF K x
+ExtF+ {{num}} (Ext x) (Ext y) = Ext (Num._+_ num x y)
+
+ExtF- : ∀ {K : Set}{x : Poly K}{{_ : Num (Poly K)}}
+      -> ExtF K x -> ExtF K x -> ExtF K x
+ExtF- {{num}} (Ext x) (Ext y) = Ext (Num._-_ num x y)
+
+ExtF* : ∀ {K : Set}{x : Poly K}{{_ : Num K}}{{_ : Num (Poly K)}}{{_ : Frac K}}
+      -> ExtF K x -> ExtF K x -> ExtF K x
+ExtF* {_} {x} {{num}} {{numPoly}} (Ext a) (Ext b)
+    = Ext (modUP {{num}} {{numPoly}} (Num._*_ numPoly a b) x)
+
+
+numExtF : ∀ {K : Set}{x : Poly K}{{_ : Num K}}{{_ : Num (Poly K)}}{{_ : Frac K}} -> Num (ExtF K x)
+numExtF {{numK}} {{numPolyK}} {{fracK}}
+   = record { +-id = Ext (P (Num.+-id numK  ∷ [])
+                                        (s≤s z≤n))
+            ; *-id = Ext (P (Num.*-id numK ∷ [])
+                          (s≤s z≤n))
+            ; _+_ = ExtF+
+            ; _-_ = ExtF-
+            ; _*_ = ExtF*
+            }
+
 
 _^'_ : ∀ {A : Set} {{_ : Num A}} -> A -> ℕ -> A
 _^'_ {{num}} x y = ^-int x y (Num.*-id num)

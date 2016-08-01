@@ -6,7 +6,7 @@ open import Data.List
 open import Data.Sign as Sign
 
 data Fp (n : ℕ) .(p : Prime n) : Set where
-  F : ℕ -> Fp n p
+  F : ℤ -> Fp n p
 
 data Poly (K : Set) : Set where
   P : (x : List K) -> length x > 0 -> Poly K
