@@ -2,11 +2,12 @@ module _ where
 
 open import Data.String
 open import Data.Nat
+open import Data.Integer hiding (suc)
 open import Data.Fin
 open import RTEnv
 
 data TAC : Set where
-  ConstI : Addr -> ℕ -> TAC
+  ConstI : Addr -> ℤ -> TAC
   AddI : Addr -> Addr -> Addr -> TAC
   MulI : Addr -> Addr -> Addr -> TAC
 

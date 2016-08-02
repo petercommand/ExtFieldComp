@@ -1,7 +1,9 @@
+open import Relation.Nullary
 open import Relation.Binary.PropositionalEquality
 open import Data.List
 open import Data.Nat
-open import Data.Fin hiding (_+_; _≤_)
+open import Data.Integer hiding (_+_; _*_; _≤_)
+open import Data.Fin hiding (_+_; _≤_; _<_)
 open import Data.Nat.Primality
 open import Data.String hiding (_++_)
 open import Data.Maybe
@@ -21,20 +23,38 @@ module Comp where
 
 
 
-record Compilable (A : Set) : Set where
+record Compilable (A : Set) (B : Set) (subComp : Compilable B) : Set where
   field
     compSize : ℕ
-    compToVec : A -> Vec ℕ compSize
-    compFromVec : Vec ℕ compSize -> A
+    compToVec : A -> Vec ℤ compSize
+    compFromVec : Vec ℤ compSize -> A
     compToFrom : ∀ {a} -> compFromVec (compToVec a) ≡ a
+    compGetConstant : ℕ -> A -> ℕ × List TAC × Vec ℕ compSize
     toIR : {m : ℕ} -> CompState compSize m -> Expr1 A m -> ℕ × List TAC × Vec ℕ compSize
 
 record Evalable (A : Set) : Set where
   field
     eval : ∀ {n} -> EvalEnv A n -> Expr1 A n -> A
 
+constFlatMap' : ∀ {A B : Set} {{comp : Compilable A B}}
+     -> ℕ -> (list : List A)
+     -> (current : ℕ)
+     -> (neq : ¬ A ≡ B)
+     -> length list ≡ current
+     -> ℕ × List TAC × Vec ℕ (current + Compilable.subComp comp neq)
+constFlatMap' varnum [] .0 refl = varnum , [] , Vec.[]
+constFlatMap' varnum (x ∷ list) cur p = {!!}
+
+constFlatMap : ∀ {A B : Set} {{comp : Compilable A B}}
+     -> ℕ -> (list : List A)
+     -> length list ≤ Compilable.compSize comp
+     -> let subComp = Compilable.subComp comp
+        in ℕ × List TAC × Vec ℕ (Compilable.compSize comp * Compilable.compSize subComp)
+constFlatMap varnum list p = {!!}
+
+
 newVar : ∀ {m n} -> CompState m n -> CompState m n × ℕ
-newVar (varnum , env) = ((suc varnum) , env) , varnum
+newVar (varnum , env) = ((ℕ.suc varnum) , env) , varnum
 
 
 fst : {A B : Set} -> A × B -> A
@@ -49,14 +69,14 @@ data _∙_$_↓_ {K : Set} (num : Num K) :
   bigLet1 : ∀ {m} {env : EvalEnv K m}
       -> {exp : Expr1 K m}
       -> {r : K}
-      -> {exp1 : Expr1 K (suc m)}
+      -> {exp1 : Expr1 K (ℕ.suc m)}
       -> {r1 : K}
       -> num ∙ env $ exp ↓ r
       -> num ∙ (r ∷ env) $ exp1 ↓ r1
       -> num ∙ env $ Let1 exp exp1 ↓ r1
   bigLetC1 : ∀ {m} {env : EvalEnv K m}
       -> {const : K}
-      -> {exp : Expr1 K (suc m)}
+      -> {exp : Expr1 K (ℕ.suc m)}
       -> {r : K}
       -> num ∙ (const ∷ env) $ exp ↓ r
       -> num ∙ env $ LetC1 const exp ↓ r
@@ -103,12 +123,12 @@ run env (ConstI resAddr val ∷ ir)
 run env (AddI x x1 x2 ∷ ir)
     = let val1 = getRTEnv x1 env
           val2 = getRTEnv x2 env
-          r = val1 + val2
+          r = val1 Data.Integer.+ val2
       in run (putRTEnv x r env) ir
 run env (MulI x x1 x2 ∷ ir)
     = let val1 = getRTEnv x1 env
           val2 = getRTEnv x2 env
-          r = val1 * val2
+          r = val1 Data.Integer.* val2
       in run (putRTEnv x r env) ir
 
 evalTopLevel : {A : Set} -> {{_ : Evalable A}} -> Expr1 A 0 -> A
