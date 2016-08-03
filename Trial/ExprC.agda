@@ -399,6 +399,23 @@ consist-reduce env c stab h (inc cons .c x)
     = inc (consist-reduce env _ stab h cons) c x
 
 
+ℂ*-correct : ∀ {ar₀ ai₀ ar₁ ai₁ vr₀ vi₀ vr₁ vi₁ c h}
+   → getHeap ar₀ h ≡ vr₀
+   → getHeap ai₀ h ≡ vi₀
+   → getHeap ar₁ h ≡ vr₁
+   → getHeap ai₁ h ≡ vi₁
+   → let h₀ = run (
+          add ar₀ ar₁ c ∷
+          add ai₀ ai₁ (suc c) ∷
+          mul ar₀ ai₁ (suc (suc c)) ∷
+          mul ar₁ ai₀ (suc (suc (suc c))) ∷
+          add (suc (suc c)) (suc (suc (suc c))) (suc (suc (suc (suc c))))
+          ∷
+          sub c (suc (suc (suc (suc c)))) (suc (suc (suc (suc (suc c)))))
+          ∷ []) h
+     in ℂb (getHeap (suc-n c 5) h₀) (getHeap (suc-n c 4) h₀) ≡
+        ℂb vr₀ vi₀ ℂ* ℂb vr₁ vi₁
+ℂ*-correct p1 p2 p3 p4 = {!!}
 comp-correct : ∀ {n}
    → (e : Expr n) (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
    → Consist h env stab c
@@ -500,7 +517,7 @@ comp-correct (e₀ ∙ e₁) env c₀ stab h cons
          ∷
          sub c₂ (suc (suc (suc (suc c₂)))) (suc (suc (suc (suc (suc c₂)))))
          ∷ []) h
-           | run-compose p₁ (add ar₀ ar₁ c₂ ∷
+          | run-compose p₁ (add ar₀ ar₁ c₂ ∷
          add ai₀ ai₁ (suc c₂) ∷
          mul ar₀ ai₁ (suc (suc c₂)) ∷
          mul ar₁ ai₀ (suc (suc (suc c₂))) ∷
@@ -508,7 +525,14 @@ comp-correct (e₀ ∙ e₁) env c₀ stab h cons
          ∷
          sub c₂ (suc (suc (suc (suc c₂)))) (suc (suc (suc (suc (suc c₂)))))
          ∷ []) (run p₀ h)
-    = {!!} , {!!} , {!!} , {!!}
+    = ℂ*-correct {ar₀} {ai₀} {ar₁} {ai₁} {_} {_} {_} {_} {c₂} {run p₁ (run p₀ h)}
+        (trans (codeAddrIrrelevance->ignorable p₁ p₀ _ _ irrer1)
+           (cong ℂ.r correct0))
+        (trans (codeAddrIrrelevance->ignorable p₁ p₀ _ _ irrei1)
+           (cong ℂ.i correct0))
+        (cong ℂ.r correct1)
+        (cong ℂ.i correct1) , ≤-refl ,
+           a≤suc-a _ , rpc-aux env stab _ z≤n (a≤suc-a _) {!!}
 comp-correct {_} (lett e₀ e₁) env c₀ stab h cons
     with comp-correct e₀ env c₀ stab h cons
 ... | correct0 , ar₀<c₁ , ai₀<c₁ , cons_e₀
