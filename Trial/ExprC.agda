@@ -88,19 +88,15 @@ compile c₀ stab (e₀ ∔ e₁)    with compile c₀ stab e₀
 compile c₀ stab (e₀ ∙ e₁)    with compile c₀ stab e₀
 ... | p₀ , (ar₀ , ai₀) , c₁  with compile c₁ stab e₁
 ... | p₁ , (ar₁ , ai₁) , c₂
-    = p₀ ++ p₁ ++ add ar₀ ar₁ c₂ ∷                         -- c₂ := *ar₀ + *ar₁
-                   add ai₀ ai₁ (suc c₂) ∷                  -- c₂ + 1 := *ai₀ + *ai₁
-                   mul ar₀ ai₁ (suc (suc c₂)) ∷            -- c₂ + 2 := *ar₀ * *ai₁
-                   mul ar₁ ai₀ (suc (suc (suc c₂))) ∷      -- c₂ + 3 := *ar₁ * *ai₀
-                   add (suc (suc c₂)) (suc (suc (suc c₂))) -- c₂ + 4 := *(c₂ + 2) +
-                                                           --           *(c₂ + 3)
-                          (suc (suc (suc (suc c₂)))) ∷
-                   sub c₂ (suc (suc (suc (suc c₂))))       -- c₂ + 5 := *c₂ -
-                                                           --           *(c₂ + 4)
-                          (suc (suc (suc (suc (suc c₂))))) ∷ [] ,
-                                (suc (suc (suc (suc (suc c₂)))) , -- real comp addr
-                                 suc (suc (suc (suc c₂))))        -- img comp addr
-                                 , suc (suc (suc (suc (suc (suc c₂))))) -- c₂ + 6
+    = p₀ ++ p₁ ++ add ar₀ ar₁ c₂ ∷                  
+                   add ai₀ ai₁ (suc c₂) ∷           
+                   mul ar₀ ai₁ (suc-n c₂ 2) ∷       
+                   mul ar₁ ai₀ (suc-n c₂ 3) ∷     
+                   add (suc-n c₂ 2) (suc-n c₂ 3) (suc-n c₂ 4) ∷
+                   sub c₂ (suc-n c₂ 4) (suc-n c₂ 5) ∷ [] ,
+                                ((suc-n c₂ 5) , -- real comp addr
+                                 (suc-n c₂ 4))  -- img comp addr
+                                 , suc-n c₂ 6 -- c₂ + 6
 compile c₀ stab (lett e₀ e₁) with compile c₀ stab e₀
 ... | p₀ , a₀ , c₁           with compile c₁ (a₀ ∷ stab) e₁
 ... | p₁ , a₁ , c₂ = p₀ ++ p₁ , a₁ , c₂
@@ -495,7 +491,7 @@ comp-correct (e₀ ∙ e₁) env c₀ stab h cons
 ... | inc2
     with compile c₁ stab e₁
 ... | p₁ , (ar₁ , ai₁) , c₂
-    = {!!}
+    = {!!} , {!!} , {!!} , {!!}
 comp-correct {_} (lett e₀ e₁) env c₀ stab h cons
     with comp-correct e₀ env c₀ stab h cons
 ... | correct0 , ar₀<c₁ , ai₀<c₁ , cons_e₀
