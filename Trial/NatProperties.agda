@@ -1,6 +1,7 @@
 open import Data.Nat
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
+open import Data.Product
 import Data.Nat.Properties.Simple as NS
 
 max : ℕ -> ℕ -> ℕ
@@ -95,6 +96,10 @@ lem (suc b) (suc c) (suc d) z≤n (s≤s p3) = s≤s (lem b c (suc d) z≤n (s�
 ≤-trans z≤n (s≤s p2) = z≤n
 ≤-trans (s≤s p1) (s≤s p2) = s≤s (≤-trans p1 p2)
 
+¬suc-a≡zero : ∀ (a : ℕ) -> ¬ suc a ≡ zero 
+¬suc-a≡zero zero ()
+¬suc-a≡zero (suc a) ()
+
 a<c->¬a≡c : ∀ (a c : ℕ) -> a < c -> ¬ (a ≡ c)
 a<c->¬a≡c .0 (suc c) (s≤s z≤n) a≡c = aux a≡c
   where
@@ -121,4 +126,9 @@ data Acc (n : ℕ) : Set where
   go (suc n) zero (s≤s p) = acc (λ m ())
   go (suc n) (suc m) (s≤s p) = acc (λ m1 p1 -> go n m1 (≤-trans p1 p))
 
-
+suc-n : ℕ -> ℕ -> ℕ
+suc-n a zero = a
+suc-n a (suc n) = suc (suc-n a n)
+a≤-suc-n-a : ∀ a n -> a ≤ suc-n a n
+a≤-suc-n-a a zero = ≤-refl
+a≤-suc-n-a a (suc n) = ≤-trans (a≤-suc-n-a a n) (a≤suc-a (suc-n a n))
