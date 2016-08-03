@@ -491,6 +491,23 @@ comp-correct (e₀ ∙ e₁) env c₀ stab h cons
 ... | inc2
     with compile c₁ stab e₁
 ... | p₁ , (ar₁ , ai₁) , c₂
+    rewrite run-compose p₀ (p₁ ++
+         add ar₀ ar₁ c₂ ∷
+         add ai₀ ai₁ (suc c₂) ∷
+         mul ar₀ ai₁ (suc (suc c₂)) ∷
+         mul ar₁ ai₀ (suc (suc (suc c₂))) ∷
+         add (suc (suc c₂)) (suc (suc (suc c₂))) (suc (suc (suc (suc c₂))))
+         ∷
+         sub c₂ (suc (suc (suc (suc c₂)))) (suc (suc (suc (suc (suc c₂)))))
+         ∷ []) h
+           | run-compose p₁ (add ar₀ ar₁ c₂ ∷
+         add ai₀ ai₁ (suc c₂) ∷
+         mul ar₀ ai₁ (suc (suc c₂)) ∷
+         mul ar₁ ai₀ (suc (suc (suc c₂))) ∷
+         add (suc (suc c₂)) (suc (suc (suc c₂))) (suc (suc (suc (suc c₂))))
+         ∷
+         sub c₂ (suc (suc (suc (suc c₂)))) (suc (suc (suc (suc (suc c₂)))))
+         ∷ []) (run p₀ h)
     = {!!} , {!!} , {!!} , {!!}
 comp-correct {_} (lett e₀ e₁) env c₀ stab h cons
     with comp-correct e₀ env c₀ stab h cons
