@@ -49,8 +49,21 @@ private
   _Fp+_ : {n : ℕ} -> {{p : Prime n}} -> {{_ : Num ℤ}} -> Fp n p -> Fp n p -> Fp n p
   _Fp+_ {{_}} {{numℤ}} (F x) (F y) = (F $ (Num._+_ numℤ) x y)
 
+  _Fp-_ : {n : ℕ} -> {{p : Prime n}} -> {{_ : Num ℤ}} -> Fp n p -> Fp n p -> Fp n p
+  _Fp-_ {{_}} {{numℕ}} (F x) (F y) = (F $ (Num._-_ numℤ) x y)
+
   _Fp*_ : {n : ℕ} -> {{p : Prime n}} -> {{_ : Num ℤ}} -> Fp n p -> Fp n p -> Fp n p
   _Fp*_ {{_}} {{numℤ}} (F x) (F y) = (F $ (Num._*_ numℤ) x y)
+
+numFp : ∀ {n : ℕ} -> {{p : Prime n}} -> Num (Fp n p)
+numFp {n} {{p}} = record {
+                           _+_ = _Fp+_ {{_}} {{numℤ}};
+                           _-_ = _Fp-_ {{_}} {{numℤ}};
+                           _*_ = _Fp*_ {{_}} {{numℤ}};
+                           +-id = F (ℤ.pos 0);
+                           *-id = F (ℤ.pos 1)
+                  }
+                    
 
 private
   plus : {K : Set} -> {{num : Num K}} -> List K -> List K -> List K
@@ -133,8 +146,6 @@ numPoly {{num}} = record {
 
 -- From http://hackage.haskell.org/package/HaskellForMaths-0.4.8/docs/src/Math-Algebra-Field-Extension.html#ExtensionField
 -- Division algorithm
-deg : {K : Set} -> Poly K -> ℕ
-deg (P x x₁) = length x
 
 -- leading term
 lt : {K : Set} -> Poly K -> K

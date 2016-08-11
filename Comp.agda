@@ -23,9 +23,11 @@ module Comp where
 
 
 
-record Compilable (A : Set) (B : Set) (subComp : Compilable B) : Set where
+record Compilable (A : Set) : Set where
   field
+    compOrd : ℕ
     compSize : ℕ
+    compTotalSize : ℕ
     compToVec : A -> Vec ℤ compSize
     compFromVec : Vec ℤ compSize -> A
     compToFrom : ∀ {a} -> compFromVec (compToVec a) ≡ a
@@ -35,22 +37,6 @@ record Compilable (A : Set) (B : Set) (subComp : Compilable B) : Set where
 record Evalable (A : Set) : Set where
   field
     eval : ∀ {n} -> EvalEnv A n -> Expr1 A n -> A
-
-constFlatMap' : ∀ {A B : Set} {{comp : Compilable A B}}
-     -> ℕ -> (list : List A)
-     -> (current : ℕ)
-     -> (neq : ¬ A ≡ B)
-     -> length list ≡ current
-     -> ℕ × List TAC × Vec ℕ (current + Compilable.subComp comp neq)
-constFlatMap' varnum [] .0 refl = varnum , [] , Vec.[]
-constFlatMap' varnum (x ∷ list) cur p = {!!}
-
-constFlatMap : ∀ {A B : Set} {{comp : Compilable A B}}
-     -> ℕ -> (list : List A)
-     -> length list ≤ Compilable.compSize comp
-     -> let subComp = Compilable.subComp comp
-        in ℕ × List TAC × Vec ℕ (Compilable.compSize comp * Compilable.compSize subComp)
-constFlatMap varnum list p = {!!}
 
 
 newVar : ∀ {m n} -> CompState m n -> CompState m n × ℕ
@@ -125,6 +111,11 @@ run env (AddI x x1 x2 ∷ ir)
           val2 = getRTEnv x2 env
           r = val1 Data.Integer.+ val2
       in run (putRTEnv x r env) ir
+run env (SubI x x1 x2 ∷ ir)
+    = let val1 = getRTEnv x1 env
+          val2 = getRTEnv x2 env
+          r = val1 Data.Integer.- val2
+      in run (putRTEnv x r env) ir
 run env (MulI x x1 x2 ∷ ir)
     = let val1 = getRTEnv x1 env
           val2 = getRTEnv x2 env
@@ -133,3 +124,25 @@ run env (MulI x x1 x2 ∷ ir)
 
 evalTopLevel : {A : Set} -> {{_ : Evalable A}} -> Expr1 A 0 -> A
 evalTopLevel {{ev}} expr = Evalable.eval ev Vec.[] expr
+
+
+--- Expansion
+
+data ExpandExpr (A : Set) (comp : Compilable A) : ℕ -> Set where
+  AddE : ∀ (n : ℕ)
+        -> ExpandExpr A comp n
+        -> ExpandExpr A comp n
+        -> ExpandExpr A comp n
+  VarE : ∀ (n : ℕ)
+        -> Vec Addr (n * Compilable.compSize comp)
+        -> ExpandExpr A comp n
+
+
+{-
+-- expand :: Expr a -> [Expr (SubType a)]
+expand : ∀ {A : Set}{n : ℕ}{x : Poly A}
+    -> {{comp : Compilable A}}
+    -> ExpandExpr (ExtF A x) comp n
+    -> Vec (ExpandExpr A (Compilable.compOrd comp)) (deg x)
+expand = {!!}
+-}

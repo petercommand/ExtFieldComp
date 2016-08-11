@@ -9,11 +9,13 @@ open import RTEnv
 data TAC : Set where
   ConstI : Addr -> ℤ -> TAC
   AddI : Addr -> Addr -> Addr -> TAC
+  SubI : Addr -> Addr -> Addr -> TAC
   MulI : Addr -> Addr -> Addr -> TAC
 
 target : TAC -> Addr
 target (ConstI x x₁) = x
 target (AddI x x₁ x₂) = x
+target (SubI x x₁ x₂) = x
 target (MulI x x₁ x₂) = x
 
 data Expr (A : Set) : Set where
@@ -36,3 +38,4 @@ data Expr1 (A : Set) : ℕ -> Set where
   Var1 : ∀ {n} -> Fin n -> Expr1 A n
   Add1 : ∀ {n} -> Expr1 A n -> Expr1 A n -> Expr1 A n
   Mul1 : ∀ {n} -> Expr1 A n -> Expr1 A n -> Expr1 A n
+
