@@ -17,4 +17,6 @@ expand1 {n} {A} (e₀ ∔ e₁) with expand1 {n} e₀ | expand1 {n} e₁
 ... | u₀ , u₁ | t₀ , t₁ = u₀ ∔ t₀ , u₁ ∔ t₁
 
 expand : ∀ {n A} → Expr (Nest n A) → Nest n (Expr A)
-expand = ? 
+expand {zero} exp = exp
+expand {suc n} x = let p1 , p2 = expand1 {n} x
+                   in expand {n} p1 , expand {n} p2 
