@@ -7,7 +7,7 @@ Nest : ℕ → Set → Set
 Nest zero A = A
 Nest (suc n) A = Nest n A × Nest n A
 
-data Expr (A : Set): Set where
+data Expr (A : Set) : Set where
   num : A → Expr A
   _∔_ : (e₀ : Expr A) → (e₁ : Expr A) → Expr A
 

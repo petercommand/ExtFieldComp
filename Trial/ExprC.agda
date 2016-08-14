@@ -420,7 +420,8 @@ comp-correct : ∀ {n}
    → (e : Expr n) (env : Env n) (c : Addr) (stab : SymTab n) (h : Heap)
    → Consist h env stab c
    → let p , (ar , ai) , c₀ = compile c stab e
-     in ℂb (getHeap ar (run p h)) (getHeap ai (run p h)) ≡ eval env e × ar < c₀ × ai < c₀ × Consist (run p h) env stab c₀
+     in ℂb (getHeap ar (run p h)) (getHeap ai (run p h)) ≡
+        eval env e × ar < c₀ × ai < c₀ × Consist (run p h) env stab c₀
 comp-correct (num (ℂb r i)) env c stab h cons
     rewrite get-put' {i} c (suc c) (putHeap c r h) (λ ())
           | get-put (suc c) i (putHeap c r h)
