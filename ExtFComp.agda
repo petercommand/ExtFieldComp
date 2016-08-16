@@ -4,7 +4,7 @@ open import Data.Nat
 open import Data.Maybe
 open import Data.Nat.Primality
 open import Data.Product
-open import Data.List
+open import Data.List hiding (product)
 open import Data.Vec as Vec hiding (_++_)
 
 open import Relation.Nullary
@@ -21,6 +21,7 @@ open import Field
 open import FieldDef
 open import RTEnv
 open import Num
+open import Expand
 
 constFlatMap : ∀ {A : Set} {{comp : Compilable A}}
      -> ℕ -> (list : List A)
@@ -98,3 +99,23 @@ extfToIR {_} {_} {x} {{comp}} (varnum , env) (Mul1 exp exp₁)
          addrs = Vec.map target irs
      in varnum2 + deg x * Compilable.compSize comp ,
           (ir1 ++ ir2 ++ Vec.toList irs) , addrs   
+
+
+
+
+
+
+extfToIR' : ∀ {m n o}
+   -> {{p : Prime m}}
+   -> (vec : Vec ℕ n)
+   -> (div : NestObj (Fp m p) n vec)
+   -> CompState (product vec) o
+   -> Expr1 (NestMod (Fp m p) n vec) o
+   -> ℕ × List TAC × Vec Addr (product vec)
+extfToIR' vec div (varnum , env) (Let1 exp exp₁)
+    = let varnum1 , ir1 , r1 = extfToIR' vec div (varnum , env) exp
+      in extfToIR' vec div (varnum1 , r1 ∷ env) exp₁
+extfToIR' vec div st (LetC1 x exp) = {!!}
+extfToIR' vec div (varnum , env) (Var1 x) = varnum , [] , Env.lookup x env
+extfToIR' vec div st (Add1 exp exp₁) = {!!}
+extfToIR' vec div st (Mul1 exp exp₁) = {!!}
