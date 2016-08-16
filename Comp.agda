@@ -124,25 +124,3 @@ run env (MulI x x1 x2 ∷ ir)
 
 evalTopLevel : {A : Set} -> {{_ : Evalable A}} -> Expr1 A 0 -> A
 evalTopLevel {{ev}} expr = Evalable.eval ev Vec.[] expr
-
-
---- Expansion
-
-data ExpandExpr (A : Set) (comp : Compilable A) : ℕ -> Set where
-  AddE : ∀ (n : ℕ)
-        -> ExpandExpr A comp n
-        -> ExpandExpr A comp n
-        -> ExpandExpr A comp n
-  VarE : ∀ (n : ℕ)
-        -> Vec Addr (n * Compilable.compSize comp)
-        -> ExpandExpr A comp n
-
-
-{-
--- expand :: Expr a -> [Expr (SubType a)]
-expand : ∀ {A : Set}{n : ℕ}{x : Poly A}
-    -> {{comp : Compilable A}}
-    -> ExpandExpr (ExtF A x) comp n
-    -> Vec (ExpandExpr A (Compilable.compOrd comp)) (deg x)
-expand = {!!}
--}
