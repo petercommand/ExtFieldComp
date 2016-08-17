@@ -22,7 +22,7 @@ open import MaybeUtil
 module Comp where
 
 
-
+{-
 record Compilable (A : Set) : Set where
   field
     compOrd : ℕ
@@ -33,14 +33,10 @@ record Compilable (A : Set) : Set where
     compToFrom : ∀ {a} -> compFromVec (compToVec a) ≡ a
     compGetConstant : ℕ -> A -> ℕ × List TAC × Vec ℕ compSize
     toIR : {m : ℕ} -> CompState compSize m -> Expr1 A m -> ℕ × List TAC × Vec ℕ compSize
-
+-}
 record Evalable (A : Set) : Set where
   field
     eval : ∀ {n} -> EvalEnv A n -> Expr1 A n -> A
-
-
-newVar : ∀ {m n} -> CompState m n -> CompState m n × ℕ
-newVar (varnum , env) = ((ℕ.suc varnum) , env) , varnum
 
 
 fst : {A B : Set} -> A × B -> A
@@ -95,12 +91,12 @@ evalNum {{num}} expr = evalNum' Vec.[] expr
 
 evalable : ∀ {K : Set} -> {{_ : Num K}} -> Evalable K
 evalable {{num}} = record { eval = evalNum' {{num}} }
-
+{-
 comp : ∀ {A : Set} -> {{ins : Compilable A}}
                    -> Expr1 A 0
                    -> ℕ × List TAC × Vec Addr (Compilable.compSize ins)
 comp {{co}} expr = Compilable.toIR co (0 , []) expr
-
+-}
 
 run : RTEnv -> (List TAC) -> RTEnv
 run env [] = env

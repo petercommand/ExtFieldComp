@@ -23,7 +23,7 @@ open import RTEnv
 open import FpComp
 open import Num
 open import Expand
-
+{- Abandoned
 constFlatMap : ∀ {A : Set} {{comp : Compilable A}}
      -> ℕ -> (list : List A)
      -> ℕ × List TAC × Vec ℕ (length list * Compilable.compSize comp)
@@ -38,7 +38,7 @@ fillOrTrunc zero def _ = []
 fillOrTrunc (suc m) def [] = def ∷ fillOrTrunc m def []
 fillOrTrunc (suc m) def (x ∷ vec) = x ∷ fillOrTrunc m def vec
 
-{- Abandoned
+
 extfToIR : ∀ {o K x} -> {{compK : Compilable K}}
                      -> CompState (deg x * Compilable.compSize compK) o
                      -> Expr1 (ExtF K x) o
@@ -86,19 +86,20 @@ extfToIR : ∀ {m n o}
    -> {{p : Prime m}}
    -> (vec : Vec ℕ n)
    -> (div : NestObj (Fp m p) n vec)
-   -> CompState (product vec) o
+   -> CompState n vec o
    -> Expr1 (NestMod (Fp m p) n vec) o
    -> ℕ × List TAC × Vec Addr (product vec)
 extfToIR vec div (varnum , env) (Let1 exp exp₁)
     = let varnum1 , ir1 , r1 = extfToIR vec div (varnum , env) exp
-      in extfToIR vec div (varnum1 , r1 ∷ env) exp₁
+      in extfToIR vec div (varnum1 , reconstruct _ vec r1 ∷ env) exp₁
 extfToIR vec div (varnum , env) (LetC1 x exp)
     = let flat = flatten _ vec x
           varnum1 , ir = Vec.foldr (\n -> ℕ × Vec TAC n) (\elem acc ->
               let varnum' , ir = acc
               in suc varnum' , ConstI varnum' (fpToInt elem) ∷ ir) (varnum , []) flat
       in varnum1 , toList ir , Vec.map target ir
-extfToIR vec div (varnum , env) (Var1 x) = varnum , [] , Env.lookup x env
+extfToIR vec div (varnum , env) (Var1 x)
+    = varnum , [] , flatten _ vec (Env.lookup vec x env)
 extfToIR vec div st (Add1 exp exp₁)
     = let varnum1 , ir1 , r1 = extfToIR vec div st exp
           varnum2 , ir2 , r2 = extfToIR vec div st exp₁

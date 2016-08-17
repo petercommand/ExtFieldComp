@@ -21,18 +21,19 @@ open import Field
 open import RTEnv
 open import Num
 
-fpToIR : ∀ {n o : ℕ} {{p : Prime n}} -> CompState 1 o
+fpToIR : ∀ {n o : ℕ} {{p : Prime n}} -> CompState 1 (1 ∷ []) o
                                      -> Expr1 (Fp n p) o
                                      -> ℕ × List TAC × Vec Addr 1 -- newVarnum , IR , result address
 fpToIR (varnum , env) (Let1 expr expr₁)
     = let varnum1 , ir1 , r1 = fpToIR (varnum , env) expr
-          varnum2 , ir2 , r2 = fpToIR (varnum1 , putEnvVal r1 env) expr₁
+          varnum2 , ir2 , r2 = fpToIR (varnum1 , putEnvVal (1 ∷ []) r1 env) expr₁
       in varnum2 , ir1 ++ ir2 , r2
 fpToIR (varnum , env) (LetC1 (F x) expr)
-    = let varnum1 , ir1 , r1 = fpToIR (suc varnum , putEnvVal (varnum Vec.∷ Vec.[])
-                                                          env) expr
+    = let varnum1 , ir1 , r1
+           = fpToIR (suc varnum , putEnvVal (1 ∷ [])
+                          (varnum Vec.∷ Vec.[]) env) expr
       in varnum1 , ConstI varnum x ∷ ir1 , r1
-fpToIR (varnum , env) (Var1 x) = varnum , [] , Env.lookup x env
+fpToIR (varnum , env) (Var1 x) = varnum , [] , Env.lookup (1 ∷ []) x env
 fpToIR (varnum , env) (Add1 expr expr₁)
     = let varnum1 , ir1 , r1 = fpToIR (suc varnum , env) expr
           varnum2 , ir2 , r2 = fpToIR (suc varnum1 , env) expr₁

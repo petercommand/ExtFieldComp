@@ -10,28 +10,6 @@ open import Env
 open import RTEnv
 open import Expr
 
-NestMod : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
-NestMod A zero [] = A
-NestMod A (suc n) (x ∷ vec) = Vec (NestMod A n vec) x
-
-
-Op₂ : Set -> Set
-Op₂ A = A -> A -> A
-
-product : ∀ {n} -> Vec ℕ n -> ℕ
-product = foldr _ _*_ 1
-
-flatten : {A : Set} -> (n : ℕ)(vec : Vec ℕ n) -> NestMod A n vec -> Vec A (product vec)
-flatten zero [] t = t ∷ []
-flatten (suc n) (x ∷ vec) t = concat (map (flatten n vec) t)
-
-NestF : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
-NestF A zero [] = Op₂ A
-NestF A (suc n) (x ∷ vec) = (∀ o -> Op₂ (Vec (Expr1 (NestMod A n vec) o) x)) × NestF A n vec
-
-NestObj : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
-NestObj A zero [] = A
-NestObj A (suc n) (x ∷ vec) = (∀ o -> Vec (Expr1 (NestMod A n vec) o) x) × NestObj A n vec
 
 expandLet : ∀ {A o} (n : ℕ)
     -> (vec : Vec ℕ n)

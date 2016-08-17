@@ -1,8 +1,10 @@
 module _ where
 
+open import Data.Vec
 open import Data.String
 open import Data.Nat
-open import Data.Integer hiding (suc)
+open import Data.Product hiding (map)
+open import Data.Integer hiding (suc; _*_)
 open import Data.Fin
 open import RTEnv
 
@@ -39,3 +41,41 @@ data Expr1 (A : Set) : ℕ -> Set where
   Add1 : ∀ {n} -> Expr1 A n -> Expr1 A n -> Expr1 A n
   Mul1 : ∀ {n} -> Expr1 A n -> Expr1 A n -> Expr1 A n
 
+NestMod : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
+NestMod A zero [] = A
+NestMod A (suc n) (x ∷ vec) = Vec (NestMod A n vec) x
+
+nestMap : ∀ {A B n} -> (vec : Vec ℕ n) -> (A -> B)
+    -> NestMod A n vec -> NestMod B n vec
+nestMap [] f x = f x
+nestMap (v ∷ vec) f x = Data.Vec.map (nestMap vec f) x
+
+Op₂ : Set -> Set
+Op₂ A = A -> A -> A
+
+product : ∀ {n} -> Vec ℕ n -> ℕ
+product = foldr _ _*_ 1
+
+concat_r : ∀ {A : Set}(a b : ℕ) -> Vec A (a * b) -> Vec (Vec A b) a
+concat_r {A} a b vec = proj₁ (group a b vec)
+
+flatten : {A : Set} -> (n : ℕ)(vec : Vec ℕ n)
+    -> NestMod A n vec -> Vec A (product vec)
+flatten zero [] t = t ∷ []
+flatten (suc n) (x ∷ vec) t = concat (map (flatten n vec) t)
+
+reconstruct : {A : Set} -> (n : ℕ)(vec : Vec ℕ n)
+     -> Vec A (product vec) -> NestMod A n vec
+reconstruct zero [] (x ∷ []) = x
+reconstruct (suc n) (x ∷ vec) x₁
+    = Data.Vec.map (reconstruct n vec) (concat_r _ _ x₁)
+
+NestF : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
+NestF A zero [] = Op₂ A
+NestF A (suc n) (x ∷ vec) = (∀ o -> Op₂ (Vec (Expr1 (NestMod A n vec) o) x)) ×
+                            NestF A n vec
+
+NestObj : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
+NestObj A zero [] = A
+NestObj A (suc n) (x ∷ vec) = (∀ o -> Vec (Expr1 (NestMod A n vec) o) x) ×
+                              NestObj A n vec
