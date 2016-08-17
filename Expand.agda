@@ -63,28 +63,29 @@ expand1 {_} {m} n len vec (o , op) (t , target) (Mul1 exp exp₁)
 
 expand : ∀ {A o} (n : ℕ)
     -> (vec : Vec ℕ n)
-    -> (op : NestF A n vec)
+    -> (mulOp : NestF A n vec)
+    -> (modOp : NestF A n vec)
     -> (target : NestObj A n vec)
     -> Expr1 (NestMod A n vec) o
     -> NestMod (Expr1 A o) n vec
-expand n vec op target (Let1 expr expr₁)
-  = let e = expand n vec op target expr
-        e' = expand n vec op target expr₁
+expand n vec mul mod target (Let1 expr expr₁)
+  = let e = expand n vec mul mod target expr
+        e' = expand n vec mul mod target expr₁
     in expandLet n vec e e'
-expand n vec op target (LetC1 x expr)
-  = let e = expand n vec op target expr
+expand n vec mul mod target (LetC1 x expr)
+  = let e = expand n vec mul mod target expr
     in expandLetC n vec x e
-expand zero [] op target (Var1 x) = Var1 x
-expand (suc n) (v ∷ vec) (o , op) (t , target) (Var1 x)
-  = replicate (expand n vec op target (Var1 x))
-expand zero [] op target (Add1 expr expr₁) = Add1 expr expr₁
-expand (suc n) (v ∷ vec) op target (Add1 expr expr₁)
-  = let e = expand (suc n) (v ∷ vec) op target expr
-        e' = expand (suc n) (v ∷ vec) op target expr₁
+expand zero [] mul mod target (Var1 x) = Var1 x
+expand (suc n) (v ∷ vec) (m , mul) (mo , mod) (t , target) (Var1 x)
+  = replicate (expand n vec mul mod target (Var1 x))
+expand zero [] mul mod target (Add1 expr expr₁) = Add1 expr expr₁
+expand (suc n) (v ∷ vec) mul mod target (Add1 expr expr₁)
+  = let e = expand (suc n) (v ∷ vec) mul mod target expr
+        e' = expand (suc n) (v ∷ vec) mul mod target expr₁
     in zipWith (expandAdd n vec) e e'
-expand zero [] op target (Mul1 expr expr₁) = Mul1 expr expr₁
-expand {_} {m} (suc n) (x ∷ vec) (o , op) (t , target) (Mul1 expr expr₁)
-  = let e1 = expand1 n x vec (o , op) (t , target) expr
-        e2 = expand1 n x vec (o , op) (t , target) expr₁
-    in map (expand n vec op target) (o m e1 e2)
+expand zero [] mul mod target (Mul1 expr expr₁) = Mul1 expr expr₁
+expand {_} (suc n) (x ∷ vec) (m , mul) (mo , mod) (t , target) (Mul1 expr expr₁)
+  = let e1 = expand1 n x vec (m , mul) (t , target) expr
+        e2 = expand1 n x vec (m , mul) (t , target) expr₁
+    in map (expand n vec mul mod target) (mo _ (m _ e1 e2) (t _))
 
