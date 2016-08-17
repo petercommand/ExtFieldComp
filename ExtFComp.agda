@@ -20,6 +20,7 @@ open import Env
 open import Field
 open import FieldDef
 open import RTEnv
+open import FpComp
 open import Num
 open import Expand
 
@@ -78,7 +79,8 @@ extfToIR {_} {_} {x} {{comp}} (varnum , env) (Mul1 exp exp₁)
 
 
 
-
+fpToInt : ∀ {m}{{p : Prime m}} -> Fp m p -> Int
+fpToInt (F x) = x
 
 extfToIR : ∀ {m n o}
    -> {{p : Prime m}}
@@ -90,7 +92,27 @@ extfToIR : ∀ {m n o}
 extfToIR vec div (varnum , env) (Let1 exp exp₁)
     = let varnum1 , ir1 , r1 = extfToIR vec div (varnum , env) exp
       in extfToIR vec div (varnum1 , r1 ∷ env) exp₁
-extfToIR vec div st (LetC1 x exp) = {!!}
+extfToIR vec div (varnum , env) (LetC1 x exp)
+    = let flat = flatten _ vec x
+          varnum1 , ir = Vec.foldr (\n -> ℕ × Vec TAC n) (\elem acc ->
+              let varnum' , ir = acc
+              in suc varnum' , ConstI varnum' (fpToInt elem) ∷ ir) (varnum , []) flat
+      in varnum1 , toList ir , Vec.map target ir
 extfToIR vec div (varnum , env) (Var1 x) = varnum , [] , Env.lookup x env
-extfToIR vec div st (Add1 exp exp₁) = {!!}
-extfToIR vec div st (Mul1 exp exp₁) = {!!}
+extfToIR vec div st (Add1 exp exp₁)
+    = let varnum1 , ir1 , r1 = extfToIR vec div st exp
+          varnum2 , ir2 , r2 = extfToIR vec div st exp₁
+          varnum3 , ir3 = Vec.foldr (λ x -> ℕ × Vec TAC x)
+                 (λ elem acc -> suc (proj₁ acc) ,
+                     AddI (proj₁ acc) (proj₁ elem) (proj₂ elem) ∷ proj₂ acc)
+                   (varnum2 , []) (Vec.zipWith _,_ r1 r2)
+          addrs = Vec.map target ir3
+      in varnum3 , ir1 ++ ir2 ++ toList ir3 , addrs
+extfToIR {_} {n} vec div (varnum , env) (Mul1 exp exp₁)
+    = let e1 = expand n {!!} {!!} {!!} (Mul1 exp exp₁)
+          flat = flatten n vec e1
+          varnum1 , ir , r1 = Vec.foldr (\n -> ℕ × List TAC × Vec Addr n) (\elem acc ->
+              let varnum' , ir , r = acc
+                  varnum'' , ir1 , r1 = fpToIR (varnum , {!!}) elem
+              in varnum'' , ir1 ++ ir , (head r1) ∷ r) (varnum , [] , []) flat
+      in varnum1 , ir , r1

@@ -54,6 +54,7 @@ fpToFrom : ∀ {n} -> {{ins : Prime n}}
                  -> ∀ {m} -> fpFromVec {n} {{ins}} (fpToVec m) ≡ m
 fpToFrom {m = F x} = refl
 
+{-
 fpCompilable : ∀ {n : ℕ} {{p : Prime n}} -> Compilable (Fp n p)
 fpCompilable {_} {{p}} = record { toIR = fpToIR {_} {_} {{p}}
                                 ; compSize = 1
@@ -61,3 +62,4 @@ fpCompilable {_} {{p}} = record { toIR = fpToIR {_} {_} {{p}}
                                 ; compFromVec = fpFromVec {_} {{p}}
                                 ; compToFrom = fpToFrom {_} {{p}}
                          }
+-}

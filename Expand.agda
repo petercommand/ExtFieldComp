@@ -21,6 +21,10 @@ Op₂ A = A -> A -> A
 product : ∀ {n} -> Vec ℕ n -> ℕ
 product = foldr _ _*_ 1
 
+flatten : {A : Set} -> (n : ℕ)(vec : Vec ℕ n) -> NestMod A n vec -> Vec A (product vec)
+flatten zero [] t = t ∷ []
+flatten (suc n) (x ∷ vec) t = concat (map (flatten n vec) t)
+
 NestF : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
 NestF A zero [] = Op₂ A
 NestF A (suc n) (x ∷ vec) = (∀ o -> Op₂ (Vec (Expr1 (NestMod A n vec) o) x)) × NestF A n vec
