@@ -3,11 +3,12 @@ module _ where
 
 open import Data.Nat
 open import Data.Nat.Primality
+open import Data.Integer hiding (_≤_)
 open import Data.Product
 open import Data.Maybe hiding (All)
 open import Data.Vec
 open import Data.String
-open import Data.List
+open import Data.List hiding (product)
 open import Data.List.All
 open import Data.Fin hiding (_<_; _≤_)
 open import Data.Empty
@@ -29,36 +30,28 @@ open import MaybeUtil
 open import VecAll
 
 
-data EnvConsistent {K : Set} {{comp : Compilable K}} : ∀ {n}
+data EnvConsistent (K : Set) (m : ℕ)
+     (vec : Vec ℕ m)
+     (from : K -> Vec ℤ (product vec))
+     (to : Vec ℤ (product vec) -> K)
+     (p : ∀ n -> from (to n) ≡ n)
+     : ∀ {n}
      -> (evalEnv : EvalEnv K n)
-     -> (env : Env (Compilable.compSize comp) n)
+     -> (env : Env m vec n)
      -> (rtenv : RTEnv)
      -> ℕ
      -> Set where
-  ConsBase : ∀ {rtenv : RTEnv} -> EnvConsistent [] [] rtenv 0
-  ConsInd : ∀ {n addrs v o p}
+  ConsBase : ∀ {rtenv : RTEnv} -> EnvConsistent K m vec from to p [] [] rtenv 0
+  ConsInd : ∀ {n addrs v o q}
              -> {evalEnv : EvalEnv K n}
-             -> {env : Env (Compilable.compSize comp) n}
+             -> {env : Env m vec n}
              -> {rtenv : RTEnv}
-             -> getBatch addrs rtenv ≡ Compilable.compToVec comp v
+             -> getBatch addrs rtenv ≡ from v
              -> VecAll (\a -> a < o) addrs 
-             -> o ≤ p
-             -> EnvConsistent {{comp}} evalEnv env rtenv o
-             -> EnvConsistent {{comp}} (v ∷ evalEnv) (addrs ∷ env) rtenv p
-
-
--- Is it possible to state a list of properties to satisfy to say that
--- the compiler is correctly implemented if these properties are satisfied?
-record CompCorrect (K : Set) (comp : Compilable K) : Set where
-  field
-    rt-inc : ∀ {n} -> (e : Expr1 K n) (varnum : Addr)
-                   -> (env : Env (Compilable.compSize comp) n)
-                   -> let varnum1 , _ , _ = Compilable.toIR comp (varnum , env) e
-                      in varnum1 > varnum
-    irre : ∀ {n} varnum varnum1 -> varnum < varnum1
-             -> (e : Expr1 K n) (env : Env (Compilable.compSize comp) n)
-             -> let _ , ir1 , _ = Compilable.toIR comp (varnum1 , env) e
-                in All (\tac -> ¬ target tac ≡ varnum) ir1
+             -> o ≤ q
+             -> EnvConsistent K m vec from to p evalEnv env rtenv o
+             -> EnvConsistent K m vec from to p (v ∷ evalEnv)
+                   (reconstruct _ vec addrs ∷ env) rtenv q
 
 ++-rewrite : ∀ {l}{K : Set l}(a : K)(b : List K)(c : List K)
             -> a Data.List.∷ b Data.List.++ c ≡ a ∷ (b Data.List.++ c)
@@ -112,28 +105,3 @@ big->evalNum' env (Add1 expr expr₁) _ (bigAdd1 big big₁)
 big->evalNum' env (Mul1 expr expr₁) _ (bigMul1 big big₁)
       rewrite big->evalNum' env expr _ big
             | big->evalNum' env expr₁ _ big₁ = refl
-{-
-module CompVerify (K : Set) (comp : Compilable K)
-         (evalable : Evalable K) (compCorrect : CompCorrect K comp) where
-    open Compilable comp
-    open Evalable evalable
-    open CompCorrect compCorrect
-    comp-correct : ∀ {n : ℕ}
-      -> (varnum : Addr)
-      -> (exp : Expr1 K n)
-      -> (evalEnv : EvalEnv K n)
-      -> (env : Env compSize n)
-      -> (rtenv : RTEnv)
-      -> EnvConsistent {{comp}} evalEnv env rtenv varnum
-      -> let varnum1 , ir1 , r1 = toIR (varnum , env) exp
-         in getBatch r1 (run rtenv ir1) ≡ compToVec (eval evalEnv exp)
-    comp-correct varnum (Let1 exp exp₁) evalEnv env rtenv cons
-        with comp-correct varnum exp evalEnv env rtenv cons
-    ... | correct1
-        with toIR (varnum , env) exp
-    ... | varnum1 , ir1 , r1 = {!!}
-    comp-correct varnum (LetC1 x exp) evalEnv env rtenv cons = {!!}
-    comp-correct varnum (Var1 x) evalEnv env rtenv cons = {!!}
-    comp-correct varnum (Add1 exp exp₁) evalEnv env rtenv cons = {!!}
-    comp-correct varnum (Mul1 exp exp₁) evalEnv env rtenv cons = {!!}
--}

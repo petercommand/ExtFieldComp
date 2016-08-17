@@ -21,6 +21,10 @@ open import Field
 open import RTEnv
 open import Num
 
+fpToInt : ∀ {m}{{p : Prime m}} -> Fp m p -> Int
+fpToInt (F x) = x
+
+
 fpToIR : ∀ {n o : ℕ} {{p : Prime n}} -> CompState 1 (1 ∷ []) o
                                      -> Expr1 (Fp n p) o
                                      -> ℕ × List TAC × Vec Addr 1 -- newVarnum , IR , result address

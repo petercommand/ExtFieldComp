@@ -15,6 +15,7 @@ open import Function
 
 open import MaybeUtil
 open import Comp
+open import FpComp
 open import Expr
 open import Env
 open import Field
@@ -24,8 +25,6 @@ open import FpComp
 open import Num
 open import Expand
 
-fpToInt : ∀ {m}{{p : Prime m}} -> Fp m p -> Int
-fpToInt (F x) = x
 
 vecExchange : ∀ {A : Set}{a b}
    -> Vec (Vec A a) b
