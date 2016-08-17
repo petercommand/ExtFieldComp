@@ -50,8 +50,19 @@ nestMap : ∀ {A B n} -> (vec : Vec ℕ n) -> (A -> B)
 nestMap [] f x = f x
 nestMap (v ∷ vec) f x = Data.Vec.map (nestMap vec f) x
 
+nestZipWith : ∀ {A B C n} -> (vec : Vec ℕ n) -> (A -> B -> C)
+    -> NestMod A n vec -> NestMod B n vec
+    -> NestMod C n vec
+nestZipWith [] f x y = f x y
+nestZipWith (v ∷ vec) f x y
+    = Data.Vec.map (\x -> nestZipWith vec f (proj₁ x) (proj₂ x))
+         (Data.Vec.zip x y)
+
 Op₂ : Set -> Set
 Op₂ A = A -> A -> A
+
+Op₃ : Set -> Set
+Op₃ A = A -> A -> A -> A
 
 product : ∀ {n} -> Vec ℕ n -> ℕ
 product = foldr _ _*_ 1
@@ -74,6 +85,12 @@ NestF : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
 NestF A zero [] = Op₂ A
 NestF A (suc n) (x ∷ vec) = (∀ o -> Op₂ (Vec (Expr1 (NestMod A n vec) o) x)) ×
                             NestF A n vec
+
+NestF₃ : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
+NestF₃ A zero [] = Op₃ A
+NestF₃ A (suc n) (x ∷ vec) = (∀ o -> Op₃ (Vec (Expr1 (NestMod A n vec) o) x)) ×
+                            NestF₃ A n vec
+
 
 NestObj : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
 NestObj A zero [] = A

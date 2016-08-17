@@ -34,6 +34,28 @@ vecExchange [] = Vec.replicate []
 vecExchange (vec ∷ vec₁) = let ev = vecExchange vec₁
                             in Vec.zipWith (_∷_) vec ev
 
+extfEval : ∀ {m n o}
+   -> {{p : Prime m}}
+   -> (vec : Vec ℕ n)
+   -> (mul : NestF (Fp m p) n vec)
+   -> (mod : NestF (Fp m p) n vec)
+   -> (div : NestObj (Fp m p) n vec)
+   -> EvalEnv (NestMod (Fp m p) n vec) o
+   -> Expr1 (NestMod (Fp m p) n vec) o
+   -> NestMod (Fp m p) n vec
+extfEval vec mul mod div env (Let1 exp exp₁)
+   = let r = extfEval vec mul mod div env exp
+     in extfEval vec mul mod div (r ∷ env) exp₁
+extfEval vec mul mod div env (LetC1 x exp)
+   = extfEval vec mul mod div (x ∷ env) exp
+extfEval vec mul mod div env (Var1 x) = evalLookup x env
+extfEval {m} {{p}} vec mul mod div env (Add1 exp exp₁)
+  = let r1 = extfEval vec mul mod div env exp
+        r2 = extfEval vec mul mod div env exp₁
+        + = Num._+_ (numFp {m} {{p}})
+    in nestZipWith vec (+) r1 r2
+extfEval vec mul mod div env (Mul1 exp exp₁) = {!!}
+
 extfToIR : ∀ {m n o}
    -> {{p : Prime m}}
    -> (vec : Vec ℕ n)
@@ -76,3 +98,4 @@ extfToIR {_} {n} vec mul mod div (varnum , env) (Mul1 exp exp₁)
               in varnum'' , ir1 ++ ir , (head r1) ∷ r) (varnum , [] , [])
                    (Vec.zipWith _,_ flat env')
       in varnum1 , ir , r1
+
