@@ -11,12 +11,12 @@ open import Expr
 open import RTEnv
 
 Env : (m : ℕ) -> (vec : Vec ℕ m) -> ℕ -> Set
-Env m vec n = Vec (NestMod ℕ m vec) n  -- Vec (Vec ℕ m) n -- List of [Address]
+Env m vec n = Vec (Vec ℕ (product vec)) n  -- Vec (Vec ℕ m) n -- List of [Address]
 
 EvalEnv : Set -> ℕ -> Set
 EvalEnv K n = Vec K n
 
-lookup : {m n : ℕ} -> (vec : Vec ℕ m) -> Fin n -> Env m vec n -> NestMod ℕ m vec
+lookup : {m n : ℕ} -> (vec : Vec ℕ m) -> Fin n -> Env m vec n -> Vec ℕ (product vec)
 lookup vec zero (x ∷ env) = x
 lookup vec (suc num) (x ∷ env) = lookup vec num env
 
@@ -25,7 +25,7 @@ evalLookup zero (x ∷ env) = x
 evalLookup (suc n) (x ∷ env) = evalLookup n env
 
 putEnvVal : ∀ {m n} -> (vec : Vec ℕ m)
-    -> NestMod ℕ m vec
+    -> Vec ℕ (product vec)
     -> Env m vec n
     -> Env m vec (suc n)
 putEnvVal vec x env = x ∷ env

@@ -39,13 +39,13 @@ fpToIR (varnum , env) (LetC1 (F x) expr)
       in varnum1 , ConstI varnum x ∷ ir1 , r1
 fpToIR (varnum , env) (Var1 x) = varnum , [] , Env.lookup (1 ∷ []) x env
 fpToIR (varnum , env) (Add1 expr expr₁)
-    = let varnum1 , ir1 , r1 = fpToIR (suc varnum , env) expr
-          varnum2 , ir2 , r2 = fpToIR (suc varnum1 , env) expr₁
+    = let varnum1 , ir1 , r1 = fpToIR (varnum , env) expr
+          varnum2 , ir2 , r2 = fpToIR (varnum1 , env) expr₁
       in suc varnum2 , ir1 ++ ir2 ++ (AddI varnum2 (Vec.head r1) (Vec.head r2) ∷ [])
                                              , (varnum2 Vec.∷ Vec.[])
 fpToIR (varnum , env) (Mul1 expr expr₁)
-    = let varnum1 , ir1 , r1 = fpToIR (suc varnum , env) expr
-          varnum2 , ir2 , r2 = fpToIR (suc varnum1 , env) expr₁
+    = let varnum1 , ir1 , r1 = fpToIR (varnum , env) expr
+          varnum2 , ir2 , r2 = fpToIR (varnum1 , env) expr₁
       in suc varnum2 , ir1 ++ ir2 ++ (MulI varnum2 (Vec.head r1) (Vec.head r2) ∷ [])
                                              , (varnum2 Vec.∷ Vec.[])
 

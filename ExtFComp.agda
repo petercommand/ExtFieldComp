@@ -13,7 +13,6 @@ open import Relation.Binary.PropositionalEquality
 open import Function
 
 
-open import MaybeUtil
 open import Comp
 open import FpComp
 open import Expr
@@ -78,7 +77,7 @@ extfToIR : ∀ {m n o}
    -> ℕ × List TAC × Vec Addr (product vec)
 extfToIR vec mul div (varnum , env) (Let1 exp exp₁)
     = let varnum1 , ir1 , r1 = extfToIR vec mul div (varnum , env) exp
-      in extfToIR vec mul div (varnum1 , reconstruct _ vec r1 ∷ env) exp₁
+      in extfToIR vec mul div (varnum1 , r1 ∷ env) exp₁
 extfToIR vec mul div (varnum , env) (LetC1 x exp)
     = let flat = flatten _ vec x
           varnum1 , ir = Vec.foldr (\n -> ℕ × Vec TAC n) (\elem acc ->
@@ -86,7 +85,7 @@ extfToIR vec mul div (varnum , env) (LetC1 x exp)
               in suc varnum' , ConstI varnum' (fpToInt elem) ∷ ir) (varnum , []) flat
       in varnum1 , toList ir , Vec.map target ir
 extfToIR vec mul div (varnum , env) (Var1 x)
-    = varnum , [] , flatten _ vec (Env.lookup vec x env)
+    = varnum , [] , (Env.lookup vec x env)
 extfToIR vec mul div st (Add1 exp exp₁)
     = let varnum1 , ir1 , r1 = extfToIR vec mul div st exp
           varnum2 , ir2 , r2 = extfToIR vec mul div st exp₁
@@ -99,7 +98,7 @@ extfToIR vec mul div st (Add1 exp exp₁)
 extfToIR {_} {n} vec mul div (varnum , env) (Mul1 exp exp₁)
     = let e1 = expand n vec mul div (Mul1 exp exp₁)
           flat = flatten n vec e1
-          env' = vecExchange (Vec.map (flatten _ vec) env)
+          env' = vecExchange env
           varnum1 , ir , r1 = Vec.foldr (\n -> ℕ × List TAC × Vec Addr n)
              (\elem acc ->
               let varnum' , ir , r = acc
