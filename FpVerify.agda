@@ -31,6 +31,7 @@ open import MaybeUtil
 
 eq' : ∀ {A : Set} (vec : Vec A 1) -> head vec ∷ [] ≡ vec
 eq' (x ∷ []) = refl
+
 fpVerify : ∀ {m n : ℕ}{{p : Prime n}}
          (varnum : ℕ)
          (rtenv : RTEnv)
@@ -81,13 +82,27 @@ fpVerify varnum rtenv evalEnv env cons (LetC1 (F x) expr)
 fpVerify varnum rtenv evalEnv env cons (Var1 x)
     = consist cons x , consist->vecAll cons x , cons
 fpVerify varnum rtenv evalEnv env cons (Add1 expr expr₁)
+    with fpVerify varnum rtenv evalEnv env cons expr
+... | correct1 , all1 , cons1
     with fpToIR (varnum , env) expr
-... | varnum1 , ir1 , r1
+... | varnum1 , ir1 , r1 ∷ []
+    with all1
+... | AllI all1' AllB
+    with comp-ignorable {_} {1} {1 ∷ []} fpToIR r1 varnum1 all1' {!!} expr₁ env (run rtenv ir1) {!!}
+... | ig1
+    with fpVerify varnum1 (run rtenv ir1) evalEnv env cons1 expr₁
+... | correct2 , all2 , cons2
     with fpToIR (varnum1 , env) expr₁
-... | varnum2 , ir2 , r2
+... | varnum2 , ir2 , r2 ∷ []
     rewrite run-compose ir1 (ir2 Data.List.++
-             AddI varnum2 (head r1) (head r2) ∷ [])
+             AddI varnum2 r1 r2 ∷ [])
               rtenv
-          | run-compose ir2 (AddI varnum2 (head r1) (head r2) ∷ []) (run rtenv ir1)
-          = {!!} , {!!} , {!!}
+          | run-compose ir2 (AddI varnum2 r1 r2 ∷ []) (run rtenv ir1)
+          | get-put varnum2 (getRTEnv r1 (run (run rtenv ir1) ir2) Data.Integer.+
+                             getRTEnv r2 (run (run rtenv ir1) ir2))
+                         (run (run rtenv ir1) ir2)
+          | cong head correct2
+          | ig1
+          | cong head correct1
+          = cong (λ x → x ∷ []) {!!} , AllI ≤-refl AllB , {!!}
 fpVerify varnum rtenv evalEnv env cons (Mul1 expr expr₁) = {!!}

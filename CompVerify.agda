@@ -9,6 +9,7 @@ open import Data.Maybe hiding (All)
 open import Data.Vec hiding (_++_)
 open import Data.List hiding (product)
 open import Data.List.All
+open import Data.List.All.Properties
 open import Data.Fin hiding (_<_; _≤_)
 open import Data.Empty
 
@@ -62,6 +63,53 @@ consist-inc : ∀ {K m n vec from to p q s}
 consist-inc ConsBase p₁ = ConsBase
 consist-inc (ConsInd x x₁ x₂ consist) p₁ = ConsInd x x₁ (≤-trans x₂ p₁) consist
 
+
+HeapInc : ∀ {K n vec o}
+   -> (toIR : CompState n vec o
+                -> Expr1 K o
+                -> ℕ × List TAC × Vec Addr (product vec))
+   -> Set
+HeapInc {K} {n} {vec} {o} toIR
+   = ∀ varnum env expr -> let varnum1 , ir1 , r1 = toIR (varnum , env) expr
+                          in varnum1 ≥ varnum
+
+comp-irrelevance' : ∀ {a b list} -> All (\x -> b < target x) list
+                                 -> a < b
+                                 -> All (\x -> ¬ x ≡ a) (Data.List.map target list)
+comp-irrelevance' [] p = []
+comp-irrelevance' (px ∷ all) p = (a<c->¬c≡a _ _ (≤-trans p (≤weak px))) ∷
+                                    comp-irrelevance' all p
+
+comp-irrelevance : ∀ {K n vec o}(toIR : CompState n vec o
+                                    -> Expr1 K o
+                                    -> _) varnum varnum1
+   -> varnum < varnum1
+   -> HeapInc {K} {n} {vec} {o} toIR
+   -> ∀ expr env
+   -> let _ , ir , _ = toIR (varnum1 , env) expr
+      in All (\x -> target x > varnum1) ir
+         -> All (\x -> ¬ x ≡ varnum) (Data.List.map target ir)
+comp-irrelevance toIR varnum varnum1 p inc expr env all
+    with inc varnum env expr
+... | inc1
+    with toIR (varnum1 , env) expr
+... | varnum2 , ir1 , r1 = comp-irrelevance' all p
+
+list-decomp : ∀ (ir : List TAC) -> length ir > 0
+    -> ∃ (λ x -> ∃ (λ y -> (x ++ (y ∷ [])) ≡ ir))
+list-decomp [] ()
+list-decomp (x ∷ []) (s≤s p) = [] , x , refl
+list-decomp (x ∷ x₁ ∷ ir) (s≤s p)
+   = let head , elem , pr = list-decomp (x₁ ∷ ir) (s≤s z≤n)
+     in x ∷ head , elem , cong (\y -> x ∷ y) pr
+
+all-decomp : ∀ {K : Set}{P : K -> Set}(list : List K) (all : All P list) -> length list > 0
+    -> ∃ (λ x -> ∃ (λ y -> All P x × All P (y ∷ []) × (x ++ (y ∷ []) ≡ list) × (length x < length list)))
+all-decomp [] [] ()
+all-decomp (x ∷ []) (px ∷ []) (s≤s p) = [] , x , [] , px ∷ [] , refl , s≤s z≤n
+all-decomp (x ∷ xs ∷ xss) (px ∷ px₁ ∷ all) p = let head , elem , headp , elemp , pr , pr2 = all-decomp (xs ∷ xss) (px₁ ∷ all) (s≤s z≤n)
+                                               in x ∷ head , elem , px ∷ headp , elemp , cong (\y -> x ∷ y) pr , s≤s pr2
+
 run-compose : ∀ r1 r2 rtenv ->
     run rtenv (r1 ++ r2) ≡ run (run rtenv r1) r2
 run-compose [] r2 rtenv = refl
@@ -85,6 +133,47 @@ run-compose (MulI x x₁ x₂ ∷ r1) r2 rtenv
          (getRTEnv x₁ rtenv Data.Integer.*
           getRTEnv x₂ rtenv)
        rtenv)
+
+ignorable : ∀ addr rtenv ir -> All (\x -> ¬ target x ≡ addr) ir
+                   -> Acc (length ir) -> getRTEnv addr (run rtenv ir) ≡ getRTEnv addr rtenv
+ignorable addr rtenv [] [] _ = refl
+ignorable addr rtenv (x₅ ∷ ir) all (acc ac) with all-decomp (x₅ ∷ ir) all (s≤s z≤n)
+... | head , ConstI x x₁ , allh , e ∷ alle , pr , pr2
+    rewrite sym pr
+          | run-compose head (ConstI x x₁ ∷ []) rtenv
+          | get-put' {x₁} addr x (run rtenv head) (e ∘ sym)
+          = ignorable addr rtenv head allh (ac (length head) pr2)
+... | head , AddI x x₁ x₂ , allh , e ∷ alle , pr , pr2
+    rewrite sym pr
+          | run-compose head (AddI x x₁ x₂ ∷ []) rtenv
+          | get-put' {getRTEnv x₁ (run rtenv head) Data.Integer.+
+                      getRTEnv x₂ (run rtenv head)} addr x (run rtenv head) (e ∘ sym)
+          = ignorable addr rtenv head allh (ac (length head) pr2)
+... | head , SubI x x₁ x₂ , allh , e ∷ alle , pr , pr2
+    rewrite sym pr
+          | run-compose head (SubI x x₁ x₂ ∷ []) rtenv
+          | get-put' {getRTEnv x₁ (run rtenv head) Data.Integer.-
+                      getRTEnv x₂ (run rtenv head)} addr x (run rtenv head) (e ∘ sym)
+          = ignorable addr rtenv head allh (ac (length head) pr2)
+... | head , MulI x x₁ x₂ , allh , e ∷ alle , pr , pr2
+    rewrite sym pr
+          | run-compose head (MulI x x₁ x₂ ∷ []) rtenv
+          | get-put' {getRTEnv x₁ (run rtenv head) Data.Integer.*
+                      getRTEnv x₂ (run rtenv head)} addr x (run rtenv head) (e ∘ sym)
+          = ignorable addr rtenv head allh (ac (length head) pr2)
+comp-ignorable : ∀ {K n vec o}(toIR : CompState n vec o
+                                    -> Expr1 K o
+                                    -> _) varnum varnum1
+   -> varnum < varnum1
+   -> HeapInc {K} {n} {vec} {o} toIR
+   -> ∀ expr env rtenv
+   -> let _ , ir , _ = toIR (varnum1 , env) expr
+      in All (\x -> target x > varnum1) ir
+        -> getRTEnv varnum (run rtenv ir) ≡ getRTEnv varnum rtenv
+comp-ignorable {K} {n} {vec} {o} toIR varnum varnum1 p inc expr env rtenv all
+   = let irre = comp-irrelevance {K} {n} {vec} toIR varnum varnum1 p inc expr env all
+         _ , ir , _ = toIR (varnum1 , env) expr
+     in ignorable varnum rtenv ir (map-All irre) (<-wf (length ir))
 
 vecAllInc : ∀ {n a b}{vec : Vec ℕ n}
    -> a ≤ b
