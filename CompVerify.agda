@@ -73,27 +73,37 @@ HeapInc {K} {n} {vec} {o} toIR
    = ∀ varnum env expr -> let varnum1 , ir1 , r1 = toIR (varnum , env) expr
                           in varnum1 ≥ varnum
 
-comp-irrelevance' : ∀ {a b list} -> All (\x -> b < target x) list
+AddrInc : ∀ {K n vec o}
+    -> (toIR : CompState n vec o
+                -> Expr1 K o
+                -> ℕ × List TAC × Vec Addr (product vec))
+    -> Set
+AddrInc toIR = ∀ varnum env expr -> let _ , ir , _ = toIR (varnum , env) expr
+                                    in All (\x -> target x ≥ varnum) ir
+
+comp-irrelevance' : ∀ {a b list} -> All (\x -> b ≤ target x) list
                                  -> a < b
                                  -> All (\x -> ¬ x ≡ a) (Data.List.map target list)
 comp-irrelevance' [] p = []
-comp-irrelevance' (px ∷ all) p = (a<c->¬c≡a _ _ (≤-trans p (≤weak px))) ∷
+comp-irrelevance' (px ∷ all) p = (a<c->¬c≡a _ _ (≤-trans p px)) ∷
                                     comp-irrelevance' all p
 
 comp-irrelevance : ∀ {K n vec o}(toIR : CompState n vec o
                                     -> Expr1 K o
                                     -> _) varnum varnum1
    -> varnum < varnum1
-   -> HeapInc {K} {n} {vec} {o} toIR
+   -> HeapInc {K} {n} {vec} toIR
+   -> AddrInc {K} {n} {vec} toIR
    -> ∀ expr env
    -> let _ , ir , _ = toIR (varnum1 , env) expr
-      in All (\x -> target x > varnum1) ir
-         -> All (\x -> ¬ x ≡ varnum) (Data.List.map target ir)
-comp-irrelevance toIR varnum varnum1 p inc expr env all
+      in All (\x -> ¬ x ≡ varnum) (Data.List.map target ir)
+comp-irrelevance toIR varnum varnum1 p inc all expr env
     with inc varnum env expr
 ... | inc1
+    with all varnum1 env expr
+... | all1
     with toIR (varnum1 , env) expr
-... | varnum2 , ir1 , r1 = comp-irrelevance' all p
+... | varnum2 , ir1 , r1 = comp-irrelevance' all1 p
 
 list-decomp : ∀ (ir : List TAC) -> length ir > 0
     -> ∃ (λ x -> ∃ (λ y -> (x ++ (y ∷ [])) ≡ ir))
@@ -135,7 +145,8 @@ run-compose (MulI x x₁ x₂ ∷ r1) r2 rtenv
        rtenv)
 
 ignorable : ∀ addr rtenv ir -> All (\x -> ¬ target x ≡ addr) ir
-                   -> Acc (length ir) -> getRTEnv addr (run rtenv ir) ≡ getRTEnv addr rtenv
+                   -> Acc (length ir)
+                   -> getRTEnv addr (run rtenv ir) ≡ getRTEnv addr rtenv
 ignorable addr rtenv [] [] _ = refl
 ignorable addr rtenv (x₅ ∷ ir) all (acc ac) with all-decomp (x₅ ∷ ir) all (s≤s z≤n)
 ... | head , ConstI x x₁ , allh , e ∷ alle , pr , pr2
@@ -166,12 +177,12 @@ comp-ignorable : ∀ {K n vec o}(toIR : CompState n vec o
                                     -> _) varnum varnum1
    -> varnum < varnum1
    -> HeapInc {K} {n} {vec} {o} toIR
+   -> AddrInc {K} {n} {vec} {o} toIR
    -> ∀ expr env rtenv
    -> let _ , ir , _ = toIR (varnum1 , env) expr
-      in All (\x -> target x > varnum1) ir
-        -> getRTEnv varnum (run rtenv ir) ≡ getRTEnv varnum rtenv
-comp-ignorable {K} {n} {vec} {o} toIR varnum varnum1 p inc expr env rtenv all
-   = let irre = comp-irrelevance {K} {n} {vec} toIR varnum varnum1 p inc expr env all
+      in getRTEnv varnum (run rtenv ir) ≡ getRTEnv varnum rtenv
+comp-ignorable {K} {n} {vec} {o} toIR varnum varnum1 p inc all expr env rtenv
+   = let irre = comp-irrelevance {K} {n} {vec} toIR varnum varnum1 p inc all expr env
          _ , ir , _ = toIR (varnum1 , env) expr
      in ignorable varnum rtenv ir (map-All irre) (<-wf (length ir))
 
@@ -234,4 +245,14 @@ rpc-aux x y (ConsInd x₁ x₂ x₃ consist)
 _:>_ : ∀ {l} (K : Set l) (a : K) -> K
 a :> b = b
 
+All<weak : ∀ {a}{list : List TAC} -> All (\x -> a ≤ target x) list
+                                         -> ∀ b
+                                         -> b ≤ a
+                                         -> All (\x -> b ≤ target x) list
+All<weak [] b p = []
+All<weak (px ∷ all) b p = (≤-trans p px) ∷ (All<weak all b p)
 
+All++ : ∀ {a p} {A : Set a} {P : A → Set p} {xs ys : List A} →
+        All P xs → All P ys → All P (xs ++ ys)
+All++ []         pys = pys
+All++ (px ∷ pxs) pys = px ∷ All++ pxs pys
