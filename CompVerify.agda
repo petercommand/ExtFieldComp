@@ -256,3 +256,4 @@ All++ : ∀ {a p} {A : Set a} {P : A → Set p} {xs ys : List A} →
         All P xs → All P ys → All P (xs ++ ys)
 All++ []         pys = pys
 All++ (px ∷ pxs) pys = px ∷ All++ pxs pys
+
