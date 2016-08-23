@@ -64,7 +64,7 @@ extfEval {m} {{p}} vec mul div env (Add1 exp exp₁)
     in nestZipWith vec (+) r1 r2
 extfEval {m} {{p}} vec mul div env (Mul1 exp exp₁)
   = let r1 = extfEval vec mul div env exp
-        r2 = extfEval vec mul div env exp
+        r2 = extfEval vec mul div env exp₁
     in extfEvalMul vec mul div r1 r2
 
 extfToIR : ∀ {m n o}

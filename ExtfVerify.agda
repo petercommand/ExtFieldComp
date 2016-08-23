@@ -21,6 +21,7 @@ open import FpComp
 open import Num
 open import Expand
 open import CompVerify
+open import FpVerify hiding (eq')
 open import ExtFComp
 open import VecAll
 
@@ -51,12 +52,30 @@ expandVerify {vec = []} mul mul' div div' evalEnv (Let1 expr expr₁)
     with expandVerify {vec = []} mul mul' div div' evalEnv expr
 ... | expandV1
     with expandVerify {vec = []} mul mul' div div' (extfEval [] mul' div' evalEnv expr ∷ evalEnv) expr₁
-... | expandV2 = {!!}
+... | expandV2
+    rewrite sym expandV2 = {!!}
 expandVerify {vec = x ∷ vec} mul mul' div div' evalEnv (Let1 expr expr₁) = {!!}
 expandVerify mul mul' div div' evalEnv (LetC1 x expr) = {!!}
 expandVerify mul mul' div div' evalEnv (Var1 x) = {!!}
 expandVerify mul mul' div div' evalEnv (Add1 expr expr₁) = {!!}
-expandVerify mul mul' div div' evalEnv (Mul1 expr expr₁) = {!!}
+expandVerify {m} {_} {o} {vec = []} mul mul' div div' evalEnv (Mul1 expr expr₁)
+    with expandVerify mul mul' div div' evalEnv expr
+... | expandV1
+    with expandVerify mul mul' div div' evalEnv expr₁
+... | expandV2
+    with extfEval _ mul' div' evalEnv expr
+... | eval1
+    with extfEval _ mul' div' evalEnv expr₁
+... | eval2
+    with vecExchange (Vec.replicate (λ t → t ∷ []) ⊛ evalEnv)
+... | test
+    = {!!}
+expandVerify {vec = x ∷ vec} mul mul' div div' evalEnv (Mul1 expr expr₁)
+    with expandVerify mul mul' div div' evalEnv expr
+... | expandV1
+    with expandVerify mul mul' div div' evalEnv expr₁
+... | expandV2
+    = {!!}
 extfVerify : ∀ {m n o : ℕ}
          -> {{p : Prime m}}
          -> {vec : Vec ℕ n}
