@@ -5,7 +5,7 @@ open import Data.Maybe
 open import Data.Nat.Primality
 open import Data.Product
 open import Data.List hiding (product)
-open import Data.Vec as Vec hiding (_++_)
+open import Vec as Vec hiding (_++_)
 
 open import Relation.Nullary
 open import Relation.Binary.PropositionalEquality

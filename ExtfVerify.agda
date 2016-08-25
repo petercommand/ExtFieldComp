@@ -3,7 +3,7 @@ open import Data.Nat
 open import Data.Nat.Primality
 open import Data.Product
 open import Data.List hiding (product)
-open import Data.Vec as Vec hiding (_++_)
+open import Vec as Vec hiding (_++_)
 
 open import Relation.Nullary
 open import Relation.Binary.PropositionalEquality
@@ -48,12 +48,22 @@ expandVerify : ∀ {m n o : ℕ}
                                                  in evalNum' {{numFp {_} {{p}}}} evalEnv result)
                                  (Vec.zip evalEnv' result)) ≡
                extfEval vec mul' div' evalEnv expr
-expandVerify {vec = []} mul mul' div div' evalEnv (Let1 expr expr₁)
+expandVerify {{p}} {vec = []} mul mul' div div' evalEnv (Let1 expr expr₁)
     with expandVerify {vec = []} mul mul' div div' evalEnv expr
 ... | expandV1
     with expandVerify {vec = []} mul mul' div div' (extfEval [] mul' div' evalEnv expr ∷ evalEnv) expr₁
 ... | expandV2
-    rewrite sym expandV2 = {!!}
+    rewrite sym expandV2 = cong (reconstruct 0 [])
+                             {Vec.map (λ x → evalNum' {{numFp {_} {{p}}}} (proj₁ x) (proj₂ x))
+                              (Vec.zipWith _,_ (vecExchange (Vec.map (λ t → t ∷ []) evalEnv))
+                               (Let1 (expand 0 [] mul div expr) (expand 0 [] mul div expr₁) ∷
+                                []))}
+                             {Vec.map (λ x → evalNum' {{numFp {_} {{p}}}} (proj₁ x) (proj₂ x))
+                              (Vec.zipWith _,_
+                               (Vec.zipWith _∷_ (extfEval [] mul' div' evalEnv expr ∷ [])
+                                (vecExchange (Vec.map (λ t → t ∷ []) evalEnv)))
+                               (expand 0 [] mul div expr₁ ∷ []))}
+                               {!!}
 expandVerify {vec = x ∷ vec} mul mul' div div' evalEnv (Let1 expr expr₁) = {!!}
 expandVerify mul mul' div div' evalEnv (LetC1 x expr) = {!!}
 expandVerify mul mul' div div' evalEnv (Var1 x) = {!!}

@@ -1,6 +1,6 @@
 module _ where
 
-open import Data.Vec
+open import Vec
 open import Data.String
 open import Data.Nat
 open import Data.Product hiding (map)
@@ -48,15 +48,15 @@ NestMod A (suc n) (x ∷ vec) = Vec (NestMod A n vec) x
 nestMap : ∀ {A B n} -> (vec : Vec ℕ n) -> (A -> B)
     -> NestMod A n vec -> NestMod B n vec
 nestMap [] f x = f x
-nestMap (v ∷ vec) f x = Data.Vec.map (nestMap vec f) x
+nestMap (v ∷ vec) f x = Vec.map (nestMap vec f) x
 
 nestZipWith : ∀ {A B C n} -> (vec : Vec ℕ n) -> (A -> B -> C)
     -> NestMod A n vec -> NestMod B n vec
     -> NestMod C n vec
 nestZipWith [] f x y = f x y
 nestZipWith (v ∷ vec) f x y
-    = Data.Vec.map (\x -> nestZipWith vec f (proj₁ x) (proj₂ x))
-         (Data.Vec.zip x y)
+    = Vec.map (\x -> nestZipWith vec f (proj₁ x) (proj₂ x))
+         (Vec.zip x y)
 
 Op₂ : Set -> Set
 Op₂ A = A -> A -> A
@@ -79,7 +79,7 @@ reconstruct : {A : Set} -> (n : ℕ)(vec : Vec ℕ n)
      -> Vec A (product vec) -> NestMod A n vec
 reconstruct zero [] (x ∷ []) = x
 reconstruct (suc n) (x ∷ vec) x₁
-    = Data.Vec.map (reconstruct n vec) (concat_r _ _ x₁)
+    = Vec.map (reconstruct n vec) (concat_r _ _ x₁)
 
 NestF : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
 NestF A zero [] = Op₂ A

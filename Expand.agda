@@ -1,7 +1,7 @@
 module _ where
 
 open import Data.Nat
-open import Data.Vec
+open import Vec
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
 
 
