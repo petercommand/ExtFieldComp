@@ -7,6 +7,7 @@ open import Vec as Vec hiding (_++_)
 
 open import Relation.Nullary
 open import Relation.Binary.PropositionalEquality
+import Relation.Binary.HeterogeneousEquality as H
 
 open import Function
 
@@ -63,7 +64,13 @@ expandVerify {{p}} {vec = []} mul mul' div div' evalEnv (Let1 expr expr₁)
                                (Vec.zipWith _∷_ (extfEval [] mul' div' evalEnv expr ∷ [])
                                 (vecExchange (Vec.map (λ t → t ∷ []) evalEnv)))
                                (expand 0 [] mul div expr₁ ∷ []))}
-                               {!!}
+                               {!cong (Vec.map (λ x → evalNum' {{numFp {_} {{p}}}} (proj₁ x) (proj₂ x)))
+                                 {Vec.zipWith _,_ (vecExchange (Vec.map (λ t → t ∷ []) evalEnv))
+                                   (Let1 (expand 0 [] mul div expr) (expand 0 [] mul div expr₁) ∷ [])}
+                                 {Vec.zipWith _,_
+                                   (Vec.zipWith _∷_ (extfEval [] mul' div' evalEnv expr ∷ [])
+                                     (vecExchange (Vec.map (λ t → t ∷ []) evalEnv)))
+                                 (expand 0 [] mul div expr₁ ∷ [])} ?!}
 expandVerify {vec = x ∷ vec} mul mul' div div' evalEnv (Let1 expr expr₁) = {!!}
 expandVerify mul mul' div div' evalEnv (LetC1 x expr) = {!!}
 expandVerify mul mul' div div' evalEnv (Var1 x) = {!!}
@@ -77,8 +84,6 @@ expandVerify {m} {_} {o} {vec = []} mul mul' div div' evalEnv (Mul1 expr expr₁
 ... | eval1
     with extfEval _ mul' div' evalEnv expr₁
 ... | eval2
-    with vecExchange (Vec.replicate (λ t → t ∷ []) ⊛ evalEnv)
-... | test
     = {!!}
 expandVerify {vec = x ∷ vec} mul mul' div div' evalEnv (Mul1 expr expr₁)
     with expandVerify mul mul' div div' evalEnv expr
