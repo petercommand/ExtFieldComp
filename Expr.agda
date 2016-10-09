@@ -86,10 +86,10 @@ NestF A zero [] = Op₂ A
 NestF A (suc n) (x ∷ vec) = (∀ o -> Op₂ (Vec (Expr1 (NestMod A n vec) o) x)) ×
                             NestF A n vec
 
-NestF₃ : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
-NestF₃ A zero [] = Op₃ A
-NestF₃ A (suc n) (x ∷ vec) = (∀ o -> Op₃ (Vec (Expr1 (NestMod A n vec) o) x)) ×
-                            NestF₃ A n vec
+NestF₂ : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
+NestF₂ A zero [] = Op₂ A
+NestF₂ A (suc n) (x ∷ vec) = (∀ o -> Op₂ (Vec (Expr1 (NestMod A n vec) o) x)) ×
+                            NestF₂ A n vec
 
 NestF₃' : (A : Set) (n : ℕ) -> Vec ℕ n -> Set
 NestF₃' A zero [] = Op₃ A
