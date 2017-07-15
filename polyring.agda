@@ -1,4 +1,5 @@
 open import Data.Nat hiding (_⊔_)
+open import Data.Product
 open import Num
 open import NatProperties
 open import Data.Nat.Properties.Simple
@@ -39,10 +40,18 @@ NExprN : ∀ {l m} (A : Set l) (B : Set m) (n : ℕ) -> Set (l ⊔ m)
 NExprN A B zero = ExprN A zero -> B
 NExprN A B (suc n) = ExprN A (suc n) -> NExprN A B n
 
-NExprN' : ∀ {l o} (A : Set l) (B : Set o) (m : ℕ) (n : ℕ) -> Set (l ⊔ o)
-NExprN' A B zero n = ExprN A n -> B
-NExprN' A B (suc m) n = ExprN A n -> NExprN' A B m n
+NExprN' : ∀ {l} (A : Set l) (m : ℕ) (n : ℕ) -> Set l
+NExprN' A zero n = ExprN A n -> ExprN A n
+NExprN' A (suc m) n = ExprN A n -> NExprN' A m n
 
+
+Nest : Set -> ℕ -> Set
+Nest A zero = Expr A
+Nest A (suc n) = ExprN A (suc n) × Nest A n
+
+Nest' : Set -> ℕ -> Set
+Nest' A zero = A
+Nest' A (suc n) = A × Nest' A n
 
 toFuncNum : ∀ {A : Set} (num : Num A) -> Num (A -> A)
 toFuncNum record { +-id = +-id ; *-id = *-id ; _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_ }
@@ -90,7 +99,7 @@ fmapN {A} {m} (suc n) f rewrite a+suc-b==suc-a+b m n
 toExprNumN : ∀ {A : Set}{n}{{num : Num A}} -> Num (ExprN A n)
 toExprNumN {n = zero} {{num}} = toExprNum num
 toExprNumN {A} {n = suc n} {{num}} rewrite numEquiv {A} n = toExprNum (toExprNumN {_} {n})
-
+{-
 {-# NON_TERMINATING #-}
 semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> NExprN A (A -> A) n
 semantics {{num}} zero = foldExpr {{toFuncNum num}} id const
@@ -100,21 +109,63 @@ semantics {A} {{num}} (suc (suc n)) e
           semantics {{toExprNumN {_} {suc n} {{num}}}}
                zero (subst id (numEquiv n) e))
 
-{-# NON_TERMINATING #-}   
+-}
+
+{-# NON_TERMINATING #-}
+semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> Nest A n -> A -> A
+semantics {{num}} zero = foldExpr {{toFuncNum num}} id const 
+semantics {{num}} (suc zero) (proj₁ , proj₂) = semantics zero (semantics {{toExprNum num}} zero proj₁ proj₂)
+semantics {{num}} (suc (suc n)) (proj₁ , proj₂ , proj₃) = semantics (suc n) (semantics {{toExprNumN {_} {suc n} {{num}}}} zero (subst id (numEquiv n) proj₁) proj₂ , proj₃)
+
+toProdFunc : ∀ {A : Set}{n : ℕ} -> NExprN A (A -> A) n -> Nest A n -> A -> A
+toProdFunc {n = zero} x x₁ = x x₁
+toProdFunc {n = suc n} x (proj₁ , proj₂) x₁ = toProdFunc (x proj₁) proj₂ x₁
+
+{-# NON_TERMINATING #-}
 rotrExpr : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> ExprN A n -> ExprN A n
 rotrExpr zero x = x
 rotrExpr {{num}} (suc zero) = foldExpr {{toExprNumN {_} {1} {{num}}}} (Lit Ind)
                                           (foldExpr {{toExprNumN {_} {1} {{num}}}}
                                               Ind (Lit ∘ Lit))
 rotrExpr {A} {{num}} (suc (suc n)) x
-   = (fmapN {_} {1} (suc n) (rotrExpr {A} 1)) (rotrExpr {{toExprNum num}} (suc n) x)
+   = (fmapN {_} {1} (suc n) (rotrExpr {A} (suc zero))) (rotrExpr {{toExprNum num}} (suc n) x)
 
-substitute' : ∀ {A : Set}{{num : Num A}} (m n : ℕ) -> NExprN' A (ExprN A n) m n
-substitute' zero n = {!!}
-substitute' (suc m) n = {!!}
+{-# NON_TERMINATING #-}
+rotlExpr : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> ExprN A n -> ExprN A n
+rotlExpr zero x = x
+rotlExpr {{num}} (suc zero) = foldExpr {{toExprNumN {_} {1} {{num}}}} (Lit Ind)
+                                          (foldExpr {{toExprNumN {_} {1} {{num}}}}
+                                          
+                                              Ind (Lit ∘ Lit))
+rotlExpr {A} {{num}} (suc (suc n)) x
+   = (fmapN {_} {1} (suc n) (rotrExpr {A} (suc zero))) (rotrExpr {{toExprNum num}} (suc n) x)
 
-substitute : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> NExprN' A (ExprN A n) (suc n) n
-substitute {{num}} n = substitute' (suc n) n  -- semantics {{toExprNum num}} 0 (rotrExpr 1 (Lit e)) e'
+
+{-# NON_TERMINATING #-}
+sub : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> ExprN A n -> ExprN A n -> ExprN A n
+sub zero Ind e' = e'
+sub zero (Lit x) e' = Lit x
+sub zero (Add e e₁) e' = Add (sub zero e e') (sub zero e₁ e')
+sub zero (Sub e e₁) e' = Sub (sub zero e e') (sub zero e₁ e')
+sub zero (Mul e e₁) e' = Mul (sub zero e e') (sub zero e₁ e')
+sub {A} (suc n) e e' rewrite numEquiv {A} n
+    with e
+... | Ind       = e'
+... | Lit x     = Lit x
+... | Add e₁ e₂ = Add (subst id (numEquiv {A} n) (sub (suc n) (subst id (sym (numEquiv {A} n)) e₁) (subst id (sym (numEquiv {A} n)) e')))
+                      (subst id (numEquiv {A} n) (sub (suc n) (subst id (sym (numEquiv {A} n)) e₂) (subst id (sym (numEquiv {A} n)) e')))
+... | Sub e₁ e₂ = Sub (subst id (numEquiv {A} n) (sub (suc n) (subst id (sym (numEquiv {A} n)) e₁) (subst id (sym (numEquiv {A} n)) e')))
+                      (subst id (numEquiv {A} n) (sub (suc n) (subst id (sym (numEquiv {A} n)) e₂) (subst id (sym (numEquiv {A} n)) e')))
+... | Mul e₁ e₂ = Mul (subst id (numEquiv {A} n) (sub (suc n) (subst id (sym (numEquiv {A} n)) e₁) (subst id (sym (numEquiv {A} n)) e')))
+                      (subst id (numEquiv {A} n) (sub (suc n) (subst id (sym (numEquiv {A} n)) e₂) (subst id (sym (numEquiv {A} n)) e')))
+
+substitute' : ∀ {A : Set}{{num : Num A}} (n n' : ℕ) -> ExprN A n -> Nest' (ExprN A n) n' -> ExprN A n
+substitute' n zero e e' = {!!}
+substitute' n (suc n') e e' = {!!}
 
 
 
+substitute : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> ExprN A n -> Nest' (ExprN A n) n -> ExprN A n
+substitute zero e e' = {!!}
+substitute (suc n) e e' = {!!}
+-- rotrExpr 3 (Add Ind (Add (Lit Ind) (Lit (Lit Ind))))
