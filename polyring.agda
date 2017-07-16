@@ -1,3 +1,4 @@
+open import Data.Unit using (⊤; tt)
 open import Data.Nat hiding (_⊔_)
 open import Data.Product
 open import Num
@@ -33,25 +34,24 @@ foldExpr {{num}} x f (Mul e1 e2) =
 
 
 ExprN : ∀ {l} (A : Set l) (n : ℕ) -> Set l
-ExprN A zero = Expr A
+ExprN A zero = A
 ExprN A (suc n) = ExprN (Expr A) n
 
-NExprN : ∀ {l m} (A : Set l) (B : Set m) (n : ℕ) -> Set (l ⊔ m)
-NExprN A B zero = ExprN A zero -> B
-NExprN A B (suc n) = ExprN A (suc n) -> NExprN A B n
-
-NExprN' : ∀ {l} (A : Set l) (m : ℕ) (n : ℕ) -> Set l
-NExprN' A zero n = ExprN A n -> ExprN A n
-NExprN' A (suc m) n = ExprN A n -> NExprN' A m n
-
+-- NExprN : ∀ {l m} (A : Set l) (B : Set m) (n : ℕ) -> Set (l ⊔ m)
+-- NExprN A B zero = ExprN A zero -> B
+-- NExprN A B (suc n) = ExprN A (suc n) -> NExprN A B n
+--
+-- NExprN' : ∀ {l} (A : Set l) (m : ℕ) (n : ℕ) -> Set l
+-- NExprN' A zero n = ExprN A n -> ExprN A n
+-- NExprN' A (suc m) n = ExprN A n -> NExprN' A m n
 
 Nest : Set -> ℕ -> Set
-Nest A zero = Expr A
-Nest A (suc n) = ExprN A (suc n) × Nest A n
+Nest A zero = ⊤
+Nest A (suc n) = ExprN A n × Nest A n
 
-Nest' : Set -> ℕ -> Set
-Nest' A zero = A
-Nest' A (suc n) = A × Nest' A n
+-- Nest' : Set -> ℕ -> Set
+-- Nest' A zero = A
+-- Nest' A (suc n) = A × Nest' A n
 
 toFuncNum : ∀ {A : Set} (num : Num A) -> Num (A -> A)
 toFuncNum record { +-id = +-id ; *-id = *-id ; _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_ }
@@ -61,6 +61,7 @@ toFuncNum record { +-id = +-id ; *-id = *-id ; _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_
             ; _-_ = \f g x -> f x - g x
             ; _*_ = \f g x -> f x * g x
             }
+
 toExprNum : ∀ {A : Set} (num : Num A) -> Num (Expr A)
 toExprNum record { +-id = +-id ; *-id = *-id ; _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_ }
    = record { +-id = Lit +-id
@@ -87,7 +88,7 @@ exprLift zero (suc n) z≤n exp = exprLift 0 n z≤n (Lit exp)
 exprLift (suc m) (suc n) (s≤s p) exp = exprLift m n p exp
 
 compose : ∀ {A : Set} -> (n : ℕ) -> (A -> A) -> (A -> A)
-compose zero f = f
+compose zero f = id
 compose (suc n) f = f ∘ compose n f
 
 fmapN : ∀ {A : Set}{m} -> (n : ℕ) -> (ExprN A m -> ExprN A m) -> ExprN A (m + n) -> ExprN A (m + n)
@@ -95,27 +96,40 @@ fmapN {_} {m} zero f rewrite +-comm m zero = f
 fmapN {A} {m} (suc n) f rewrite a+suc-b==suc-a+b m n
    = fmapN {_} {suc m} n (subst (\x -> x -> x) (sym $ numEquiv m) (fmap f))
 
-
 toExprNumN : ∀ {A : Set}{n}{{num : Num A}} -> Num (ExprN A n)
-toExprNumN {n = zero} {{num}} = toExprNum num
+toExprNumN {n = zero} {{num}} = num
 toExprNumN {A} {n = suc n} {{num}} rewrite numEquiv {A} n = toExprNum (toExprNumN {_} {n})
+
+semantics1 : ∀ {A : Set} {{num : Num A}} → Expr A → A → A
+semantics1 {{num}} = foldExpr {{toFuncNum num}} id const
+
+semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
+semantics zero x tt = x
+semantics {A} {{num}} (suc n) e (t , es) rewrite numEquiv {A} n
+  = semantics n (semantics1 {{toExprNumN {n = n}}} e t) es
+
+
 {-
-{-# NON_TERMINATING #-}
-semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> NExprN A (A -> A) n
-semantics {{num}} zero = foldExpr {{toFuncNum num}} id const
-semantics {{num}} (suc zero) e = semantics zero ∘ semantics {{toExprNum num}} zero e
-semantics {A} {{num}} (suc (suc n)) e
-   = (semantics {{num}} (suc n) ∘
-          semantics {{toExprNumN {_} {suc n} {{num}}}}
-               zero (subst id (numEquiv n) e))
+ {-# NON_TERMINATING # -}
+-- semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> NExprN A (A -> A) n
+-- semantics {{num}} zero = foldExpr {{toFuncNum num}} id const
+-- semantics {{num}} (suc zero) e = semantics zero ∘ semantics {{toExprNum num}} zero e
+-- semantics {A} {{num}} (suc (suc n)) e
+--    = (semantics {{num}} (suc n) ∘
+--           semantics {{toExprNumN {_} {suc n} {{num}}}}
+--                zero (subst id (numEquiv n) e))
 
 -}
 
+{- SCM
 {-# NON_TERMINATING #-}
 semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> Nest A n -> A -> A
-semantics {{num}} zero = foldExpr {{toFuncNum num}} id const 
+semantics {{num}} zero = foldExpr {{toFuncNum num}} id const
 semantics {{num}} (suc zero) (proj₁ , proj₂) = semantics zero (semantics {{toExprNum num}} zero proj₁ proj₂)
-semantics {{num}} (suc (suc n)) (proj₁ , proj₂ , proj₃) = semantics (suc n) (semantics {{toExprNumN {_} {suc n} {{num}}}} zero (subst id (numEquiv n) proj₁) proj₂ , proj₃)
+semantics {{num}} (suc (suc n)) (proj₁ , proj₂ , proj₃) =
+  semantics (suc n)
+    (semantics {{toExprNumN {_} {suc n} {{num}}}} zero
+                  (subst id (numEquiv n) proj₁) proj₂ , proj₃)
 
 toProdFunc : ∀ {A : Set}{n : ℕ} -> NExprN A (A -> A) n -> Nest A n -> A -> A
 toProdFunc {n = zero} x x₁ = x x₁
@@ -135,7 +149,7 @@ rotlExpr : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> ExprN A n -> ExprN A n
 rotlExpr zero x = x
 rotlExpr {{num}} (suc zero) = foldExpr {{toExprNumN {_} {1} {{num}}}} (Lit Ind)
                                           (foldExpr {{toExprNumN {_} {1} {{num}}}}
-                                          
+
                                               Ind (Lit ∘ Lit))
 rotlExpr {A} {{num}} (suc (suc n)) x
    = (fmapN {_} {1} (suc n) (rotrExpr {A} (suc zero))) (rotrExpr {{toExprNum num}} (suc n) x)
@@ -160,12 +174,13 @@ sub {A} (suc n) e e' rewrite numEquiv {A} n
                       (subst id (numEquiv {A} n) (sub (suc n) (subst id (sym (numEquiv {A} n)) e₂) (subst id (sym (numEquiv {A} n)) e')))
 
 substitute' : ∀ {A : Set}{{num : Num A}} (n n' : ℕ) -> ExprN A n -> Nest' (ExprN A n) n' -> ExprN A n
-substitute' n zero e e' = {!!}
-substitute' n (suc n') e e' = {!!}
+substitute' n zero e e' = {! !}
+substitute' n (suc n') e e' = {! !}
 
 
 
 substitute : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> ExprN A n -> Nest' (ExprN A n) n -> ExprN A n
-substitute zero e e' = {!!}
-substitute (suc n) e e' = {!!}
+substitute zero e e' = {! !}
+substitute (suc n) e e' = {! !}
 -- rotrExpr 3 (Add Ind (Add (Lit Ind) (Lit (Lit Ind))))
+SCM -}
