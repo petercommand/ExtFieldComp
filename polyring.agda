@@ -1,5 +1,6 @@
 open import Data.Unit using (⊤; tt)
 open import Data.Nat hiding (_⊔_)
+open import Data.List
 open import Data.Product
 open import Num
 open import NatProperties
@@ -56,7 +57,8 @@ Nest A (suc n) = ExprN A n × Nest A n
 -- Nest' A zero = A
 -- Nest' A (suc n) = A × Nest' A n
 
-toFuncNum : ∀ {A : Set} (num : Num A) -> Num (A -> A)
+
+instance toFuncNum : ∀ {A : Set} (num : Num A) -> Num (A -> A)
 toFuncNum record { +-id = +-id ; *-id = *-id ; _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_ }
    = record { +-id = const +-id
             ; *-id = const *-id
@@ -65,7 +67,7 @@ toFuncNum record { +-id = +-id ; *-id = *-id ; _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_
             ; _*_ = \f g x -> f x * g x
             }
 
-toExprNum : ∀ {A : Set} (num : Num A) -> Num (Expr A)
+instance toExprNum : ∀ {A : Set} (num : Num A) -> Num (Expr A)
 toExprNum record { +-id = +-id ; *-id = *-id ; _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_ }
    = record { +-id = Lit +-id
             ; *-id = Lit  *-id
@@ -73,7 +75,6 @@ toExprNum record { +-id = +-id ; *-id = *-id ; _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_
             ; _-_ = \e1 e2 -> Sub e1 e2
             ; _*_ = \e1 e2 -> Mul e1 e2
             }
-
 fmap : ∀ {A B : Set} -> (A -> B) -> Expr A -> Expr B
 fmap f Ind = Ind
 fmap f (Lit x) = Lit (f x)
@@ -105,12 +106,83 @@ toExprNumN {A} (suc n) {{num}} rewrite numEquiv {A} n =
    toExprNum (toExprNumN n)
 
 semantics1 : ∀ {A : Set} {{num : Num A}} → Expr A → A → A
-semantics1 {{num}} = foldExpr {{toFuncNum num}} id const
+semantics1 = foldExpr id const
+
 
 semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
 semantics zero x tt = x
 semantics {A} {{num}} (suc n) e (t , es) rewrite numEquiv {A} n
-  = semantics n (semantics1 {{toExprNumN n}} e t) es
+    = let ins = toExprNumN {_} n {{num}}
+      in semantics n (semantics1 {{ins}} e t) es
+
+record Sym (A : Set) : Set where
+  constructor [[_]]
+  field
+    Sym1 : ℕ
+Addr : Set → Set
+Addr A = Sym A
+
+data TAC (A : Set) : Set where
+  ConstI : Addr A -> A -> TAC A
+  AddI : Addr A -> Addr A -> Addr A -> TAC A
+  SubI : Addr A -> Addr A -> Addr A -> TAC A
+  MulI : Addr A -> Addr A -> Addr A -> TAC A
+
+
+
+record SSA (A : Set) (B : Set) : Set where
+  constructor ssa
+  field
+    ssa1 : Sym A × List (TAC A) -> B × Sym A × List (TAC A)
+
+
+return : ∀ {S A : Set} → A → SSA S A
+return a = ssa (λ x → a , x)
+
+_>>=_ : ∀ {S A B : Set} → SSA S A → (A → SSA S B) → SSA S B
+ssa x >>= f = ssa (λ args → let r , s = x args
+                                ssa s' = f r
+                            in s' s)
+infixr 10 _>>=_
+
+
+
+
+getvar : ∀ {A : Set} → SSA A (Sym A)
+getvar = ssa (λ args → let [[ n ]] , is = args
+                       in [[ n ]] , [[ suc n ]] , is)
+putins : ∀ {A : Set} → TAC A → SSA A ⊤
+putins i = ssa (λ args → let [[ n ]] , is = args
+                         in tt , [[ n ]] , i ∷ is)
+
+biOpSSA : ∀ {A : Set}
+          → (Addr A -> Addr A -> Addr A -> TAC A)
+          → SSA A (Sym A) → SSA A (Sym A)
+          → SSA A (Sym A)
+biOpSSA op p1 p2 = p1 >>= λ x →
+                   p2 >>= λ y →
+                   getvar >>= λ z →
+                   putins (op z x y) >>= λ _ →
+                   return z
+
+instance SSANum : ∀ {A : Set} -> Num (SSA A (Sym A))
+SSANum = record { +-id = {!!} -- address of zero
+                ; *-id = {!!} -- address of one
+                ; _+_ = biOpSSA AddI
+                ; _-_ = biOpSSA SubI
+                ; _*_ = biOpSSA MulI }
+
+
+compile : ∀ {A : Set} (n : ℕ) → ExprN A n → SSA A (Sym A)
+compile zero x = getvar >>= λ v →
+                 putins (ConstI v x) >>= λ _ ->
+                 return v
+
+compile {A} (suc n) exp rewrite numEquiv {A} n
+ = getvar >>= λ v →
+   foldExpr (return v) (compile n) exp
+
+
 
 {-
  {-# NON_TERMINATING # -}
