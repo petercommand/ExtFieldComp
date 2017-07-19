@@ -1,6 +1,5 @@
---
-
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, TypeSynonymInstances #-}
+module PolyRing where
 
 import Control.Monad.State
 
@@ -32,6 +31,8 @@ instance Num a => Num (Expr a) where
   e1 + e2 = Add e1 e2
   e1 - e2 = Sub e1 e2
   e1 * e2 = Mul e1 e2
+  abs = undefined
+  signum = undefined
 
 foldExpr :: Num b => b -> (a -> b) -> Expr a -> b
 foldExpr x _ Ind = x
@@ -39,6 +40,14 @@ foldExpr _ f (Lit x) = f x
 foldExpr x f (Add e1 e2) = foldExpr x f e1 + foldExpr x f e2
 foldExpr x f (Sub e1 e2) = foldExpr x f e1 - foldExpr x f e2
 foldExpr x f (Mul e1 e2) = foldExpr x f e1 * foldExpr x f e2
+
+foldE :: b -> (a -> b) -> (b -> b -> b) ->
+         (b -> b -> b) -> (b -> b -> b)-> Expr a -> b
+foldE x _ _ _ _ Ind = x
+foldE _ f _ _ _ (Lit x) = f x
+foldE x f a s m (Add e1 e2) = foldE x f a s m e1 `a` foldE x f a s m e2
+foldE x f a s m (Sub e1 e2) = foldE x f a s m e1 `s` foldE x f a s m e2
+foldE x f a s m (Mul e1 e2) = foldE x f a s m e1 `m` foldE x f a s m e2
 
 type Expr2 a = Expr (Expr a)
 type Expr3 a = Expr2 (Expr a)
@@ -54,6 +63,8 @@ instance Num a => Num (a -> a) where
   f + g = \x -> f x + g x
   f - g = \x -> f x - g x
   f * g = \x -> f x * g x
+  abs = undefined
+  signum = undefined
 
 semantics :: Num a => Expr a -> a -> a
 semantics = foldExpr id const
@@ -101,96 +112,175 @@ substitute3 :: Num a => Expr3 a -> Expr3 a -> Expr3 a -> Expr3 a -> Expr3 a
 substitute3 e1 e2 e3 e = semantics3 (rotrExpr6 . rotrExpr6 . rotrExpr6 $ Lit . Lit . Lit $ e) (Lit . Lit $ e1) (Lit e2) e3
 -- ...
 
--- Symbols of type a
+type Addr = Int
 
-data Sym a = Var Integer deriving Show
+  -- a state monad for new addr generation
 
--- SSA statements of type a
+type CompM a = State Addr a
 
-type SSA a = State (Sym a, [String]) (Sym a)
+data BinOp = IAdd | IMinus | IMul
+data Instr a = UAssign Addr a
+             | BAssign Addr BinOp Addr Addr
 
-instance Show (SSA a) where
-  show s = unlines . snd $ execState s (Var 0, [])
+instance Show BinOp where
+  show IAdd = "+"
+  show IMinus = "-"
+  show IMul = "*"
 
-getvar :: SSA a
-getvar = state $ \(Var n, is) -> (Var n, (Var (n + 1), is))
+instance Show a => Show (Instr a) where
+  show (UAssign addr v) = "r" ++ show addr ++ " := " ++ show v
+  show (BAssign tar op s1 s2) =
+      "r" ++ show tar ++ " := r" ++ show s1 ++ " " ++ show op ++
+        " r" ++  show s2
 
-putins :: String -> SSA a
-putins i = state $ \(s, is) -> (s, (s, is ++ [i]))
+instance Num (CompM (Addr, [Instr a])) where
+   (+) = binop IAdd
+   (-) = binop IMinus
+   (*) = binop IMul
+   abs = undefined
+   signum = undefined
+   fromInteger = undefined
 
-gen_assign :: Show a => Sym a -> a -> String
-gen_assign dst val = show dst ++ " := " ++ show val
+binop :: BinOp -> CompM (Addr, [Instr a])
+               -> CompM (Addr, [Instr a])
+               -> CompM (Addr, [Instr a])
+binop op m1 m2 =
+  do (a1, is1) <- m1
+     (a2, is2) <- m2
+     a0 <- alloc
+     return (a0, is1 ++ is2 ++ [BAssign a0 op a1 a2])
 
-gen_ind :: Show a => Sym a -> Integer -> String
-gen_ind dst ind = show dst ++ " := Ind " ++ show ind
+alloc :: CompM Addr
+alloc = state $ (\addr -> (addr, addr + 1))
 
-gen_arith :: Show a => String -> Sym a -> Sym a -> Sym a -> String
-gen_arith op dst src1 src2 = show dst ++ " := " ++ show src1 ++ op ++ show src2
 
-instance Show a => Num (SSA a) where
-  p1 + p2 = do x <- p1
-               y <- p2
-               z <- getvar
-               putins $ gen_arith " + " z x y
-               return z
-  p1 - p2 = do x <- p1
-               y <- p2
-               z <- getvar
-               putins $ gen_arith " - " z x y
-               return z
-  p1 * p2 = do x <- p1
-               y <- p2
-               z <- getvar
-               putins $ gen_arith " * " z x y
-               return z
+-- SCM: For all N, compileN has type
+--   compileN :: ExprN a -> Vec Addr N -> CompM (Addr, [Instr a])
+-- The vector of Addr contains the addresses of arguments of the
+-- expression.
 
--- Compiling expressions of type a to SSA statements
+pass r = return (r, [])
 
-pass :: SSA a
-pass = do { v <- getvar ; return v }
+compile0 :: a -> CompM (Addr, [Instr a])
+compile0 v = do r <- alloc
+                return (r, [UAssign r v])
 
-compile0 :: Show a => a -> SSA a
-compile0 x = do { v <- getvar ; putins $ gen_assign v x ; return v }
+compile1 :: Expr a -> Addr -> CompM (Addr, [Instr a])
+compile1 e1 r0 = foldExpr (pass r0) compile0 e1
 
-compile :: Show a => Expr a -> SSA a
-compile = foldExpr pass compile0
+compile2 :: Expr2 a -> Addr -> Addr -> CompM (Addr, [Instr a])
+compile2 e2 r1 r0 = foldExpr (pass r1) lit e2
+   where lit e1 = compile1 e1 r0
 
-compile2 :: Show a => Expr2 a -> SSA a
-compile2 = foldExpr pass compile
+compile3 :: Expr3 a -> Addr -> Addr -> Addr -> CompM (Addr, [Instr a])
+compile3 e3 r2 r1 r0 = foldExpr (pass r2) lit e3
+  where lit e2 = compile2 e2 r1 r0
 
-compile3 :: Show a => Expr3 a -> SSA a
-compile3 = foldExpr pass compile2
+-- SCM: for all N, compileN' is merely compileN with the order of arugments .
+-- altered They are here because, after moving the positon of ExprN a
+-- rightwards, we can have a more concise definition. Not sure it implies
+-- anything significant, though.
 
-compile4 :: Show a => Expr4 a -> SSA a
-compile4 = foldExpr pass compile3
--- ...
+compile1' :: Addr -> Expr a -> CompM (Addr, [Instr a])
+compile1' r0 = foldExpr (pass r0) compile0
 
--- Test cases for evaluating and compiling expressions of Float
+compile2' :: Addr -> Addr -> Expr2 a -> CompM (Addr, [Instr a])
+compile2' r1 r0 = foldExpr (pass r1) (compile1' r0)
 
-x = Ind :: Expr Float
-e1 = 1 + 2*x
-s1 = semantics e1
-v1 = s1 3
-p1 = compile e1
-e2 = substitute e1 (4 + 5*x)
-s2 = semantics e2
-v2 = s2 6
-p2 = compile e2
-y = Ind :: Expr2 Float
-z = Ind :: Expr3 Float
-e3 = (z + 1)*(Lit y + 2)*((Lit . Lit $ x) + 3)
-s3 = semantics3 e3
-v3 = s3 4 5 6
-p3 = compile3 e3
-e3' = rotrExpr3 e3
-e3'' = rotrExpr3 e3'
-e3''' = rotrExpr3 e3''
-e4 = Lit e3 + Ind :: Expr4 Float
-e4' = rotrExpr4 . rotrExpr4 . rotrExpr4 . rotrExpr4 $ e4
-e5 = (1 + Lit x)*(2 + y)
-e6 = (3 + Lit x)*(4 + y*y)
-e7 = (5 + Lit x)*(6 + y*(7 + y))
-e7' = substitute2 e5 e6 e7
+compile3' :: Addr -> Addr -> Addr -> Expr3 a -> CompM (Addr, [Instr a])
+compile3' r2 r1 r0 = foldExpr (pass r2) (compile2' r1 r0)
+
+
+-- -- Symbols of type a
+--
+-- data Sym a = Var Integer deriving Show
+--
+-- -- SSA statements of type a
+--
+-- type SSA a = State (Sym a, [String]) (Sym a)
+--
+-- instance Show (SSA a) where
+--   show s = unlines . snd $ execState s (Var 0, [])
+--
+-- getvar :: SSA a
+-- getvar = state $ \(Var n, is) -> (Var n, (Var (n + 1), is))
+--
+-- putins :: String -> SSA a
+-- putins i = state $ \(s, is) -> (s, (s, is ++ [i]))
+--
+-- gen_assign :: Show a => Sym a -> a -> String
+-- gen_assign dst val = show dst ++ " := " ++ show val
+--
+-- gen_ind :: Show a => Sym a -> Integer -> String
+-- gen_ind dst ind = show dst ++ " := Ind " ++ show ind
+--
+-- gen_arith :: Show a => String -> Sym a -> Sym a -> Sym a -> String
+-- gen_arith op dst src1 src2 = show dst ++ " := " ++ show src1 ++ op ++ show src2
+--
+-- instance Show a => Num (SSA a) where
+--   p1 + p2 = do x <- p1
+--                y <- p2
+--                z <- getvar
+--                putins $ gen_arith " + " z x y
+--                return z
+--   p1 - p2 = do x <- p1
+--                y <- p2
+--                z <- getvar
+--                putins $ gen_arith " - " z x y
+--                return z
+--   p1 * p2 = do x <- p1
+--                y <- p2
+--                z <- getvar
+--                putins $ gen_arith " * " z x y
+--                return z
+--
+-- -- Compiling expressions of type a to SSA statements
+--
+-- pass :: SSA a
+-- pass = do { v <- getvar ; return v }
+--
+-- compile0 :: Show a => a -> SSA a
+-- compile0 x = do { v <- getvar ; putins $ gen_assign v x ; return v }
+--
+-- compile :: Show a => Expr a -> SSA a
+-- compile = foldExpr pass compile0
+--
+-- compile2 :: Show a => Expr2 a -> SSA a
+-- compile2 = foldExpr pass compile
+--
+-- compile3 :: Show a => Expr3 a -> SSA a
+-- compile3 = foldExpr pass compile2
+--
+-- compile4 :: Show a => Expr4 a -> SSA a
+-- compile4 = foldExpr pass compile3
+-- -- ...
+--
+-- -- Test cases for evaluating and compiling expressions of Float
+--
+-- x = Ind :: Expr Float
+-- e1 = 1 + 2*x
+-- s1 = semantics e1
+-- v1 = s1 3
+-- p1 = compile e1
+-- e2 = substitute e1 (4 + 5*x)
+-- s2 = semantics e2
+-- v2 = s2 6
+-- p2 = compile e2
+-- y = Ind :: Expr2 Float
+-- z = Ind :: Expr3 Float
+-- e3 = (z + 1)*(Lit y + 2)*((Lit . Lit $ x) + 3)
+-- s3 = semantics3 e3
+-- v3 = s3 4 5 6
+-- p3 = compile3 e3
+-- e3' = rotrExpr3 e3
+-- e3'' = rotrExpr3 e3'
+-- e3''' = rotrExpr3 e3''
+-- e4 = Lit e3 + Ind :: Expr4 Float
+-- e4' = rotrExpr4 . rotrExpr4 . rotrExpr4 . rotrExpr4 $ e4
+-- e5 = (1 + Lit x)*(2 + y)
+-- e6 = (3 + Lit x)*(4 + y*y)
+-- e7 = (5 + Lit x)*(6 + y*(7 + y))
+-- e7' = substitute2 e5 e6 e7
 
 -- Types that are extended from other types
 
@@ -231,6 +321,8 @@ instance Num a => Num (MyGaussian a) where
   Complex a1 b1 + Complex a2 b2 = Complex (a1 + a2) (b1 + b2)
   Complex a1 b1 - Complex a2 b2 = Complex (a1 - a2) (b1 - b2)
   Complex a1 b1 * Complex a2 b2 = Complex (a1*a2 - b1*b2) (a1*b2 + a2*b1)
+  abs = undefined
+  signum = undefined
 
 instance Extended MyGaussian where
   fromList [x, y] = Complex x y
@@ -248,18 +340,19 @@ instance Num a => Num (MyRational a) where
   Rational a1 b1 + Rational a2 b2 = Rational (a1*b2 + a2*b1) (b1*b2)
   Rational a1 b1 - Rational a2 b2 = Rational (a1*b2 - a2*b1) (b1*b2)
   Rational a1 b1 * Rational a2 b2 = Rational (a1*a2) (b1*b2)
+  abs = undefined
+  signum = undefined
 
 instance Extended MyRational where
   fromList [x, y] = Rational x y
   toList (Rational x y) = [x, y]
 
--- Compiling (MyGaussian (MyRational a)) to a
-
-compileGR :: (Num a, Show a) => Expr (MyGaussian (MyRational a)) -> [SSA a]
-compileGR = map compile4 . concat. map toList . map expand24 . toList . expand2
-
--- Test cases for compiling expressions of extended types
-
-e8 = Ind + Lit (Complex (Rational 1 2) (Rational 3 4)) * Lit (Complex (Rational 5 6) (Rational 7 8))
-p8 = compileGR e8
-
+-- -- Compiling (MyGaussian (MyRational a)) to a
+--
+-- compileGR :: (Num a, Show a) => Expr (MyGaussian (MyRational a)) -> [SSA a]
+-- compileGR = map compile4 . concat. map toList . map expand24 . toList . expand2
+--
+-- -- Test cases for compiling expressions of extended types
+--
+-- e8 = Ind + Lit (Complex (Rational 1 2) (Rational 3 4)) * Lit (Complex (Rational 5 6) (Rational 7 8))
+-- p8 = compileGR e8
