@@ -17,6 +17,7 @@ data Expr {l} (A : Set l) : Set l where
   Sub : (e1 : Expr A) -> (e2 : Expr A) -> Expr A
   Mul : (e1 : Expr A) -> (e2 : Expr A) -> Expr A
 
+
 foldExpr : ∀ {m} {a : Set m} {b : Set} {{num : Num b}}
          -> b
          -> (a -> b)
@@ -46,7 +47,12 @@ Nest : Set -> ℕ -> Set
 Nest A zero = ⊤
 Nest A (suc n) = ExprN A n × Nest A n
 
-
+NestRange : Set -> (st : ℕ) -> (len : ℕ) -> Set
+NestRange A _ zero = ⊤
+NestRange A zero (suc len) = ⊤
+NestRange A (suc st) (suc len)
+   = ExprN A st × NestRange A st len
+              
 instance toFuncNum : ∀ {A : Set} (num : Num A) -> Num (A -> A)
 toFuncNum record { _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_ }
    = record { _+_ = \f g x -> f x + g x
@@ -99,6 +105,23 @@ semantics zero x tt = x
 semantics {A} (suc n) e (t , es) rewrite numEquiv A n
     = let ins = toExprNumN n
       in semantics n (semantics1 {{ins}} e t) es
+
+nestToNestRange : ∀ {A : Set} → {m : ℕ} → Nest A m → NestRange A m m
+nestToNestRange {m = zero} n = tt
+nestToNestRange {m = suc m} (proj₁ , proj₂)
+    = proj₁ , (nestToNestRange proj₂)
+
+nest-rev : ∀ {A : Set} (m n o : ℕ) → Nest A o
+    → m + n ≡ o → NestRange A o m × Nest A n
+nest-rev m zero o exp p rewrite zero-red {m} | p = nestToNestRange exp , tt
+nest-rev zero (suc n) zero exp ()
+nest-rev {A} zero (suc n) (suc o) (proj₁ , proj₂) p
+   rewrite suc-≡-elim n o p = tt , proj₁ , proj₂
+nest-rev (suc m) (suc n) zero exp ()
+nest-rev (suc m) (suc n) (suc .(m + suc n)) (proj₁ , p) refl
+   rewrite a+suc-b==suc-a+b m n
+   = let a , b = nest-rev m (suc n) (suc (m + n)) p (a+suc-b==suc-a+b m n)
+     in (proj₁ , a) , b
 
 record Addr : Set where
   constructor [[_]]
@@ -168,7 +191,11 @@ compile zero addr exp = compile0 exp
 compile {A} (suc n) (x ∷ addr) exp
   rewrite numEquiv A n
   = foldExpr (pass x) (compile n addr) exp
-
+{-
+comp-sem : ∀ {A : Set} (n : ℕ)
+   → (exp : Nest A n)
+   → 
+-}
 idExpr2 : ∀ {A : Set} {{num : Num A}} → Expr2 A → Expr2 A
 idExpr2 = foldExpr {{toExprNumN 2}} Ind
             (foldExpr {{toExprNumN 2}} (Lit Ind) (Lit ∘ Lit))
