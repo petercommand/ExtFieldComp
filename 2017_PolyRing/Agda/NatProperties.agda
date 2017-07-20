@@ -14,6 +14,9 @@ suc-<-elim zero (suc b) = λ x → z≤n
 suc-<-elim (suc a) zero (s≤s ())
 suc-<-elim (suc a) (suc b) (s≤s p) = p
 
+suc-≡-elim : (a b : ℕ) -> (suc a ≡ suc b) -> a ≡ b
+suc-≡-elim a .a refl = refl
+
 suc-≤-elim' : (a b : ℕ) -> (suc a ≤ b) -> a ≤ b
 suc-≤-elim' zero _ (s≤s p) = z≤n
 suc-≤-elim' (suc a) _ (s≤s p) = s≤s (suc-≤-elim' a _ p)
