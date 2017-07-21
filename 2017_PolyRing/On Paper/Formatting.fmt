@@ -32,6 +32,7 @@
 %format <== = "\mathrel{\Leftarrow}"
 %format ==> = "\mathrel{\Rightarrow}"
 
+%format [] = "\lbrack\,\rbrack"
 
 \def\commentbegin{\quad\{\ }
 \def\commentend{\}}
