@@ -1,7 +1,6 @@
 open import Data.Unit using (⊤; tt)
 open import Data.Nat hiding (_⊔_)
 open import Data.List
-open import Data.Product
 open import Data.Vec hiding (_>>=_) renaming (_++_ to _v++_)
 open import Num
 open import NatProperties
@@ -10,6 +9,18 @@ open import Level hiding (zero; suc)
 open import Function
 open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Relation.Binary.PropositionalEquality
+-- Non-Dependent Pair
+record _×_ (A : Set) (B : Set) : Set where
+  constructor _,_
+  field
+    proj₁ : A
+    proj₂ : B
+
+open _×_ public
+infixr 2 _×_
+infixr 4 _,_
+
+--
 
 data Expr {l} (A : Set l) : Set l where
   Ind : Expr A
@@ -100,12 +111,22 @@ toExprNumN {A} (suc n) {{num}} rewrite numEquiv A n =
 semantics1 : ∀ {A : Set} {{num : Num A}} → Expr A → A → A
 semantics1 = foldExpr id const
 
-
+{-
 semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
 semantics zero x tt = x
 semantics {A} (suc n) e (t , es) rewrite numEquiv A n
     = let ins = toExprNumN n
       in semantics n (semantics1 {{ins}} e t) es
+-}
+
+semantics-aux : ∀ {A : Set} {n} → (w : Set) → w → w ≡ Expr (ExprN A n) → Expr (ExprN A n)
+semantics-aux _ e refl = e
+
+semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
+semantics zero x tt = x
+semantics {A} (suc n) e (t , es)
+    = let ins = toExprNumN n
+      in semantics n (semantics1 {{ins}} (subst id (numEquiv A n) e) t) es
 
 nestToNestRange : ∀ {A : Set} → {m : ℕ} → Nest A m → NestRange A m m
 nestToNestRange {m = zero} n = tt
@@ -251,7 +272,7 @@ comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
    → (h : Heap A)
    → semantics n exp env ≡ runSSA (compAll n env exp) h
 comp-sem zero exp env h rewrite get-put [[ 0 ]] exp h = refl
-comp-sem {A} (suc n) exp env h = {!!}
+comp-sem {A} (suc n) exp env h rewrite numEquiv A n = {!!}
 
 idExpr2 : ∀ {A : Set} {{num : Num A}} → Expr2 A → Expr2 A
 idExpr2 = foldExpr {{toExprNumN 2}} Ind
