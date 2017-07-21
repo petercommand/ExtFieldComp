@@ -119,14 +119,14 @@ semantics {A} (suc n) e (t , es) rewrite numEquiv A n
       in semantics n (semantics1 {{ins}} e t) es
 -}
 
-semantics-aux : ∀ {A : Set} {n} → (w : Set) → w → w ≡ Expr (ExprN A n) → Expr (ExprN A n)
-semantics-aux _ e refl = e
+semantics-aux : ∀ {A : Set} {n} → {w : Set} → w → w ≡ Expr (ExprN A n) → Expr (ExprN A n)
+semantics-aux e refl = e
 
 semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
 semantics zero x tt = x
 semantics {A} (suc n) e (t , es)
     = let ins = toExprNumN n
-      in semantics n (semantics1 {{ins}} (subst id (numEquiv A n) e) t) es
+      in semantics n (semantics1 {{ins}} (semantics-aux {A} {n} e (numEquiv A n)) t) es
 
 nestToNestRange : ∀ {A : Set} → {m : ℕ} → Nest A m → NestRange A m m
 nestToNestRange {m = zero} n = tt
@@ -162,6 +162,7 @@ Ins A = List (TAC A)
 
 
 record SSA (A : Set) (B : Set) : Set where
+  no-eta-equality
   constructor ssa
   field
     ssa1 : Addr -> B × Addr
