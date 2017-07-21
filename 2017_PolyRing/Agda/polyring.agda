@@ -1,14 +1,26 @@
 open import Data.Unit using (⊤; tt)
 open import Data.Nat hiding (_⊔_)
 open import Data.List
-open import Data.Product
-open import Data.Vec hiding (_>>=_; _++_)
+open import Data.Vec hiding (_>>=_) renaming (_++_ to _v++_)
 open import Num
 open import NatProperties
 open import Data.Nat.Properties.Simple
 open import Level hiding (zero; suc)
 open import Function
+open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Relation.Binary.PropositionalEquality
+-- Non-Dependent Pair
+record _×_ (A : Set) (B : Set) : Set where
+  constructor _,_
+  field
+    proj₁ : A
+    proj₂ : B
+
+open _×_ public
+infixr 2 _×_
+infixr 4 _,_
+
+--
 
 data Expr {l} (A : Set l) : Set l where
   Ind : Expr A
@@ -99,12 +111,22 @@ toExprNumN {A} (suc n) {{num}} rewrite numEquiv A n =
 semantics1 : ∀ {A : Set} {{num : Num A}} → Expr A → A → A
 semantics1 = foldExpr id const
 
-
+{-
 semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
 semantics zero x tt = x
 semantics {A} (suc n) e (t , es) rewrite numEquiv A n
     = let ins = toExprNumN n
       in semantics n (semantics1 {{ins}} e t) es
+-}
+
+semantics-aux : ∀ {A : Set} {n} → (w : Set) → w → w ≡ Expr (ExprN A n) → Expr (ExprN A n)
+semantics-aux _ e refl = e
+
+semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
+semantics zero x tt = x
+semantics {A} (suc n) e (t , es)
+    = let ins = toExprNumN n
+      in semantics n (semantics1 {{ins}} (subst id (numEquiv A n) e) t) es
 
 nestToNestRange : ∀ {A : Set} → {m : ℕ} → Nest A m → NestRange A m m
 nestToNestRange {m = zero} n = tt
@@ -191,11 +213,67 @@ compile zero addr exp = compile0 exp
 compile {A} (suc n) (x ∷ addr) exp
   rewrite numEquiv A n
   = foldExpr (pass x) (compile n addr) exp
-{-
-comp-sem : ∀ {A : Set} (n : ℕ)
-   → (exp : Nest A n)
-   → 
--}
+
+compileEnv : ∀ {A : Set} (n : ℕ) → Nest A n → SSA A (Vec Addr n × Ins A)
+compileEnv zero nest = return (Vec.[] , [])
+compileEnv {A} (suc n) (proj₁ , proj₂)
+  rewrite cong (λ x → Vec Addr (suc x)) (sym (zero-red {n}))
+        | cong (λ x → Vec Addr x) (sym (a+suc-b==suc-a+b n 0))
+  = compileEnv n proj₂ >>= λ k →
+    let addr , ins = k
+    in compile n addr proj₁ >>= λ k1 →
+    let addr1 , ins2 = k1
+    in return (addr v++ (addr1 ∷ []) , ins ++ ins2) 
+
+compAll : ∀ {A : Set} (n : ℕ) → Nest A n → ExprN A n → SSA A (Addr × Ins A)
+compAll n env exp = compileEnv n env >>= λ k →
+                    let env_e , ins_e = k
+                    in compile n env_e exp >>= λ k1 →
+                    let ret , ins_e2 = k1
+                    in return (ret , ins_e ++ ins_e2)
+
+postulate
+  Heap : Set → Set
+postulate
+  putHeap : ∀ {A : Set} → Addr → A → Heap A → Heap A
+  getHeap : ∀ {A : Set} → Addr → Heap A → A
+  get-put : ∀ {A : Set} → ∀ c (k : A) h → getHeap c (putHeap c k h) ≡ k
+  get-put' : ∀ {A : Set} → ∀ c c' (k : A) h → ¬ c ≡ c'
+                         → getHeap c (putHeap c' k h) ≡ getHeap c h 
+
+runIns : ∀ {A : Set} {{_ : Num A}} → Heap A → Ins A → Heap A
+runIns h [] = h
+runIns h (ConstI x₁ x₂ ∷ ins) = runIns (putHeap x₁ x₂ h) ins
+runIns {{num}} h (AddI x₁ x₂ x₃ ∷ ins)
+  = let a₂ = getHeap x₂ h
+        a₃ = getHeap x₃ h
+        _+_ = Num._+_ num
+    in runIns (putHeap x₁ (a₂ + a₃) h) ins
+runIns {{num}} h (SubI x₁ x₂ x₃ ∷ ins)
+  = let a₂ = getHeap x₂ h
+        a₃ = getHeap x₃ h
+        _-_ = Num._-_ num
+    in runIns (putHeap x₁ (a₂ - a₃) h) ins
+runIns {{num}} h (MulI x₁ x₂ x₃ ∷ ins)
+  = let a₂ = getHeap x₂ h
+        a₃ = getHeap x₃ h
+        _*_ = Num._*_ num
+    in runIns (putHeap x₁ (a₂ * a₃) h) ins
+
+runSSA : ∀ {A : Set} {{_ : Num A}} → SSA A (Addr × Ins A) → Heap A → A
+runSSA (ssa ssa1) h
+  = let r , _ = ssa1 [[ 0 ]]
+        addr , ins = r
+    in getHeap addr (runIns h ins) 
+
+comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
+   → (exp : ExprN A n)
+   → (env : Nest A n)
+   → (h : Heap A)
+   → semantics n exp env ≡ runSSA (compAll n env exp) h
+comp-sem zero exp env h rewrite get-put [[ 0 ]] exp h = refl
+comp-sem {A} (suc n) exp env h rewrite numEquiv A n = {!!}
+
 idExpr2 : ∀ {A : Set} {{num : Num A}} → Expr2 A → Expr2 A
 idExpr2 = foldExpr {{toExprNumN 2}} Ind
             (foldExpr {{toExprNumN 2}} (Lit Ind) (Lit ∘ Lit))
