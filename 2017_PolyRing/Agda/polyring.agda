@@ -1,5 +1,6 @@
 open import Data.Unit using (⊤; tt)
 open import Data.Nat hiding (_⊔_)
+open import Data.Fin hiding (_≤_; _+_; _<_)
 open import Data.List
 open import Data.Vec hiding (_>>=_) renaming (_++_ to _v++_)
 open import Num
@@ -267,9 +268,9 @@ runIns {{num}} h (MulI x₁ x₂ x₃ ∷ ins)
         _*_ = Num._*_ num
     in runIns (putHeap x₁ (a₂ * a₃) h) ins
 
-runSSA : ∀ {A : Set} {{_ : Num A}} → SSA A (Addr × Ins A) → Heap A → A
-runSSA (ssa ssa1) h
-  = let r , _ = ssa1 [[ 0 ]]
+runSSA : ∀ {A : Set} {{_ : Num A}} → SSA A (Addr × Ins A) → Addr → Heap A → A
+runSSA (ssa ssa1) addr h
+  = let r , _ = ssa1 addr
         addr , ins = r
     in getHeap addr (runIns h ins) 
 
@@ -283,15 +284,22 @@ splitEnv (suc i) (suc n) p e with i ≟ n
 splitEnv {A} (suc i) (suc n) p₁ e | yes p = subst (λ x → ExprN A x × Nest A x) (sym p) e
 splitEnv (suc i) (suc n) (s≤s p) (e₁ , e₂) | no ¬p = splitEnv (suc i) n (neq-le i n p ¬p) e₂
 
+_!_ : ∀ {l} {A : Set l} {n : ℕ} → Vec A n → Fin n → A
+(x ∷ v) ! zero = x
+(x ∷ v) ! suc i = v ! i
+
 comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (exp : ExprN A n)
   → (env : Nest A n)
   → (env₀ : Vec Addr n)
   → (h : Heap A)
+  → (n₀ : ℕ)
+  → (n₀ ≥ n)
   → (∀ (i : ℕ) → (p : i < n) → let eᵢ , envᵢ = splitEnv (suc i) n p env
-                               in getHeap [[ i ]] h ≡ semantics i eᵢ envᵢ)
-  → semantics n exp env ≡ runSSA (compile n env₀ exp) h
-comp-sem n exp env env₀ h cons = {!!}
+                               in getHeap [[ i ]] h ≡ semantics i eᵢ envᵢ ×
+                                  semantics i eᵢ envᵢ ≡ getHeap (env₀ ! fromℕ≤ p) h)
+  → semantics n exp env ≡ runSSA (compile n env₀ exp) [[ n₀ ]] h
+comp-sem n exp env env₀ h n₀ n₀p cons = {!!}
 
 {-
 
