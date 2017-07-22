@@ -2,7 +2,7 @@ open import Data.Nat
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
 import Data.Nat.Properties.Simple as NS
-
+open import Data.Empty
 max : ℕ -> ℕ -> ℕ
 max zero b = b
 max (suc a) zero = suc a
@@ -109,6 +109,12 @@ a<c->¬a≡c _ (suc _) (s≤s (s≤s a≤c₁)) a≡c = a<c->¬a≡c _ _ (suc-<-
 
 a<c->¬c≡a : ∀ (a c : ℕ) -> a < c -> ¬ (c ≡ a)
 a<c->¬c≡a a c a<c = λ x → a<c->¬a≡c a c a<c (sym x)
+
+neq-le : ∀ (a c : ℕ) -> a ≤ c -> ¬ a ≡ c -> a < c
+neq-le zero zero z≤n p1 = ⊥-elim (p1 refl)
+neq-le zero (suc c) p p1 = s≤s z≤n
+neq-le (suc a) zero () p1
+neq-le (suc a) (suc c) (s≤s p) p1 = s≤s (neq-le a c p (λ x → p1 (cong suc x)))
 
 a≤suc-a : ∀ (a : ℕ) -> a ≤ suc a
 a≤suc-a zero = z≤n
