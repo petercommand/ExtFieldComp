@@ -213,12 +213,12 @@ pass r = return (r , [])
 compile0 : ∀ {A : Set} → A → SSA A (Addr × List (TAC A))
 compile0 v = getvar >>= λ addr →
              return (addr , ConstI addr v ∷ [])
-abstract
-  compile : ∀ {A : Set} (n : ℕ) → Vec Addr n
-     → ExprN A n → SSA A (Addr × Ins A)
-  compile zero addr exp = compile0 exp
-  compile {A} (suc n) (x ∷ addr) exp
-    = foldExpr (pass x) (compile n addr) (subst id (numEquiv A n) exp)
+
+compile : ∀ {A : Set} (n : ℕ) → Vec Addr n
+   → ExprN A n → SSA A (Addr × Ins A)
+compile zero addr exp = compile0 exp
+compile {A} (suc n) (x ∷ addr) exp
+  = foldExpr (pass x) (compile n addr) (subst id (numEquiv A n) exp)
 
 {-
 compileEnv : ∀ {A : Set} (n : ℕ) → Nest A n → SSA A (Vec Addr n × Ins A)
@@ -288,6 +288,32 @@ _!_ : ∀ {l} {A : Set l} {n : ℕ} → Vec A n → Fin n → A
 (x ∷ v) ! zero = x
 (x ∷ v) ! suc i = v ! i
 
+
+comp-aux : ∀ {A : Set} (n : ℕ) (exp : ExprN (Expr A) n) → subst id (sym (numEquiv A n)) (subst id (numEquiv A n) exp) ≡ exp
+comp-aux {A} n exp rewrite numEquiv A n = refl
+
+comp-sem' : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
+  → (exp : Expr (ExprN A n))
+  → (env : Nest A (suc n))
+  → (env₀ : Vec Addr (suc n))
+  → (h : Heap A)
+  → (n₀ : ℕ)
+  → (n₀ ≥ (suc n))
+  → (∀ (i : ℕ) → (p : i < suc n) → let eᵢ , envᵢ = splitEnv (suc i) (suc n) p env
+                                   in getHeap [[ i ]] h ≡ semantics i eᵢ envᵢ ×
+                                      semantics i eᵢ envᵢ ≡ getHeap (env₀ ! fromℕ≤ p) h)
+  → semantics (suc n) (subst id (sym (numEquiv A n)) exp) env ≡
+    runSSA (compile (suc n) env₀ (subst id (sym (numEquiv A n)) exp)) [[ n₀ ]] h
+comp-sem' {A} zero Ind (proj₃ , tt) (x₁ ∷ []) h n₀ n₀≥suc-n cons
+    with cons 0 (s≤s z≤n)
+... | cons₁ , cons₂ = cons₂
+comp-sem' {A} zero (Lit x₁) env env₀ h n₀ n₀≥suc-n cons = {!!}
+comp-sem' {A} zero (Add exp exp₁) env env₀ h n₀ n₀≥suc-n cons = {!!}
+comp-sem' {A} zero (Sub exp exp₁) env env₀ h n₀ n₀≥suc-n cons = {!!}
+comp-sem' {A} zero (Mul exp exp₁) env env₀ h n₀ n₀≥suc-n cons = {!!}
+comp-sem' {A} (suc n) exp env env₀ h n₀ n₀≥suc-n cons = {!!}
+
+
 comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (exp : ExprN A n)
   → (env : Nest A n)
@@ -299,13 +325,14 @@ comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
                                in getHeap [[ i ]] h ≡ semantics i eᵢ envᵢ ×
                                   semantics i eᵢ envᵢ ≡ getHeap (env₀ ! fromℕ≤ p) h)
   → semantics n exp env ≡ runSSA (compile n env₀ exp) [[ n₀ ]] h
-comp-sem n exp env env₀ h n₀ n₀p cons = {!!}
+comp-sem zero exp env env₀ h n₀ n₀p cons rewrite get-put [[ n₀ ]] exp h = refl
+comp-sem {A} (suc n) exp env env₀ h n₀ n₀p cons
+   = subst (λ x → semantics (suc n) x env ≡
+             runSSA (compile (suc n) env₀ x) [[ n₀ ]] h)
+           (comp-aux n exp)
+           (comp-sem' n (subst id (numEquiv A n) exp) env env₀ h n₀ n₀p cons)
 
 {-
-
-abstract
-  baseCase : ∀ {A : Set} {{_ : Num A}} → (env : Nest A 0) → (exp : A) → (h : Heap A) → exp ≡ runSSA (compAll 0 env exp) h
-  baseCase env exp h rewrite get-put [[ 0 ]] exp h = refl
 
 comp-sem' : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
    → (exp : Expr (ExprN A n))
@@ -321,8 +348,7 @@ comp-sem' {A} zero (Mul exp exp₁) env h = {!!}
 comp-sem' {A} (suc n) exp env h = {!!}
 
 
-comp-aux : ∀ {A : Set} (n : ℕ) (exp : ExprN (Expr A) n) → subst id (sym (numEquiv A n)) (subst id (numEquiv A n) exp) ≡ exp
-comp-aux {A} n exp rewrite numEquiv A n = refl
+
 
 comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
    → (exp : ExprN A n)
