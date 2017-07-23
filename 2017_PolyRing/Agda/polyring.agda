@@ -9,7 +9,11 @@ open import Data.Nat.Properties.Simple
 open import Level hiding (zero; suc)
 open import Function
 open import Relation.Nullary using (¬_; Dec; yes; no)
-open import Relation.Binary.PropositionalEquality
+open import Relation.Binary
+open import Relation.Binary.PropositionalEquality hiding (setoid)
+open import Relation.Binary.HeterogeneousEquality renaming (subst to hsubst; cong to hcong; trans to htrans; sym to hsym; refl to hrefl)
+open ≡-Reasoning
+
 -- Non-Dependent Pair
 record _×_ (A : Set) (B : Set) : Set where
   constructor _,_
@@ -23,6 +27,20 @@ infixr 4 _,_
 
 --
 
+coe : ∀ {l} {A B : Set l} → (A ≡ B) → A → B
+coe refl a = a
+
+hcoe : ∀ {l} {A B : Set l} → (A ≅ B) → A → B
+hcoe hrefl a = a
+
+coe-removable : ∀ {l} {A B : Set l} → (p : A ≡ B) (a : A) → coe p a ≅ a
+coe-removable refl a = hrefl
+
+hcoe-removable : ∀ {l} {A B : Set l} → (p : A ≅ B) (a : A) → hcoe p a ≅ a
+hcoe-removable hrefl a = hrefl
+
+huip : ∀ {l} {A B : Set l} → (p q : A ≅ B) → p ≡ q
+huip hrefl hrefl = refl
 
 data Expr {l} (A : Set l) : Set l where
   Ind : Expr A
@@ -31,27 +49,65 @@ data Expr {l} (A : Set l) : Set l where
   Sub : (e1 : Expr A) -> (e2 : Expr A) -> Expr A
   Mul : (e1 : Expr A) -> (e2 : Expr A) -> Expr A
 
-foldExpr : ∀ {m} {a : Set m} {b : Set} {{num : Num b}}
-         -> b
-         -> (a -> b)
-         -> Expr a
-         -> b
-foldExpr x f Ind = x
-foldExpr _ f (Lit x) = f x
-foldExpr {{num}} x f (Add e1 e2) =
-   let _+_ = Num._+_ num
-   in foldExpr x f e1 + foldExpr x f e2
-foldExpr {{num}} x f (Sub e1 e2) =
-   let _-_ = Num._-_ num
-   in foldExpr x f e1 - foldExpr x f e2
-foldExpr {{num}} x f (Mul e1 e2) =
-    let _*_ = Num._*_ num
-    in foldExpr x f e1 * foldExpr x f e2
 
+module _ where
+  abstract
 
+    foldExpr : ∀ {m} {a : Set m} {b : Set} {{num : Num b}}
+             -> b
+             -> (a -> b)
+             -> Expr a
+             -> b
+    foldExpr x f Ind = x
+    foldExpr _ f (Lit x) = f x
+    foldExpr {{num}} x f (Add e1 e2) =
+       let _+_ = Num._+_ num
+       in foldExpr x f e1 + foldExpr x f e2
+    foldExpr {{num}} x f (Sub e1 e2) =
+       let _-_ = Num._-_ num
+       in foldExpr x f e1 - foldExpr x f e2
+    foldExpr {{num}} x f (Mul e1 e2) =
+       let _*_ = Num._*_ num
+       in foldExpr x f e1 * foldExpr x f e2
+    foldExpr-Ind-elim : ∀ {m} (a : Set m) {b : Set} {{num : Num b}}
+            -> (x : b)
+            -> (f : (a -> b))
+            -> foldExpr x f Ind ≡ x
+    foldExpr-Ind-elim a x f = refl
+    foldExpr-Lit-elim : ∀ {m} {a : Set m} {b : Set} {{num : Num b}}
+            -> (t : b)
+            -> (f : (a -> b))
+            -> (x : a)
+            -> foldExpr t f (Lit x) ≡ f x
+    foldExpr-Lit-elim t f x = refl
+    foldExpr-Add-elim : ∀ {m} (a : Set m) {b : Set} {{num : Num b}}
+            -> (x : b)
+            -> (f : (a -> b))
+            -> (e1 e2 : Expr a)
+            -> let _+_ = Num._+_ num
+               in foldExpr x f (Add e1 e2) ≡ foldExpr x f e1 + foldExpr x f e2
+    foldExpr-Add-elim a x f e1 e2 = refl
+    foldExpr-Sub-elim : ∀ {m} (a : Set m) {b : Set} {{num : Num b}}
+            -> (x : b)
+            -> (f : (a -> b))
+            -> (e1 e2 : Expr a)
+            -> let _-_ = Num._-_ num
+               in foldExpr x f (Sub e1 e2) ≡ foldExpr x f e1 - foldExpr x f e2
+    foldExpr-Sub-elim a x f e1 e2 = refl
+    foldExpr-Mul-elim : ∀ {m} (a : Set m) {b : Set} {{num : Num b}}
+            -> (x : b)
+            -> (f : (a -> b))
+            -> (e1 e2 : Expr a)
+            -> let _*_ = Num._*_ num
+               in foldExpr x f (Mul e1 e2) ≡ foldExpr x f e1 * foldExpr x f e2
+    foldExpr-Mul-elim a x f e1 e2 = refl
+    
 ExprN : ∀ {l} (A : Set l) (n : ℕ) -> Set l
 ExprN A zero = A
-ExprN A (suc n) = ExprN (Expr A) n
+ExprN A (suc n) = Expr (ExprN A n)
+
+exprNSetoid : ∀ {l} (A : Set l) (n : ℕ) → Setoid _ _
+exprNSetoid {_} A n = setoid (ExprN A n)
 
 Expr2 : ∀ {l} (A : Set l) -> Set l
 Expr2 A = ExprN A (suc (suc zero))
@@ -86,14 +142,16 @@ fmap f (Add e e₁) = Add (fmap f e) (fmap f e₁)
 fmap f (Sub e e₁) = Sub (fmap f e) (fmap f e₁)
 fmap f (Mul e e₁) = Mul (fmap f e) (fmap f e₁)
 
-numEquiv : ∀ (A : Set) (n : ℕ) -> ExprN (Expr A) n ≡ Expr (ExprN A n)
+numEquiv : ∀ (A : Set) (n : ℕ) -> Expr (ExprN A n) ≡ ExprN (Expr A) n 
 numEquiv _ zero = refl
-numEquiv _ (suc n) = numEquiv _ n
+numEquiv _ (suc n) = cong Expr (numEquiv _ n)
 
+{-
 exprLift : ∀ {l} {A : Set l} m n -> m ≤ n -> ExprN A m -> ExprN A n
 exprLift _ zero z≤n exp = exp
 exprLift zero (suc n) z≤n exp = exprLift 0 n z≤n (Lit exp)
 exprLift (suc m) (suc n) (s≤s p) exp = exprLift m n p exp
+-}
 
 compose : ∀ {A : Set} -> (n : ℕ) -> (A -> A) -> (A -> A)
 compose zero f = id
@@ -102,32 +160,21 @@ compose (suc n) f = f ∘ compose n f
 fmapN : ∀ {A : Set}{m} -> (n : ℕ) -> (ExprN A m -> ExprN A m) -> ExprN A (m + n) -> ExprN A (m + n)
 fmapN {_} {m} zero f rewrite +-comm m zero = f
 fmapN {A} {m} (suc n) f rewrite a+suc-b==suc-a+b m n
-   = fmapN {_} {suc m} n (subst (\x -> x -> x) (sym $ numEquiv A m) (fmap f))
+   = fmapN {_} {suc m} n (fmap f)
 
 toExprNumN : ∀ {A : Set} (n : ℕ){{num : Num A}} -> Num (ExprN A n)
 toExprNumN zero {{num}} = num
-toExprNumN {A} (suc n) {{num}} rewrite numEquiv A n =
-   toExprNum (toExprNumN n)
+toExprNumN {A} (suc n) {{num}} = toExprNum (toExprNumN n)
 
 semantics1 : ∀ {A : Set} {{num : Num A}} → Expr A → A → A
 semantics1 = foldExpr id const
 
-{-
-semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
-semantics zero x tt = x
-semantics {A} (suc n) e (t , es) rewrite numEquiv A n
-    = let ins = toExprNumN n
-      in semantics n (semantics1 {{ins}} e t) es
--}
 
-semantics-aux : ∀ {A : Set} {n} → {w : Set} → w → w ≡ Expr (ExprN A n) → Expr (ExprN A n)
-semantics-aux e refl = e
-
-semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
+semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → (exp : ExprN A n) → Nest A n → A
 semantics zero x tt = x
 semantics {A} (suc n) e (t , es)
-    = let ins = toExprNumN n
-      in semantics n (semantics1 {{ins}} (semantics-aux {A} {n} e (numEquiv A n)) t) es
+    = let instance ins = toExprNumN n
+      in semantics n (semantics1 e t) es
 
 nestToNestRange : ∀ {A : Set} → {m : ℕ} → Nest A m → NestRange A m m
 nestToNestRange {m = zero} n = tt
@@ -190,7 +237,6 @@ getvar : ∀ {A : Set} → SSA A Addr
 getvar = ssa (λ args → let [[ n ]] = args
                        in [[ n ]] , [[ suc n ]])
 
-
 biOpSSA : ∀ {A : Set}
           → (Addr -> Addr -> Addr -> TAC A)
           → SSA A (Addr × Ins A) → SSA A (Addr × Ins A)
@@ -213,13 +259,25 @@ pass r = return (r , [])
 compile0 : ∀ {A : Set} → A → SSA A (Addr × List (TAC A))
 compile0 v = getvar >>= λ addr →
              return (addr , ConstI addr v ∷ [])
+abstract
+  compile : ∀ {A : Set} (n : ℕ) → Vec Addr n
+     → ExprN A n → SSA A (Addr × Ins A)
+  compile zero addr exp = compile0 exp
+  compile {A} (suc n) (x ∷ addr) exp
+    = foldExpr (pass x) (compile n addr) exp
 
-compile : ∀ {A : Set} (n : ℕ) → Vec Addr n
-   → ExprN A n → SSA A (Addr × Ins A)
-compile zero addr exp = compile0 exp
-compile {A} (suc n) (x ∷ addr) exp
-  = foldExpr (pass x) (compile n addr) (subst id (numEquiv A n) exp)
+  compile-base-elim : ∀ (A : Set)
+      → (exp : A)
+      → compile 0 [] exp ≡ compile0 exp
+  compile-base-elim A exp = refl
 
+  compile-ind-elim : ∀ (A : Set) (n : ℕ)
+      → (x : Addr)
+      → (addr : Vec Addr n)
+      → (exp : ExprN A (suc n))
+      → compile (suc n) (x ∷ addr) exp ≡
+        foldExpr (pass x) (compile n addr) exp
+  compile-ind-elim A n x addr exp = refl
 {-
 compileEnv : ∀ {A : Set} (n : ℕ) → Nest A n → SSA A (Vec Addr n × Ins A)
 compileEnv zero nest = return (Vec.[] , [])
@@ -288,32 +346,6 @@ _!_ : ∀ {l} {A : Set l} {n : ℕ} → Vec A n → Fin n → A
 (x ∷ v) ! zero = x
 (x ∷ v) ! suc i = v ! i
 
-
-comp-aux : ∀ {A : Set} (n : ℕ) (exp : ExprN (Expr A) n) → subst id (sym (numEquiv A n)) (subst id (numEquiv A n) exp) ≡ exp
-comp-aux {A} n exp rewrite numEquiv A n = refl
-
-comp-sem' : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
-  → (exp : Expr (ExprN A n))
-  → (env : Nest A (suc n))
-  → (env₀ : Vec Addr (suc n))
-  → (h : Heap A)
-  → (n₀ : ℕ)
-  → (n₀ ≥ (suc n))
-  → (∀ (i : ℕ) → (p : i < suc n) → let eᵢ , envᵢ = splitEnv (suc i) (suc n) p env
-                                   in getHeap [[ i ]] h ≡ semantics i eᵢ envᵢ ×
-                                      semantics i eᵢ envᵢ ≡ getHeap (env₀ ! fromℕ≤ p) h)
-  → semantics (suc n) (subst id (sym (numEquiv A n)) exp) env ≡
-    runSSA (compile (suc n) env₀ (subst id (sym (numEquiv A n)) exp)) [[ n₀ ]] h
-comp-sem' {A} zero Ind (proj₃ , tt) (x₁ ∷ []) h n₀ n₀≥suc-n cons
-    with cons 0 (s≤s z≤n)
-... | cons₁ , cons₂ = cons₂
-comp-sem' {A} zero (Lit x₁) env env₀ h n₀ n₀≥suc-n cons = {!!}
-comp-sem' {A} zero (Add exp exp₁) env env₀ h n₀ n₀≥suc-n cons = {!!}
-comp-sem' {A} zero (Sub exp exp₁) env env₀ h n₀ n₀≥suc-n cons = {!!}
-comp-sem' {A} zero (Mul exp exp₁) env env₀ h n₀ n₀≥suc-n cons = {!!}
-comp-sem' {A} (suc n) exp env env₀ h n₀ n₀≥suc-n cons = {!!}
-
-
 comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (exp : ExprN A n)
   → (env : Nest A n)
@@ -324,31 +356,32 @@ comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (∀ (i : ℕ) → (p : i < n) → let eᵢ , envᵢ = splitEnv (suc i) n p env
                                in getHeap [[ i ]] h ≡ semantics i eᵢ envᵢ ×
                                   semantics i eᵢ envᵢ ≡ getHeap (env₀ ! fromℕ≤ p) h)
-  → semantics n exp env ≡ runSSA (compile n env₀ exp) [[ n₀ ]] h
-comp-sem zero exp env env₀ h n₀ n₀p cons rewrite get-put [[ n₀ ]] exp h = refl
-comp-sem {A} (suc n) exp env env₀ h n₀ n₀p cons
-   = subst (λ x → semantics (suc n) x env ≡
-             runSSA (compile (suc n) env₀ x) [[ n₀ ]] h)
-           (comp-aux n exp)
-           (comp-sem' n (subst id (numEquiv A n) exp) env env₀ h n₀ n₀p cons)
-
+  → runSSA (compile n env₀ exp) [[ n₀ ]] h ≡ semantics n exp env
+comp-sem {A} zero exp env [] h n₀ n₀p cons 
+   = begin runSSA (compile 0 [] exp) [[ n₀ ]] h
+        ≡⟨ cong (λ x → runSSA x [[ n₀ ]] h) (compile-base-elim A exp) ⟩
+           getHeap [[ n₀ ]] (putHeap [[ n₀ ]] exp h)
+        ≡⟨ get-put [[ n₀ ]] exp h ⟩
+           refl
+comp-sem {A} (suc n) Ind env (x ∷ env₀) h n₀ n₀p cons
+   = let instance ins = toExprNumN {A} n
+     in
+      begin runSSA (compile (suc n) (x ∷ env₀) Ind) [[ n₀ ]] h
+         ≡⟨ cong (λ x → runSSA x [[ n₀ ]] h) (compile-ind-elim A n x env₀ Ind) ⟩
+           runSSA (foldExpr (pass x) (compile n env₀) Ind) [[ n₀ ]] h
+         ≡⟨ cong (λ x → runSSA x [[ n₀ ]] h)
+                   (foldExpr-Ind-elim (ExprN A n) (pass x) (compile n env₀)) ⟩
+ sym  (begin semantics n (semantics1 Ind (proj₁ env)) (proj₂ env)
+          ≡⟨ cong (λ x → semantics n x (proj₂ env))
+              (cong (λ x → x (proj₁ env)) (foldExpr-Ind-elim (ExprN A n) id const)) ⟩
+            semantics n (proj₁ env) (proj₂ env)
+          ≡⟨ refl ⟩
+            {!cons 0 (s≤s z≤n)!})
+comp-sem {A} (suc n) (Lit x₁) env env₀ h n₀ n₀p cons = {!!}
+comp-sem {A} (suc n) (Add exp exp₁) env env₀ h n₀ n₀p cons = {!!}
+comp-sem {A} (suc n) (Sub exp exp₁) env env₀ h n₀ n₀p cons = {!!}
+comp-sem {A} (suc n) (Mul exp exp₁) env env₀ h n₀ n₀p cons = {!!}
 {-
-
-comp-sem' : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
-   → (exp : Expr (ExprN A n))
-   → (env : Nest A (suc n))
-   → (h : Heap A)
-   → semantics (suc n) (subst id (sym (numEquiv A n)) exp) env ≡
-     runSSA (compAll (suc n) env (subst id (sym (numEquiv A n)) exp)) h
-comp-sem' {A} zero Ind env h = {!!}
-comp-sem' {A} zero (Lit x₁) env h = {!!}
-comp-sem' {A} zero (Add exp exp₁) env h = {!!}
-comp-sem' {A} zero (Sub exp exp₁) env h = {!!}
-comp-sem' {A} zero (Mul exp exp₁) env h = {!!}
-comp-sem' {A} (suc n) exp env h = {!!}
-
-
-
 
 comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
    → (exp : ExprN A n)
@@ -371,7 +404,6 @@ rotaExprN : ∀ {A : Set} {{num : Num A}} (n : ℕ) → ExprN A n → ExprN A n
 rotaExprN zero = id
 rotaExprN (suc zero) = id
 rotaExprN (suc (suc zero)) = rotaExpr2
-rotaExprN (suc (suc (suc n))) =
-   fmapN {_} {1} (suc n) rotaExpr2 ∘ rotaExprN {{toExprNumN 1}} (suc (suc n))
+rotaExprN (suc (suc (suc n))) = {!!} -- fmapN {_} {1} (suc n) rotaExpr2 ∘ rotaExprN {{toExprNumN 1}} (suc (suc n))
 
 
