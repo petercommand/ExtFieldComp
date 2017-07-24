@@ -1,5 +1,7 @@
 open import Data.Unit using (⊤; tt)
+open import Data.Empty
 open import Data.Nat hiding (_⊔_)
+open import Data.Bool hiding (_≟_)
 open import Data.Fin hiding (_≤_; _+_; _<_)
 open import Data.List
 open import Data.Vec hiding (_>>=_) renaming (_++_ to _v++_)
@@ -115,6 +117,11 @@ Expr2 A = ExprN A (suc (suc zero))
 Nest : Set -> ℕ -> Set
 Nest A zero = ⊤
 Nest A (suc n) = ExprN A n × Nest A n
+
+data Split (A : Set) : ℕ → ℕ → Set where
+  Split0 : ⊤ → Split A zero zero
+  Split< : ∀ {i} → ExprN A i → Split A i i → Split A (suc i) (suc i)
+  Split≥ : ∀ {i n} → ExprN A n → Split A i n → Split A i (suc n)
 
 NestRange : Set -> (st : ℕ) -> (len : ℕ) -> Set
 NestRange A _ zero = ⊤
@@ -334,6 +341,23 @@ runSSA (ssa ssa1) addr h
 
 -- splitEnv' : ∀ {A : Set} (i n : ℕ) → Nest A n → Nest A (suc i)
 
+suc-⊥ : ∀ i → suc i ≤ i → ⊥
+suc-⊥ zero ()
+suc-⊥ (suc i) (s≤s p) = suc-⊥ i p
+
+Nest->Split : ∀ {A : Set} (i n : ℕ) → i ≤ n → Nest A n → Split A i n
+Nest->Split 0 0 z≤n nest = Split0 tt
+Nest->Split 0 (suc n) p nest = Split≥ (proj₁ nest) (Nest->Split zero n z≤n (proj₂ nest))
+Nest->Split (suc i) zero () nest
+Nest->Split (suc i) (suc n) (s≤s p) (proj₁ , proj₂)
+   with i ≟ n
+... | yes refl = Split< proj₁ (Nest->Split i n p proj₂)
+... | no ¬pr = Split≥ proj₁ (Nest->Split (suc i) n (neq-le i n p ¬pr) proj₂)
+
+Nest≤ : ∀ {A : Set} (i n : ℕ) → i > n → ¬ Split A i n
+Nest≤ .0 .0 () (Split0 x)
+Nest≤ .(suc _) .(suc _) p (Split< x s) = suc-⊥ _ p
+Nest≤ i (suc n) p (Split≥ x s) = Nest≤ i n (suc-≤-elim' (suc n) i p) s
 
 splitEnv : ∀ {A : Set} (i n : ℕ) → i ≤ n → Nest A n → Nest A i
 splitEnv zero n p e = tt
@@ -346,6 +370,7 @@ _!_ : ∀ {l} {A : Set l} {n : ℕ} → Vec A n → Fin n → A
 (x ∷ v) ! zero = x
 (x ∷ v) ! suc i = v ! i
 
+
 comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (exp : ExprN A n)
   → (env : Nest A n)
@@ -354,44 +379,43 @@ comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (n₀ : ℕ)
   → (n₀ ≥ n)
   → (∀ (i : ℕ) → (p : i < n) → let eᵢ , envᵢ = splitEnv (suc i) n p env
-                               in getHeap [[ i ]] h ≡ semantics i eᵢ envᵢ ×
-                                  semantics i eᵢ envᵢ ≡ getHeap (env₀ ! fromℕ≤ p) h)
+                               in getHeap [[ (ℕ- n i (≤weak p)) ]] h ≡ semantics i eᵢ envᵢ ×
+                                  env₀ ! fromℕ≤ p ≡ [[ (ℕ- n i (≤weak p)) ]])
   → runSSA (compile n env₀ exp) [[ n₀ ]] h ≡ semantics n exp env
+  
 comp-sem {A} zero exp env [] h n₀ n₀p cons 
    = begin runSSA (compile 0 [] exp) [[ n₀ ]] h
         ≡⟨ cong (λ x → runSSA x [[ n₀ ]] h) (compile-base-elim A exp) ⟩
            getHeap [[ n₀ ]] (putHeap [[ n₀ ]] exp h)
         ≡⟨ get-put [[ n₀ ]] exp h ⟩
            refl
-comp-sem {A} (suc n) Ind env (x ∷ env₀) h n₀ n₀p cons
-   = let instance ins = toExprNumN {A} n
+comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons with cons n ≤-refl
+comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons | c₁ , c₂ with n ≟ n
+comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons | c₁ , c₂ | yes refl =
+     let instance ins = toExprNumN {A} n
      in
-      begin runSSA (compile (suc n) (x ∷ env₀) Ind) [[ n₀ ]] h
-         ≡⟨ cong (λ x → runSSA x [[ n₀ ]] h) (compile-ind-elim A n x env₀ Ind) ⟩
-           runSSA (foldExpr (pass x) (compile n env₀) Ind) [[ n₀ ]] h
-         ≡⟨ cong (λ x → runSSA x [[ n₀ ]] h)
+      begin runSSA {{num}} (compile (suc n) (x ∷ env₀) Ind) [[ n₀ ]] h
+         ≡⟨ cong (λ x → runSSA {{num}} x [[ n₀ ]] h) (compile-ind-elim A n x env₀ Ind) ⟩
+           runSSA {{num}} (foldExpr (pass x) (compile n env₀) Ind) [[ n₀ ]] h
+         ≡⟨ cong (λ x → runSSA {{num}} x [[ n₀ ]] h)
                    (foldExpr-Ind-elim (ExprN A n) (pass x) (compile n env₀)) ⟩
- sym  (begin semantics n (semantics1 Ind (proj₁ env)) (proj₂ env)
-          ≡⟨ cong (λ x → semantics n x (proj₂ env))
-              (cong (λ x → x (proj₁ env)) (foldExpr-Ind-elim (ExprN A n) id const)) ⟩
-            semantics n (proj₁ env) (proj₂ env)
+ sym  (begin semantics {{num}} n (semantics1 Ind e_n) e_sn
+          ≡⟨ cong (λ x → semantics {{num}} n x e_sn) (cong (λ x → x e_n) (foldExpr-Ind-elim (ExprN A n) id const)) ⟩
+             semantics n e_n e_sn
           ≡⟨ refl ⟩
-            {!cons 0 (s≤s z≤n)!})
+             {!!}
+             {-
+          ≡⟨ sym c₁ ⟩
+             getHeap [[ ℕ- (suc n) n (≤weak (s≤s ≤-refl)) ]] h
+          ≡⟨ cong (λ x → getHeap [[ x ]] h) (ℕ--suc n (≤weak (s≤s ≤-refl))) ⟩
+             {!!}-}
+ )
+comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons | c₃ , c₄ | no ¬p' = ⊥-elim (¬p' refl)
 comp-sem {A} (suc n) (Lit x₁) env env₀ h n₀ n₀p cons = {!!}
 comp-sem {A} (suc n) (Add exp exp₁) env env₀ h n₀ n₀p cons = {!!}
 comp-sem {A} (suc n) (Sub exp exp₁) env env₀ h n₀ n₀p cons = {!!}
 comp-sem {A} (suc n) (Mul exp exp₁) env env₀ h n₀ n₀p cons = {!!}
-{-
 
-comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
-   → (exp : ExprN A n)
-   → (env : Nest A n)
-   → (h : Heap A)
-   → semantics n exp env ≡ runSSA (compAll n env exp) h
-comp-sem zero exp env h = baseCase env exp h
-comp-sem {A} (suc n) exp env h = subst (λ x -> semantics (suc n) x env ≡ runSSA (compAll (suc n) env x) h)
-                                          (comp-aux n exp) (comp-sem' n (subst id (numEquiv A n) exp) env h)
--}
 idExpr2 : ∀ {A : Set} {{num : Num A}} → Expr2 A → Expr2 A
 idExpr2 = foldExpr {{toExprNumN 2}} Ind
             (foldExpr {{toExprNumN 2}} (Lit Ind) (Lit ∘ Lit))
