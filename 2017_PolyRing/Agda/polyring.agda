@@ -10,7 +10,8 @@ open import NatProperties
 open import Data.Nat.Properties.Simple
 open import Level hiding (zero; suc)
 open import Function
-open import Relation.Nullary using (¬_; Dec; yes; no)
+open import Relation.Nullary
+open import Relation.Nullary.Decidable
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality hiding (setoid)
 open import Relation.Binary.HeterogeneousEquality renaming (subst to hsubst; cong to hcong; trans to htrans; sym to hsym; refl to hrefl)
@@ -28,6 +29,10 @@ infixr 2 _×_
 infixr 4 _,_
 
 --
+
+J : ∀ {l}{A : Set l} {x : A} (P : {y : A} → x ≡ y → Set) →
+            (P refl) → ∀ {y} (x≡y : x ≡ y) → P x≡y
+J P p refl = p
 
 coe : ∀ {l} {A B : Set l} → (A ≡ B) → A → B
 coe refl a = a
@@ -370,6 +375,18 @@ _!_ : ∀ {l} {A : Set l} {n : ℕ} → Vec A n → Fin n → A
 (x ∷ v) ! zero = x
 (x ∷ v) ! suc i = v ! i
 
+aux : ∀ i n → (p : i < n) → i + suc (ℕ- n (suc i) p) ≡ n
+aux zero zero ()
+aux zero (suc n) (s≤s p) = cong suc (ℕ-0 n p)
+aux (suc i) zero ()
+aux (suc i) (suc n) (s≤s p) = cong suc (aux i n p)
+
+aux' : ∀ n → fromℕ (ℕ- n n ≤-refl) ≡ zero
+aux' zero = refl
+aux' (suc n) rewrite ℕ-refl n ≤-refl = refl
+
+_<|_ : ∀ {l}(A : Set l) → A → A
+_ <| a = a
 
 comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (exp : ExprN A n)
@@ -379,8 +396,9 @@ comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (n₀ : ℕ)
   → (n₀ ≥ n)
   → (∀ (i : ℕ) → (p : i < n) → let eᵢ , envᵢ = splitEnv (suc i) n p env
-                               in getHeap [[ (ℕ- n i (≤weak p)) ]] h ≡ semantics i eᵢ envᵢ ×
-                                  env₀ ! fromℕ≤ p ≡ [[ (ℕ- n i (≤weak p)) ]])
+                               in getHeap [[ (ℕ- n (1 + i) p) ]] h ≡ semantics i eᵢ envᵢ
+                                   ×
+                                  env₀ ! subst Fin (aux i n p) ((# (ℕ- n (1 + i) p)) {_} {fromWitness {!!}!}}) ≡ [[ (ℕ- n (1 + i) p) ]])
   → runSSA (compile n env₀ exp) [[ n₀ ]] h ≡ semantics n exp env
   
 comp-sem {A} zero exp env [] h n₀ n₀p cons 
@@ -402,14 +420,25 @@ comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons |
  sym  (begin semantics {{num}} n (semantics1 Ind e_n) e_sn
           ≡⟨ cong (λ x → semantics {{num}} n x e_sn) (cong (λ x → x e_n) (foldExpr-Ind-elim (ExprN A n) id const)) ⟩
              semantics n e_n e_sn
+          ≡⟨ sym c₁ ⟩
+             getHeap [[ ℕ- n n ≤-refl ]] h
+          ≡⟨ cong (λ x → getHeap [[ x ]] h) (ℕ-refl n ≤-refl) ⟩
+             getHeap [[ 0 ]] h
           ≡⟨ refl ⟩
              {!!}
-             {-
-          ≡⟨ sym c₁ ⟩
-             getHeap [[ ℕ- (suc n) n (≤weak (s≤s ≤-refl)) ]] h
-          ≡⟨ cong (λ x → getHeap [[ x ]] h) (ℕ--suc n (≤weak (s≤s ≤-refl))) ⟩
-             {!!}-}
- )
+{-
+          ≡⟨ cong (λ y → getHeap y h)
+             (subst (λ y → [[ y ]] ≡ ((x ∷ env₀) ! subst Fin (aux n (suc n) (s≤s ≤-refl))
+                  (raise n (fromℕ (ℕ- n n ≤-refl))))) (ℕ-refl n ≤-refl) (sym c₂)) ⟩
+             getHeap ((x ∷ env₀) !
+               subst Fin (aux n (suc n) (s≤s ≤-refl))
+                 (raise n (fromℕ (ℕ- n n ≤-refl))))
+                   h
+          ≡⟨ cong (λ y → getHeap ((x ∷ env₀) ! subst Fin (aux n (suc n) (s≤s ≤-refl))
+                  (raise n y))
+                    h) (aux' n)  ⟩
+             {!!}
+-} )
 comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons | c₃ , c₄ | no ¬p' = ⊥-elim (¬p' refl)
 comp-sem {A} (suc n) (Lit x₁) env env₀ h n₀ n₀p cons = {!!}
 comp-sem {A} (suc n) (Add exp exp₁) env env₀ h n₀ n₀p cons = {!!}

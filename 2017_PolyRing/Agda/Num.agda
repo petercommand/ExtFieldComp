@@ -21,3 +21,14 @@ record Num (A : Set) : Set where
 ℕ- a .0 z≤n = a
 ℕ- (suc m) (suc n) (s≤s p) = ℕ- m n p
 
+ℕ--suc : ∀ (a : ℕ) p -> ℕ- (suc a) a p ≡ 1
+ℕ--suc zero z≤n = refl
+ℕ--suc (suc a) (s≤s p) = ℕ--suc a p
+
+ℕ-refl : ∀ (a : ℕ) p -> ℕ- a a p ≡ 0
+ℕ-refl zero z≤n = refl
+ℕ-refl (suc a) (s≤s p) = ℕ-refl a p
+
+
+ℕ-0 : ∀ (n : ℕ) ->  (p : 0 ≤ n) -> ℕ- n 0 p ≡ n
+ℕ-0 n z≤n = refl
