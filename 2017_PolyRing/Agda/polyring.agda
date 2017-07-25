@@ -367,10 +367,13 @@ data Singleton {a} {A : Set a} (x : A) : Set a where
 inspect : ∀ {a} {A : Set a} (x : A) → Singleton x
 inspect x = x with≡ refl
 
+aux' : ∀ {A : Set} (n : ℕ) → (x : A) → (env₀ : Vec A n) → (w : ℕ) → (p : w ≡ 0) → (p₂ : w ≤ n) → ((x ∷ env₀) ! w) (s≤s p₂) ≡ x
+aux' n x env₀ zero p p₂ = refl
+aux' n x env₀ (suc w) () p₂
+
 aux : ∀ {A : Set} (n : ℕ) → (x : A) → (env₀ : Vec A n) → ∀ p → ((x ∷ env₀) ! (ℕ- n n ≤-refl)) p ≡ x
-aux n x env (s≤s p) with inspect (ℕ- n n ≤-refl)
-aux n x env (s≤s p) | zero with≡ eq = {!!}
-aux n x env (s≤s p) | suc m with≡ eq = {!!}
+aux n x env (s≤s p) = aux' n x env (ℕ- n n ≤-refl) (ℕ-refl n ≤-refl) p
+
 comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (exp : ExprN A n)
   → (env : Nest A n)
@@ -408,8 +411,10 @@ comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons |
              getHeap [[ ℕ- n n ≤-refl ]] h
           ≡⟨ cong (λ x → getHeap [[ x ]] h) (ℕ-refl n ≤-refl) ⟩
              getHeap [[ 0 ]] h
-          ≡⟨ refl ⟩
-             {!!})
+          ≡⟨ sym (cong (λ k → getHeap k h) (subst (λ k → x ≡ [[ k ]]) (ℕ-refl n ≤-refl)
+                (subst (λ m → m ≡ [[ ℕ- n n ≤-refl ]] ) (aux n x env₀ (aux'' (suc n) n (s≤s ≤-refl))) c₂))) ⟩
+             refl
+  )
 comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons | c₃ , c₄ | no ¬p' = ⊥-elim (¬p' refl)
 comp-sem {A} (suc n) (Lit x₁) env env₀ h n₀ n₀p cons = {!!}
 comp-sem {A} (suc n) (Add exp exp₁) env env₀ h n₀ n₀p cons = {!!}

@@ -32,3 +32,8 @@ record Num (A : Set) : Set where
 
 ℕ-0 : ∀ (n : ℕ) ->  (p : 0 ≤ n) -> ℕ- n 0 p ≡ n
 ℕ-0 n z≤n = refl
+
+ℕ-inv : ∀ (i n : ℕ) -> (p : i ≥ n) -> ℕ- (suc i) (suc n) (s≤s p) ≡ ℕ- i n p
+ℕ-inv zero zero p = refl
+ℕ-inv (suc i) zero p = refl
+ℕ-inv i (suc n) p = refl

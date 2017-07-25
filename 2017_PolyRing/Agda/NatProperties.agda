@@ -8,6 +8,7 @@ max zero b = b
 max (suc a) zero = suc a
 max (suc a) (suc b) = suc (max a b)
 
+
 suc-<-elim : (a b : ℕ) -> (suc a ≤ suc b) -> (a ≤ b)
 suc-<-elim zero zero = λ x → z≤n
 suc-<-elim zero (suc b) = λ x → z≤n
@@ -34,6 +35,7 @@ a+suc-b==suc-a+b zero zero = refl
 a+suc-b==suc-a+b (suc x) zero = cong suc (a+suc-b==suc-a+b x zero)
 a+suc-b==suc-a+b zero (suc y) = refl
 a+suc-b==suc-a+b (suc x) (suc y) = cong suc (a+suc-b==suc-a+b x (suc y))
+
 
 +suc-1 : ∀ (a : ℕ) -> suc a ≡ a + 1
 +suc-1 zero = refl
@@ -109,6 +111,9 @@ a<c->¬a≡c _ (suc _) (s≤s (s≤s a≤c₁)) a≡c = a<c->¬a≡c _ _ (suc-<-
 
 a<c->¬c≡a : ∀ (a c : ℕ) -> a < c -> ¬ (c ≡ a)
 a<c->¬c≡a a c a<c = λ x → a<c->¬a≡c a c a<c (sym x)
+
+a≡c->a≤c : ∀ (a c : ℕ) -> a ≡ c -> a ≤ c
+a≡c->a≤c a .a refl = ≤-refl
 
 neq-le : ∀ (a c : ℕ) -> a ≤ c -> ¬ a ≡ c -> a < c
 neq-le zero zero z≤n p1 = ⊥-elim (p1 refl)
