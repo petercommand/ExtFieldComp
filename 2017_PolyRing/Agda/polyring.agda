@@ -398,7 +398,14 @@ comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (∀ (i : ℕ) → (p : i < n) → let eᵢ , envᵢ = splitEnv (suc i) n p env
                                in getHeap [[ (ℕ- n (1 + i) p) ]] h ≡ semantics i eᵢ envᵢ
                                    ×
-                                  env₀ ! subst Fin (aux i n p) ((# (ℕ- n (1 + i) p)) {_} {fromWitness {!!}!}}) ≡ [[ (ℕ- n (1 + i) p) ]])
+                                  env₀ ! subst Fin (aux i n p)
+                                       ((# (ℕ- n (1 + i) p)) {_} {fromWitness (≤-trans
+                                                                                 (≤-weakening (suc (ℕ- n (suc i) p)) (suc (ℕ- n (suc i) p)) i
+                                                                                  ≤-refl)
+                                                                                 (subst (λ x → suc x ≤ i + suc (ℕ- n (suc i) p)) (+-comm i (ℕ- n (suc i) p))
+                                                                                   (subst (λ x → x ≤ i + suc (ℕ- n (suc i) p))
+                                                                                     (a+suc-b==suc-a+b i (ℕ- n (suc i) p)) ≤-refl)))}) ≡
+                                       [[ (ℕ- n (1 + i) p) ]])
   → runSSA (compile n env₀ exp) [[ n₀ ]] h ≡ semantics n exp env
   
 comp-sem {A} zero exp env [] h n₀ n₀p cons 
@@ -425,20 +432,7 @@ comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons |
           ≡⟨ cong (λ x → getHeap [[ x ]] h) (ℕ-refl n ≤-refl) ⟩
              getHeap [[ 0 ]] h
           ≡⟨ refl ⟩
-             {!!}
-{-
-          ≡⟨ cong (λ y → getHeap y h)
-             (subst (λ y → [[ y ]] ≡ ((x ∷ env₀) ! subst Fin (aux n (suc n) (s≤s ≤-refl))
-                  (raise n (fromℕ (ℕ- n n ≤-refl))))) (ℕ-refl n ≤-refl) (sym c₂)) ⟩
-             getHeap ((x ∷ env₀) !
-               subst Fin (aux n (suc n) (s≤s ≤-refl))
-                 (raise n (fromℕ (ℕ- n n ≤-refl))))
-                   h
-          ≡⟨ cong (λ y → getHeap ((x ∷ env₀) ! subst Fin (aux n (suc n) (s≤s ≤-refl))
-                  (raise n y))
-                    h) (aux' n)  ⟩
-             {!!}
--} )
+             ?)
 comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons | c₃ , c₄ | no ¬p' = ⊥-elim (¬p' refl)
 comp-sem {A} (suc n) (Lit x₁) env env₀ h n₀ n₀p cons = {!!}
 comp-sem {A} (suc n) (Add exp exp₁) env env₀ h n₀ n₀p cons = {!!}
