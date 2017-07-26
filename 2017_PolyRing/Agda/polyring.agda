@@ -29,6 +29,14 @@ infixr 4 _,_
 
 --
 
+data All {a p} {A : Set a}
+         (P : A → Set p) : (n : ℕ) → Vec A n → Set (p ⊔ a) where
+  A[] : All P 0 []
+  _A∷_ : ∀ {n x xs} (px : P x) (pxs : All P n xs) → All P (suc n) (x ∷ xs)
+
+
+
+--
 data Expr {l} (A : Set l) : Set l where
   Ind : Expr A
   Lit : (x : A) -> Expr A
@@ -187,6 +195,7 @@ record Addr : Set where
   field
     addr : ℕ
 
+open Addr
 data TAC (A : Set) : Set where
   ConstI : Addr -> A -> TAC A
   AddI : Addr -> Addr -> Addr -> TAC A
@@ -380,12 +389,9 @@ comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (env₀ : Vec Addr n)
   → (h : Heap A)
   → (n₀ : ℕ)
-  → (n₀ ≥ n)
+  → All (λ e → n₀ > addr e) n env₀
   → (∀ (i : ℕ) → (p : i < n) → let eᵢ , envᵢ = splitEnv (suc i) n p env
-                               in getHeap [[ (ℕ- n (1 + i) p) ]] h ≡ semantics i eᵢ envᵢ
-                                   ×
-                                  (env₀ ! ℕ- n (1 + i) p) (aux'' n i p) ≡
-                                       [[ (ℕ- n (1 + i) p) ]])
+                               in getHeap ((env₀ ! (ℕ- n (1 + i) p)) (aux'' n i p)) h ≡ semantics i eᵢ envᵢ)
   → runSSA (compile n env₀ exp) [[ n₀ ]] h ≡ semantics n exp env
   
 comp-sem {A} zero exp env [] h n₀ n₀p cons 
@@ -395,8 +401,8 @@ comp-sem {A} zero exp env [] h n₀ n₀p cons
         ≡⟨ get-put [[ n₀ ]] exp h ⟩
            refl
 comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons with cons n ≤-refl
-comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons | c₁ , c₂ with n ≟ n
-comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons | c₁ , c₂ | yes refl =
+comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons | c₁ with n ≟ n
+comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons | c₁ | yes refl =
      let instance ins = toExprNumN {A} n
      in
       begin runSSA {{num}} (compile (suc n) (x ∷ env₀) Ind) [[ n₀ ]] h
@@ -408,15 +414,20 @@ comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons |
           ≡⟨ cong (λ x → semantics {{num}} n x e_sn) (cong (λ x → x e_n) (foldExpr-Ind-elim (ExprN A n) id const)) ⟩
              semantics n e_n e_sn
           ≡⟨ sym c₁ ⟩
-             getHeap [[ ℕ- n n ≤-refl ]] h
-          ≡⟨ cong (λ x → getHeap [[ x ]] h) (ℕ-refl n ≤-refl) ⟩
-             getHeap [[ 0 ]] h
-          ≡⟨ sym (cong (λ k → getHeap k h) (subst (λ k → x ≡ [[ k ]]) (ℕ-refl n ≤-refl)
-                (subst (λ m → m ≡ [[ ℕ- n n ≤-refl ]] ) (aux n x env₀ (aux'' (suc n) n (s≤s ≤-refl))) c₂))) ⟩
-             refl
+             getHeap (((x ∷ env₀) ! ℕ- n n ≤-refl) (aux'' (suc n) n (s≤s ≤-refl))) h
+          ≡⟨ cong (λ k → getHeap k h) (aux n x env₀ (aux'' (suc n) n (s≤s ≤-refl))) ⟩
+             getHeap x h
+          ∎
   )
-comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons | c₃ , c₄ | no ¬p' = ⊥-elim (¬p' refl)
-comp-sem {A} (suc n) (Lit x₁) env env₀ h n₀ n₀p cons = {!!}
+comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons | c₁ | no ¬p' = ⊥-elim (¬p' refl)
+comp-sem {A} (suc n) (Lit x₁) (e_n , e_sn) (x ∷ env₀) h n₀ (n₀p A∷ n₀px) cons =
+   begin runSSA (compile (suc n) (x ∷ env₀) (Lit x₁)) [[ n₀ ]] h
+      ≡⟨ cong (λ x → runSSA x [[ n₀ ]] h) (compile-ind-elim A n x env₀ (Lit x₁)) ⟩
+         runSSA (foldExpr (pass x) (compile n env₀) (Lit x₁)) [[ n₀ ]] h
+      ≡⟨ cong (λ x → runSSA x [[ n₀ ]] h) (foldExpr-Lit-elim (pass x) (compile n env₀) x₁) ⟩
+         runSSA (compile n env₀ x₁) [[ n₀ ]] h
+      ≡⟨ refl ⟩
+         {!comp-sem n x₁ e_sn env₀ h n₀ n₀px!}
 comp-sem {A} (suc n) (Add exp exp₁) env env₀ h n₀ n₀p cons = {!!}
 comp-sem {A} (suc n) (Sub exp exp₁) env env₀ h n₀ n₀p cons = {!!}
 comp-sem {A} (suc n) (Mul exp exp₁) env env₀ h n₀ n₀p cons = {!!}
