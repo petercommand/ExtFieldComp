@@ -1,3 +1,5 @@
+module PolyRing where
+
 open import Data.Unit using (⊤; tt)
 open import Data.Nat hiding (_⊔_)
 open import Data.List
@@ -9,6 +11,7 @@ open import Level hiding (zero; suc)
 open import Function
 open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Relation.Binary.PropositionalEquality
+
 -- Non-Dependent Pair
 record _×_ (A : Set) (B : Set) : Set where
   constructor _,_
@@ -29,7 +32,6 @@ data Expr {l} (A : Set l) : Set l where
   Sub : (e1 : Expr A) -> (e2 : Expr A) -> Expr A
   Mul : (e1 : Expr A) -> (e2 : Expr A) -> Expr A
 
-
 foldExpr : ∀ {m} {a : Set m} {b : Set} {{num : Num b}}
          -> b
          -> (a -> b)
@@ -47,7 +49,6 @@ foldExpr {{num}} x f (Mul e1 e2) =
    let _*_ = Num._*_ num
    in foldExpr x f e1 * foldExpr x f e2
 
-
 ExprN : ∀ {l} (A : Set l) (n : ℕ) -> Set l
 ExprN A zero = A
 ExprN A (suc n) = ExprN (Expr A) n
@@ -59,12 +60,12 @@ Nest : Set -> ℕ -> Set
 Nest A zero = ⊤
 Nest A (suc n) = ExprN A n × Nest A n
 
-NestRange : Set -> (st : ℕ) -> (len : ℕ) -> Set
-NestRange A _ zero = ⊤
-NestRange A zero (suc len) = ⊤
-NestRange A (suc st) (suc len)
-   = ExprN A st × NestRange A st len
-              
+-- NestRange : Set -> (st : ℕ) -> (len : ℕ) -> Set
+-- NestRange A _ zero = ⊤
+-- NestRange A zero (suc len) = ⊤
+-- NestRange A (suc st) (suc len)
+--    = ExprN A st × NestRange A st len
+
 instance toFuncNum : ∀ {A : Set} (num : Num A) -> Num (A -> A)
 toFuncNum record { _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_ }
    = record { _+_ = \f g x -> f x + g x
@@ -78,6 +79,7 @@ toExprNum record { _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_ }
             ; _-_ = \e1 e2 -> Sub e1 e2
             ; _*_ = \e1 e2 -> Mul e1 e2
             }
+
 fmap : ∀ {A B : Set} -> (A -> B) -> Expr A -> Expr B
 fmap f Ind = Ind
 fmap f (Lit x) = Lit (f x)
@@ -111,169 +113,44 @@ toExprNumN {A} (suc n) {{num}} rewrite numEquiv A n =
 semantics1 : ∀ {A : Set} {{num : Num A}} → Expr A → A → A
 semantics1 = foldExpr id const
 
-{-
 semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
 semantics zero x tt = x
-semantics {A} (suc n) e (t , es) rewrite numEquiv A n
-    = let ins = toExprNumN n
-      in semantics n (semantics1 {{ins}} e t) es
--}
+semantics {A} (suc n) e (t , es) rewrite numEquiv A n =
+    semantics n (semantics1 {{toExprNumN n}} e t) es
 
-semantics-aux : ∀ {A : Set} {n} → {w : Set} → w → w ≡ Expr (ExprN A n) → Expr (ExprN A n)
-semantics-aux e refl = e
+-- semantics-aux : ∀ {A : Set} {n} → {w : Set} → w → w ≡ Expr (ExprN A n) → Expr (ExprN A n)
+-- semantics-aux e refl = e
+--
+-- semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
+-- semantics zero x tt = x
+-- semantics {A} (suc n) e (t , es)
+--     = let ins = toExprNumN n
+--       in semantics n (semantics1 {{ins}} (semantics-aux {A} {n} e (numEquiv A n)) t) es
+--
+-- nestToNestRange : ∀ {A : Set} → {m : ℕ} → Nest A m → NestRange A m m
+-- nestToNestRange {m = zero} n = tt
+-- nestToNestRange {m = suc m} (proj₁ , proj₂)
+--     = proj₁ , (nestToNestRange proj₂)
+--
+-- nest-rev : ∀ {A : Set} (m n o : ℕ) → Nest A o
+--     → m + n ≡ o → NestRange A o m × Nest A n
+-- nest-rev m zero o exp p rewrite zero-red {m} | p = nestToNestRange exp , tt
+-- nest-rev zero (suc n) zero exp ()
+-- nest-rev {A} zero (suc n) (suc o) (proj₁ , proj₂) p
+--    rewrite suc-≡-elim n o p = tt , proj₁ , proj₂
+-- nest-rev (suc m) (suc n) zero exp ()
+-- nest-rev (suc m) (suc n) (suc .(m + suc n)) (proj₁ , p) refl
+--    rewrite a+suc-b==suc-a+b m n
+--    = let a , b = nest-rev m (suc n) (suc (m + n)) p (a+suc-b==suc-a+b m n)
+--      in (proj₁ , a) , b
 
-semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
-semantics zero x tt = x
-semantics {A} (suc n) e (t , es)
-    = let ins = toExprNumN n
-      in semantics n (semantics1 {{ins}} (semantics-aux {A} {n} e (numEquiv A n)) t) es
-
-nestToNestRange : ∀ {A : Set} → {m : ℕ} → Nest A m → NestRange A m m
-nestToNestRange {m = zero} n = tt
-nestToNestRange {m = suc m} (proj₁ , proj₂)
-    = proj₁ , (nestToNestRange proj₂)
-
-nest-rev : ∀ {A : Set} (m n o : ℕ) → Nest A o
-    → m + n ≡ o → NestRange A o m × Nest A n
-nest-rev m zero o exp p rewrite zero-red {m} | p = nestToNestRange exp , tt
-nest-rev zero (suc n) zero exp ()
-nest-rev {A} zero (suc n) (suc o) (proj₁ , proj₂) p
-   rewrite suc-≡-elim n o p = tt , proj₁ , proj₂
-nest-rev (suc m) (suc n) zero exp ()
-nest-rev (suc m) (suc n) (suc .(m + suc n)) (proj₁ , p) refl
-   rewrite a+suc-b==suc-a+b m n
-   = let a , b = nest-rev m (suc n) (suc (m + n)) p (a+suc-b==suc-a+b m n)
-     in (proj₁ , a) , b
-
-record Addr : Set where
-  constructor [[_]]
-  field
-    addr : ℕ
-
-data TAC (A : Set) : Set where
-  ConstI : Addr -> A -> TAC A
-  AddI : Addr -> Addr -> Addr -> TAC A
-  SubI : Addr -> Addr -> Addr -> TAC A
-  MulI : Addr -> Addr -> Addr -> TAC A
-
-Ins : Set -> Set
-Ins A = List (TAC A)
-
-
-
-record SSA (A : Set) (B : Set) : Set where
-  no-eta-equality
-  constructor ssa
-  field
-    ssa1 : Addr -> B × Addr
-
-
-return : ∀ {S A : Set} → A → SSA S A
-return a = ssa (λ x → a , x)
-
-_>>=_ : ∀ {S A B : Set} → SSA S A → (A → SSA S B) → SSA S B
-ssa x >>= f = ssa (λ args → let r , s = x args
-                                ssa s' = f r
-                            in s' s)
-infixr 10 _>>=_
-
-
-
-
-getvar : ∀ {A : Set} → SSA A Addr
-getvar = ssa (λ args → let [[ n ]] = args
-                       in [[ n ]] , [[ suc n ]])
-
-
-biOpSSA : ∀ {A : Set}
-          → (Addr -> Addr -> Addr -> TAC A)
-          → SSA A (Addr × Ins A) → SSA A (Addr × Ins A)
-          → SSA A (Addr × Ins A)
-biOpSSA op p1 p2
-  = p1 >>= λ x →
-    p2 >>= λ y →
-    getvar >>= λ dest →
-    let (addr1 , ins1) = x
-        (addr2 , ins2) = y
-    in return (dest , ins1 ++ ins2 ++ (op dest addr1 addr2 ∷ []))
-
-instance SSANum : ∀ {A : Set} -> Num (SSA A (Addr × Ins A))
-SSANum = record { _+_ = biOpSSA AddI
-                ; _-_ = biOpSSA SubI
-                ; _*_ = biOpSSA MulI }
-pass : ∀ {A B : Set} → A → SSA B (A × Ins B)
-pass r = return (r , [])
-
-compile0 : ∀ {A : Set} → A → SSA A (Addr × List (TAC A))
-compile0 v = getvar >>= λ addr →
-             return (addr , ConstI addr v ∷ [])
-
-compile : ∀ {A : Set} (n : ℕ) → Vec Addr n
-   → ExprN A n → SSA A (Addr × Ins A)
-compile zero addr exp = compile0 exp
-compile {A} (suc n) (x ∷ addr) exp
-  rewrite numEquiv A n
-  = foldExpr (pass x) (compile n addr) exp
-
-compileEnv : ∀ {A : Set} (n : ℕ) → Nest A n → SSA A (Vec Addr n × Ins A)
-compileEnv zero nest = return (Vec.[] , [])
-compileEnv {A} (suc n) (proj₁ , proj₂)
-  rewrite cong (λ x → Vec Addr (suc x)) (sym (zero-red {n}))
-        | cong (λ x → Vec Addr x) (sym (a+suc-b==suc-a+b n 0))
-  = compileEnv n proj₂ >>= λ k →
-    let addr , ins = k
-    in compile n addr proj₁ >>= λ k1 →
-    let addr1 , ins2 = k1
-    in return (addr v++ (addr1 ∷ []) , ins ++ ins2) 
-
-compAll : ∀ {A : Set} (n : ℕ) → Nest A n → ExprN A n → SSA A (Addr × Ins A)
-compAll n env exp = compileEnv n env >>= λ k →
-                    let env_e , ins_e = k
-                    in compile n env_e exp >>= λ k1 →
-                    let ret , ins_e2 = k1
-                    in return (ret , ins_e ++ ins_e2)
-
-postulate
-  Heap : Set → Set
-postulate
-  putHeap : ∀ {A : Set} → Addr → A → Heap A → Heap A
-  getHeap : ∀ {A : Set} → Addr → Heap A → A
-  get-put : ∀ {A : Set} → ∀ c (k : A) h → getHeap c (putHeap c k h) ≡ k
-  get-put' : ∀ {A : Set} → ∀ c c' (k : A) h → ¬ c ≡ c'
-                         → getHeap c (putHeap c' k h) ≡ getHeap c h 
-
-runIns : ∀ {A : Set} {{_ : Num A}} → Heap A → Ins A → Heap A
-runIns h [] = h
-runIns h (ConstI x₁ x₂ ∷ ins) = runIns (putHeap x₁ x₂ h) ins
-runIns {{num}} h (AddI x₁ x₂ x₃ ∷ ins)
-  = let a₂ = getHeap x₂ h
-        a₃ = getHeap x₃ h
-        _+_ = Num._+_ num
-    in runIns (putHeap x₁ (a₂ + a₃) h) ins
-runIns {{num}} h (SubI x₁ x₂ x₃ ∷ ins)
-  = let a₂ = getHeap x₂ h
-        a₃ = getHeap x₃ h
-        _-_ = Num._-_ num
-    in runIns (putHeap x₁ (a₂ - a₃) h) ins
-runIns {{num}} h (MulI x₁ x₂ x₃ ∷ ins)
-  = let a₂ = getHeap x₂ h
-        a₃ = getHeap x₃ h
-        _*_ = Num._*_ num
-    in runIns (putHeap x₁ (a₂ * a₃) h) ins
-
-runSSA : ∀ {A : Set} {{_ : Num A}} → SSA A (Addr × Ins A) → Heap A → A
-runSSA (ssa ssa1) h
-  = let r , _ = ssa1 [[ 0 ]]
-        addr , ins = r
-    in getHeap addr (runIns h ins) 
-
-comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
-   → (exp : ExprN A n)
-   → (env : Nest A n)
-   → (h : Heap A)
-   → semantics n exp env ≡ runSSA (compAll n env exp) h
-comp-sem zero exp env h rewrite get-put [[ 0 ]] exp h = refl
-comp-sem {A} (suc n) exp env h rewrite numEquiv A n = {!!}
+-- comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
+--    → (exp : ExprN A n)
+--    → (env : Nest A n)
+--    → (h : Heap A)
+--    → semantics n exp env ≡ runSSA (compAll n env exp) h
+-- comp-sem zero exp env h rewrite get-put [[ 0 ]] exp h = refl
+-- comp-sem {A} (suc n) exp env h rewrite numEquiv A n = {!!}
 
 idExpr2 : ∀ {A : Set} {{num : Num A}} → Expr2 A → Expr2 A
 idExpr2 = foldExpr {{toExprNumN 2}} Ind
@@ -289,5 +166,3 @@ rotaExprN (suc zero) = id
 rotaExprN (suc (suc zero)) = rotaExpr2
 rotaExprN (suc (suc (suc n))) =
    fmapN {_} {1} (suc n) rotaExpr2 ∘ rotaExprN {{toExprNumN 1}} (suc (suc n))
-
-
