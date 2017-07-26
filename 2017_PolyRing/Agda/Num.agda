@@ -25,6 +25,12 @@ record Num (A : Set) : Set where
 ℕ--suc zero z≤n = refl
 ℕ--suc (suc a) (s≤s p) = ℕ--suc a p
 
+ℕ--suc' : ∀ (a b : ℕ) p p' -> ℕ- (suc a) b p ≡ suc (ℕ- a b p')
+ℕ--suc' zero zero z≤n z≤n = refl
+ℕ--suc' zero (suc b) p ()
+ℕ--suc' (suc a) zero z≤n z≤n = refl
+ℕ--suc' (suc a) (suc b) (s≤s p) (s≤s p') = ℕ--suc' a b p p'
+
 ℕ-refl : ∀ (a : ℕ) p -> ℕ- a a p ≡ 0
 ℕ-refl zero z≤n = refl
 ℕ-refl (suc a) (s≤s p) = ℕ-refl a p

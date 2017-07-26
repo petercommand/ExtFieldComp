@@ -364,6 +364,12 @@ _!_ : ∀ {l} {A : Set l} {n : ℕ} → Vec A n → (i : ℕ) → i < n → A
 ((x ∷ vec) ! suc i) (s≤s p) = (vec ! i) p
 
 
+!-proof-irrelevance : ∀ {l} {A : Set l} {n : ℕ} → (vec : Vec A n) → (i : ℕ) → ∀ (p p₁ : i < n) → (vec ! i) p ≡ (vec ! i) p₁
+!-proof-irrelevance [] zero () p₁
+!-proof-irrelevance [] (suc _) () p₁
+!-proof-irrelevance (x ∷ vec) zero (s≤s p) (s≤s p₁) = refl
+!-proof-irrelevance (x ∷ vec) (suc i) (s≤s p) (s≤s p₁) = !-proof-irrelevance vec i p p₁
+
 aux'' : ∀ n i p → ℕ- n (suc i) p < n
 aux'' zero zero ()
 aux'' (suc n) zero (s≤s p) rewrite ℕ-0 n p = ≤-refl
@@ -383,6 +389,74 @@ aux' n x env₀ (suc w) () p₂
 aux : ∀ {A : Set} (n : ℕ) → (x : A) → (env₀ : Vec A n) → ∀ p → ((x ∷ env₀) ! (ℕ- n n ≤-refl)) p ≡ x
 aux n x env (s≤s p) = aux' n x env (ℕ- n n ≤-refl) (ℕ-refl n ≤-refl) p
 
+{-
+cons₁ : ∀ (n i : ℕ) → (x : Addr) → (env₀ : Vec Addr n) → (w k : ℕ) → (p : w ≡ suc k) (p₁ : w < suc n) → (p₂ : k < n) → ((x ∷ env₀) ! w) p₁ ≡ (env₀ ! k) p₂
+cons₁ n i x env₀ zero k () p₁ p₂
+cons₁ .(suc _) i x env₀ (suc w) .w refl (s≤s p₁) (s≤s p₂) = !-proof-irrelevance env₀ w p₁ (s≤s p₂)
+-}
+
+cons₀ : ∀ (n i : ℕ) p → (x : Addr)
+            → (env₀ : Vec Addr n)
+            → ((x ∷ env₀) ! ℕ- n i (≤weak p)) (aux'' (suc n) i (s≤s (≤weak p))) ≡
+              (env₀ ! ℕ- n (suc i) p) (aux'' n i p)
+cons₀ zero i () x env₀
+cons₀ (suc n) i (s≤s p) x env₀ with ℕ- (suc n) i (≤weak (s≤s p))
+                                  | ℕ- n i p
+                                  | aux'' (suc (suc n)) i (s≤s (≤weak (s≤s p)))
+                                  | aux'' (suc n) i (s≤s p)
+                                  | ℕ--suc' n i (≤weak (s≤s p)) p
+... | a | b | s≤s c | d | refl = !-proof-irrelevance env₀ b c d
+
+
+≤-bot : ∀ n → suc n ≤ n → ⊥
+≤-bot zero ()
+≤-bot (suc n) (s≤s p) = ≤-bot n p
+
+splitEnv-proof-irrelevance : ∀ {A : Set} (n i : ℕ) →
+    ∀ (e : Nest A n) p₁ p₂ → splitEnv i n p₁ e ≡ splitEnv i n p₂ e
+splitEnv-proof-irrelevance n zero e p₁ p₂ = refl
+splitEnv-proof-irrelevance zero (suc i) e () p₂
+splitEnv-proof-irrelevance (suc n) (suc i) e p₁ p₂ with i ≟ n
+splitEnv-proof-irrelevance (suc n) (suc .n) e p₁ p₂ | yes refl = refl
+splitEnv-proof-irrelevance (suc n) (suc i) (proj₃ , proj₄) (s≤s p₁) (s≤s p₂) | no ¬p
+  = splitEnv-proof-irrelevance n (suc i) proj₄ (neq-le i n p₁ ¬p) (neq-le i n p₂ ¬p)
+
+splitEnv-weaken : ∀ {A : Set} (n i : ℕ) → ∀ p₁ p₂ (e_n : ExprN A n) (e_sn : Nest A n)
+   → splitEnv (suc i) (suc n) p₁ (e_n , e_sn) ≡ splitEnv (suc i) n p₂ e_sn
+splitEnv-weaken zero i (s≤s p₁) () e_n e_sn
+splitEnv-weaken (suc n) zero (s≤s p₁) p₂ e_n e_sn with n ≟ 0
+splitEnv-weaken (suc .0) zero (s≤s p₁) p₂ e_n e_sn | yes refl = refl
+splitEnv-weaken (suc n) zero (s≤s p₁) (s≤s z≤n) e_n e_sn | no ¬p = refl
+splitEnv-weaken (suc n) (suc i) (s≤s (s≤s p₁)) (s≤s p₂) e_n (proj₃ , proj₄) with i ≟ n
+splitEnv-weaken (suc .i) (suc i) (s≤s (s≤s p₁)) (s≤s p₂) e_n (proj₃ , proj₄) | yes refl with suc i ≟ i
+splitEnv-weaken (suc .(suc _)) (suc .(suc _)) (s≤s (s≤s p₁)) (s≤s (s≤s p₂)) e_n (proj₃ , proj₄) | yes refl | (yes ())
+splitEnv-weaken (suc .(suc _)) (suc .(suc _)) (s≤s (s≤s p₁)) (s≤s (s≤s p₂)) e_n (proj₃ , proj₄) | yes refl | (no ¬p) = ⊥-elim (≤-bot _ p₂)
+splitEnv-weaken (suc n) (suc i) (s≤s (s≤s p₁)) (s≤s p₂) e_n (proj₃ , proj₄) | no ¬p with suc i ≟ n
+splitEnv-weaken (suc n) (suc i) (s≤s (s≤s p₁)) (s≤s p₂) e_n (proj₃ , proj₄) | no ¬p | (yes p) = refl
+splitEnv-weaken (suc n) (suc i) (s≤s (s≤s p₁)) (s≤s p₂) e_n (proj₃ , proj₄) | no ¬p₁ | (no ¬p)
+   = splitEnv-proof-irrelevance n (suc (suc i)) proj₄ (neq-le (suc i) n
+       (neq-le i n p₁
+        (λ x → ¬p₁ (subst (λ x₁ → i ≡ Data.Nat.pred x₁) (cong suc x) refl))) ¬p) (neq-le (suc i) n p₂ ¬p)
+
+cons-weaken : ∀ {A : Set} {{_ : Num A}} {n : ℕ} {x : Addr} {env₀ : Vec Addr n} {e_n : ExprN A n} {e_sn : Nest A n} {h : Heap A}
+    → (c : (i : ℕ) (p : i < suc n) →
+           getHeap (((x ∷ env₀) ! ℕ- (suc n) (1 + i) p) (aux'' (suc n) i p)) h
+         ≡
+           semantics i (proj₁ (splitEnv (suc i) (suc n) p (e_n , e_sn)))
+             (proj₂ (splitEnv (suc i) (suc n) p (e_n , e_sn))))
+    → (i : ℕ) (p : i < n) →
+      getHeap ((env₀ ! ℕ- n (1 + i) p) (aux'' n i p)) h ≡
+      semantics i (proj₁ (splitEnv (suc i) n p e_sn))
+      (proj₂ (splitEnv (suc i) n p e_sn))
+cons-weaken {A} {{_}} {n} {x} {env₀} {e_n} {e_sn} {h} c i p =
+  trans (trans (cong (λ k → getHeap k h) (sym (cons₀ n i p x env₀))) (c i (≤-suc (suc i) n p)))
+     (subst (λ x → semantics i (proj₁ x) (proj₂ x)
+                    ≡
+                   semantics i (proj₁ (splitEnv (suc i) n p e_sn))
+                     (proj₂ (splitEnv (suc i) n p e_sn))) (sym (splitEnv-weaken n i (s≤s (≤weak p)) p e_n e_sn)) refl)
+
+
+
 comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (exp : ExprN A n)
   → (env : Nest A n)
@@ -393,7 +467,6 @@ comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (∀ (i : ℕ) → (p : i < n) → let eᵢ , envᵢ = splitEnv (suc i) n p env
                                in getHeap ((env₀ ! (ℕ- n (1 + i) p)) (aux'' n i p)) h ≡ semantics i eᵢ envᵢ)
   → runSSA (compile n env₀ exp) [[ n₀ ]] h ≡ semantics n exp env
-  
 comp-sem {A} zero exp env [] h n₀ n₀p cons 
    = begin runSSA (compile 0 [] exp) [[ n₀ ]] h
         ≡⟨ cong (λ x → runSSA x [[ n₀ ]] h) (compile-base-elim A exp) ⟩
@@ -421,13 +494,18 @@ comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons |
   )
 comp-sem {A} {{num}} (suc n) Ind (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons | c₁ | no ¬p' = ⊥-elim (¬p' refl)
 comp-sem {A} (suc n) (Lit x₁) (e_n , e_sn) (x ∷ env₀) h n₀ (n₀p A∷ n₀px) cons =
+     let instance ins = toExprNumN {A} n
+     in
    begin runSSA (compile (suc n) (x ∷ env₀) (Lit x₁)) [[ n₀ ]] h
       ≡⟨ cong (λ x → runSSA x [[ n₀ ]] h) (compile-ind-elim A n x env₀ (Lit x₁)) ⟩
          runSSA (foldExpr (pass x) (compile n env₀) (Lit x₁)) [[ n₀ ]] h
       ≡⟨ cong (λ x → runSSA x [[ n₀ ]] h) (foldExpr-Lit-elim (pass x) (compile n env₀) x₁) ⟩
          runSSA (compile n env₀ x₁) [[ n₀ ]] h
-      ≡⟨ refl ⟩
-         {!comp-sem n x₁ e_sn env₀ h n₀ n₀px!}
+      ≡⟨ comp-sem n x₁ e_sn env₀ h n₀ n₀px (cons-weaken cons) ⟩
+         semantics n x₁ e_sn
+      ≡⟨ sym (cong (λ x → semantics n (x e_n) e_sn) (foldExpr-Lit-elim id const x₁)) ⟩
+         semantics n (semantics1 (Lit x₁) e_n) e_sn
+      ∎
 comp-sem {A} (suc n) (Add exp exp₁) env env₀ h n₀ n₀p cons = {!!}
 comp-sem {A} (suc n) (Sub exp exp₁) env env₀ h n₀ n₀p cons = {!!}
 comp-sem {A} (suc n) (Mul exp exp₁) env env₀ h n₀ n₀p cons = {!!}
