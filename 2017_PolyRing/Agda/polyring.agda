@@ -46,56 +46,56 @@ data Expr {l} (A : Set l) : Set l where
 
 
 module _ where
-  abstract
-
-    foldExpr : ∀ {m} {a : Set m} {b : Set} {{num : Num b}}
-             -> b
-             -> (a -> b)
-             -> Expr a
-             -> b
-    foldExpr x f Ind = x
-    foldExpr _ f (Lit x) = f x
-    foldExpr {{num}} x f (Add e1 e2) =
-       let _+_ = Num._+_ num
-       in foldExpr x f e1 + foldExpr x f e2
-    foldExpr {{num}} x f (Sub e1 e2) =
-       let _-_ = Num._-_ num
-       in foldExpr x f e1 - foldExpr x f e2
-    foldExpr {{num}} x f (Mul e1 e2) =
-       let _*_ = Num._*_ num
-       in foldExpr x f e1 * foldExpr x f e2
-    foldExpr-Ind-elim : ∀ {m} (a : Set m) {b : Set} {{num : Num b}}
-            -> (x : b)
-            -> (f : (a -> b))
-            -> foldExpr x f Ind ≡ x
-    foldExpr-Ind-elim a x f = refl
-    foldExpr-Lit-elim : ∀ {m} {a : Set m} {b : Set} {{num : Num b}}
-            -> (t : b)
-            -> (f : (a -> b))
-            -> (x : a)
-            -> foldExpr t f (Lit x) ≡ f x
-    foldExpr-Lit-elim t f x = refl
-    foldExpr-Add-elim : ∀ {m} (a : Set m) {b : Set} {{num : Num b}}
-            -> (x : b)
-            -> (f : (a -> b))
-            -> (e1 e2 : Expr a)
-            -> let _+_ = Num._+_ num
-               in foldExpr x f (Add e1 e2) ≡ foldExpr x f e1 + foldExpr x f e2
-    foldExpr-Add-elim a x f e1 e2 = refl
-    foldExpr-Sub-elim : ∀ {m} (a : Set m) {b : Set} {{num : Num b}}
-            -> (x : b)
-            -> (f : (a -> b))
-            -> (e1 e2 : Expr a)
-            -> let _-_ = Num._-_ num
-               in foldExpr x f (Sub e1 e2) ≡ foldExpr x f e1 - foldExpr x f e2
-    foldExpr-Sub-elim a x f e1 e2 = refl
-    foldExpr-Mul-elim : ∀ {m} (a : Set m) {b : Set} {{num : Num b}}
-            -> (x : b)
-            -> (f : (a -> b))
-            -> (e1 e2 : Expr a)
-            -> let _*_ = Num._*_ num
-               in foldExpr x f (Mul e1 e2) ≡ foldExpr x f e1 * foldExpr x f e2
-    foldExpr-Mul-elim a x f e1 e2 = refl
+  -- abstract
+  
+  foldExpr : ∀ {m} {a : Set m} {b : Set} {{num : Num b}}
+           -> b
+           -> (a -> b)
+           -> Expr a
+           -> b
+  foldExpr x f Ind = x
+  foldExpr _ f (Lit x) = f x
+  foldExpr {{num}} x f (Add e1 e2) =
+     let _+_ = Num._+_ num
+     in foldExpr x f e1 + foldExpr x f e2
+  foldExpr {{num}} x f (Sub e1 e2) =
+     let _-_ = Num._-_ num
+     in foldExpr x f e1 - foldExpr x f e2
+  foldExpr {{num}} x f (Mul e1 e2) =
+     let _*_ = Num._*_ num
+     in foldExpr x f e1 * foldExpr x f e2
+  foldExpr-Ind-elim : ∀ {m} (a : Set m) {b : Set} {{num : Num b}}
+          -> (x : b)
+          -> (f : (a -> b))
+          -> foldExpr x f Ind ≡ x
+  foldExpr-Ind-elim a x f = refl
+  foldExpr-Lit-elim : ∀ {m} {a : Set m} {b : Set} {{num : Num b}}
+          -> (t : b)
+          -> (f : (a -> b))
+          -> (x : a)
+          -> foldExpr t f (Lit x) ≡ f x
+  foldExpr-Lit-elim t f x = refl
+  foldExpr-Add-elim : ∀ {m} (a : Set m) {b : Set} {{num : Num b}}
+          -> (x : b)
+          -> (f : (a -> b))
+          -> (e1 e2 : Expr a)
+          -> let _+_ = Num._+_ num
+             in foldExpr x f (Add e1 e2) ≡ foldExpr x f e1 + foldExpr x f e2
+  foldExpr-Add-elim a x f e1 e2 = refl
+  foldExpr-Sub-elim : ∀ {m} (a : Set m) {b : Set} {{num : Num b}}
+          -> (x : b)
+          -> (f : (a -> b))
+          -> (e1 e2 : Expr a)
+          -> let _-_ = Num._-_ num
+             in foldExpr x f (Sub e1 e2) ≡ foldExpr x f e1 - foldExpr x f e2
+  foldExpr-Sub-elim a x f e1 e2 = refl
+  foldExpr-Mul-elim : ∀ {m} (a : Set m) {b : Set} {{num : Num b}}
+          -> (x : b)
+          -> (f : (a -> b))
+          -> (e1 e2 : Expr a)
+          -> let _*_ = Num._*_ num
+             in foldExpr x f (Mul e1 e2) ≡ foldExpr x f e1 * foldExpr x f e2
+  foldExpr-Mul-elim a x f e1 e2 = refl
     
 ExprN : ∀ {l} (A : Set l) (n : ℕ) -> Set l
 ExprN A zero = A
@@ -107,17 +107,6 @@ Expr2 A = ExprN A (suc (suc zero))
 Nest : Set -> ℕ -> Set
 Nest A zero = ⊤
 Nest A (suc n) = ExprN A n × Nest A n
-
-data Split (A : Set) : ℕ → ℕ → Set where
-  Split0 : ⊤ → Split A zero zero
-  Split< : ∀ {i} → ExprN A i → Split A i i → Split A (suc i) (suc i)
-  Split≥ : ∀ {i n} → ExprN A n → Split A i n → Split A i (suc n)
-
-NestRange : Set -> (st : ℕ) -> (len : ℕ) -> Set
-NestRange A _ zero = ⊤
-NestRange A zero (suc len) = ⊤
-NestRange A (suc st) (suc len)
-   = ExprN A st × NestRange A st len
               
 instance toFuncNum : ∀ {A : Set} (num : Num A) -> Num (A -> A)
 toFuncNum record { _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_ }
@@ -173,23 +162,6 @@ semantics {A} (suc n) e (t , es)
     = let instance ins = toExprNumN n
       in semantics n (semantics1 e t) es
 
-nestToNestRange : ∀ {A : Set} → {m : ℕ} → Nest A m → NestRange A m m
-nestToNestRange {m = zero} n = tt
-nestToNestRange {m = suc m} (proj₁ , proj₂)
-    = proj₁ , (nestToNestRange proj₂)
-
-nest-rev : ∀ {A : Set} (m n o : ℕ) → Nest A o
-    → m + n ≡ o → NestRange A o m × Nest A n
-nest-rev m zero o exp p rewrite zero-red {m} | p = nestToNestRange exp , tt
-nest-rev zero (suc n) zero exp ()
-nest-rev {A} zero (suc n) (suc o) (proj₁ , proj₂) p
-   rewrite suc-≡-elim n o p = tt , proj₁ , proj₂
-nest-rev (suc m) (suc n) zero exp ()
-nest-rev (suc m) (suc n) (suc .(m + suc n)) (proj₁ , p) refl
-   rewrite a+suc-b==suc-a+b m n
-   = let a , b = nest-rev m (suc n) (suc (m + n)) p (a+suc-b==suc-a+b m n)
-     in (proj₁ , a) , b
-
 record Addr : Set where
   constructor [[_]]
   field
@@ -208,10 +180,11 @@ Ins A = List (TAC A)
 
 
 record SSA (A : Set) (B : Set) : Set where
-  no-eta-equality
+--  no-eta-equality
   constructor ssa
   field
     ssa1 : Addr -> B × Addr
+
 
 
 return : ∀ {S A : Set} → A → SSA S A
@@ -257,25 +230,26 @@ pass r = return (r , [])
 compile0 : ∀ {A : Set} → A → SSA A (Addr × List (TAC A))
 compile0 v = getvar >>= λ addr →
              return (addr , ConstI addr v ∷ [])
-abstract
-  compile : ∀ {A : Set} (n : ℕ) → Vec Addr n
-     → ExprN A n → SSA A (Addr × Ins A)
-  compile zero addr exp = compile0 exp
-  compile {A} (suc n) (x ∷ addr) exp
-    = foldExpr (pass x) (compile n addr) exp
+-- abstract
+compile : ∀ {A : Set} (n : ℕ) → Vec Addr n
+   → ExprN A n → SSA A (Addr × Ins A)
+compile zero addr exp = compile0 exp
+compile {A} (suc n) (x ∷ addr) exp
+  = foldExpr (pass x) (compile n addr) exp
 
-  compile-base-elim : ∀ (A : Set)
-      → (exp : A)
-      → compile 0 [] exp ≡ compile0 exp
-  compile-base-elim A exp = refl
+compile-base-elim : ∀ (A : Set)
+    → (exp : A)
+    → compile 0 [] exp ≡ compile0 exp
+compile-base-elim A exp = refl
 
-  compile-ind-elim : ∀ (A : Set) (n : ℕ)
-      → (x : Addr)
-      → (addr : Vec Addr n)
-      → (exp : ExprN A (suc n))
-      → compile (suc n) (x ∷ addr) exp ≡
-        foldExpr (pass x) (compile n addr) exp
-  compile-ind-elim A n x addr exp = refl
+compile-ind-elim : ∀ (A : Set) (n : ℕ)
+    → (x : Addr)
+    → (addr : Vec Addr n)
+    → (exp : ExprN A (suc n))
+    → compile (suc n) (x ∷ addr) exp ≡
+      foldExpr (pass x) (compile n addr) exp
+compile-ind-elim A n x addr exp = refl
+-- abstract end
 {-
 compileEnv : ∀ {A : Set} (n : ℕ) → Nest A n → SSA A (Vec Addr n × Ins A)
 compileEnv zero nest = return (Vec.[] , [])
@@ -324,6 +298,14 @@ runIns {{num}} h (MulI x₁ x₂ x₃ ∷ ins)
         _*_ = Num._*_ num
     in runIns (putHeap x₁ (a₂ * a₃) h) ins
 
+runIns-compose : ∀ {A : Set} {{_ : Num A}} (ins1 ins2 : Ins A) (h : Heap A)
+  → runIns h (ins1 ++ ins2) ≡ runIns (runIns h ins1) ins2
+runIns-compose [] ins2 h = refl
+runIns-compose (ConstI x₁ x₂ ∷ ins1) ins2 h = runIns-compose ins1 ins2 _
+runIns-compose (AddI x₁ x₂ x₃ ∷ ins1) ins2 h = runIns-compose ins1 ins2 _
+runIns-compose (SubI x₁ x₂ x₃ ∷ ins1) ins2 h = runIns-compose ins1 ins2 _
+runIns-compose (MulI x₁ x₂ x₃ ∷ ins1) ins2 h = runIns-compose ins1 ins2 _
+
 runSSA : ∀ {A : Set} {{_ : Num A}} → SSA A (Addr × Ins A) → Addr → Heap A → A
 runSSA (ssa ssa1) addr h
   = let r , _ = ssa1 addr
@@ -335,20 +317,6 @@ runSSA (ssa ssa1) addr h
 suc-⊥ : ∀ i → suc i ≤ i → ⊥
 suc-⊥ zero ()
 suc-⊥ (suc i) (s≤s p) = suc-⊥ i p
-
-Nest->Split : ∀ {A : Set} (i n : ℕ) → i ≤ n → Nest A n → Split A i n
-Nest->Split 0 0 z≤n nest = Split0 tt
-Nest->Split 0 (suc n) p nest = Split≥ (proj₁ nest) (Nest->Split zero n z≤n (proj₂ nest))
-Nest->Split (suc i) zero () nest
-Nest->Split (suc i) (suc n) (s≤s p) (proj₁ , proj₂)
-   with i ≟ n
-... | yes refl = Split< proj₁ (Nest->Split i n p proj₂)
-... | no ¬pr = Split≥ proj₁ (Nest->Split (suc i) n (neq-le i n p ¬pr) proj₂)
-
-Nest≤ : ∀ {A : Set} (i n : ℕ) → i > n → ¬ Split A i n
-Nest≤ .0 .0 () (Split0 x)
-Nest≤ .(suc _) .(suc _) p (Split< x s) = suc-⊥ _ p
-Nest≤ i (suc n) p (Split≥ x s) = Nest≤ i n (suc-≤-elim' (suc n) i p) s
 
 splitEnv : ∀ {A : Set} (i n : ℕ) → i ≤ n → Nest A n → Nest A i
 splitEnv zero n p e = tt
@@ -376,24 +344,12 @@ aux'' (suc n) zero (s≤s p) rewrite ℕ-0 n p = ≤-refl
 aux'' zero (suc i) ()
 aux'' (suc n) (suc i) (s≤s p) = s≤s (≤weak (aux'' n i p))
 
-data Singleton {a} {A : Set a} (x : A) : Set a where
-  _with≡_ : (y : A) → x ≡ y → Singleton x
-
-inspect : ∀ {a} {A : Set a} (x : A) → Singleton x
-inspect x = x with≡ refl
-
 aux' : ∀ {A : Set} (n : ℕ) → (x : A) → (env₀ : Vec A n) → (w : ℕ) → (p : w ≡ 0) → (p₂ : w ≤ n) → ((x ∷ env₀) ! w) (s≤s p₂) ≡ x
 aux' n x env₀ zero p p₂ = refl
 aux' n x env₀ (suc w) () p₂
 
 aux : ∀ {A : Set} (n : ℕ) → (x : A) → (env₀ : Vec A n) → ∀ p → ((x ∷ env₀) ! (ℕ- n n ≤-refl)) p ≡ x
 aux n x env (s≤s p) = aux' n x env (ℕ- n n ≤-refl) (ℕ-refl n ≤-refl) p
-
-{-
-cons₁ : ∀ (n i : ℕ) → (x : Addr) → (env₀ : Vec Addr n) → (w k : ℕ) → (p : w ≡ suc k) (p₁ : w < suc n) → (p₂ : k < n) → ((x ∷ env₀) ! w) p₁ ≡ (env₀ ! k) p₂
-cons₁ n i x env₀ zero k () p₁ p₂
-cons₁ .(suc _) i x env₀ (suc w) .w refl (s≤s p₁) (s≤s p₂) = !-proof-irrelevance env₀ w p₁ (s≤s p₂)
--}
 
 cons₀ : ∀ (n i : ℕ) p → (x : Addr)
             → (env₀ : Vec Addr n)
@@ -506,7 +462,28 @@ comp-sem {A} (suc n) (Lit x₁) (e_n , e_sn) (x ∷ env₀) h n₀ (n₀p A∷ n
       ≡⟨ sym (cong (λ x → semantics n (x e_n) e_sn) (foldExpr-Lit-elim id const x₁)) ⟩
          semantics n (semantics1 (Lit x₁) e_n) e_sn
       ∎
-comp-sem {A} (suc n) (Add exp exp₁) env env₀ h n₀ n₀p cons = {!!}
+comp-sem {A} (suc n) (Add exp exp₁) (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons
+    with comp-sem (suc n) exp (e_n , e_sn) (x ∷ env₀) h n₀ n₀p cons
+... | comp_sem₁
+    with compile (suc n) (x ∷ env₀) exp
+... | comp1
+    with SSA.ssa1 comp1 [[ n₀ ]]
+... | (ret1 , ins1) , [[ n₁ ]]
+    with comp-sem (suc n) exp (e_n , e_sn) (x ∷ env₀) h n₁ {!!} cons
+... | comp_sem₂
+    with compile (suc n) (x ∷ env₀) exp₁
+... | comp2
+    with SSA.ssa1 comp2 [[ n₁ ]]
+... | (ret2 , ins2) , [[ n₂ ]]
+    rewrite runIns-compose ins1 (ins2 ++ AddI [[ n₂ ]] ret1 ret2 ∷ []) h
+          | runIns-compose ins2 (AddI [[ n₂ ]] ret1 ret2 ∷ []) (runIns h ins1)
+    = {!!}
+{-
+   begin runSSA (compile (suc n) (x ∷ env₀) (Add exp exp₁)) [[ n₀ ]] h
+      ≡⟨ cong (λ k → runSSA k [[ n₀ ]] h) (compile-ind-elim A n x env₀ (Add exp exp₁)) ⟩
+         runSSA (foldExpr (pass x) (compile n env₀) (Add exp exp₁)) [[ n₀ ]] h
+      ≡⟨ cong (λ k → runSSA k [[ n₀ ]] h) (foldExpr-Add-elim (ExprN A n) (pass x) (compile n env₀) exp exp₁) ⟩
+         {!!} -}
 comp-sem {A} (suc n) (Sub exp exp₁) env env₀ h n₀ n₀p cons = {!!}
 comp-sem {A} (suc n) (Mul exp exp₁) env env₀ h n₀ n₀p cons = {!!}
 
