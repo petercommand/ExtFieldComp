@@ -3,6 +3,7 @@ module PolyRing where
 open import Data.Unit using (⊤; tt)
 open import Data.Nat hiding (_⊔_)
 open import Data.List
+open import Data.Product
 open import Data.Vec hiding (_>>=_) renaming (_++_ to _v++_)
 open import Num
 open import NatProperties
@@ -11,19 +12,6 @@ open import Level hiding (zero; suc)
 open import Function
 open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Relation.Binary.PropositionalEquality
-
--- Non-Dependent Pair
-record _×_ (A : Set) (B : Set) : Set where
-  constructor _,_
-  field
-    proj₁ : A
-    proj₂ : B
-
-open _×_ public
-infixr 2 _×_
-infixr 4 _,_
-
---
 
 data Expr {l} (A : Set l) : Set l where
   Ind : Expr A
@@ -51,7 +39,7 @@ foldExpr {{num}} x f (Mul e1 e2) =
 
 ExprN : ∀ {l} (A : Set l) (n : ℕ) -> Set l
 ExprN A zero = A
-ExprN A (suc n) = ExprN (Expr A) n
+ExprN A (suc n) = Expr (ExprN A n)
 
 Expr2 : ∀ {l} (A : Set l) -> Set l
 Expr2 A = ExprN A (suc (suc zero))
@@ -89,12 +77,7 @@ fmap f (Mul e e₁) = Mul (fmap f e) (fmap f e₁)
 
 numEquiv : ∀ (A : Set) (n : ℕ) -> ExprN (Expr A) n ≡ Expr (ExprN A n)
 numEquiv _ zero = refl
-numEquiv _ (suc n) = numEquiv _ n
-
-exprLift : ∀ {l} {A : Set l} m n -> m ≤ n -> ExprN A m -> ExprN A n
-exprLift _ zero z≤n exp = exp
-exprLift zero (suc n) z≤n exp = exprLift 0 n z≤n (Lit exp)
-exprLift (suc m) (suc n) (s≤s p) exp = exprLift m n p exp
+numEquiv _ (suc n) = cong Expr (numEquiv _ n)
 
 compose : ∀ {A : Set} -> (n : ℕ) -> (A -> A) -> (A -> A)
 compose zero f = id
@@ -103,11 +86,11 @@ compose (suc n) f = f ∘ compose n f
 fmapN : ∀ {A : Set}{m} -> (n : ℕ) -> (ExprN A m -> ExprN A m) -> ExprN A (m + n) -> ExprN A (m + n)
 fmapN {_} {m} zero f rewrite +-comm m zero = f
 fmapN {A} {m} (suc n) f rewrite a+suc-b==suc-a+b m n
-   = fmapN {_} {suc m} n (subst (\x -> x -> x) (sym $ numEquiv A m) (fmap f))
+   = fmapN {_} {suc m} n (fmap f)
 
 toExprNumN : ∀ {A : Set} (n : ℕ){{num : Num A}} -> Num (ExprN A n)
 toExprNumN zero {{num}} = num
-toExprNumN {A} (suc n) {{num}} rewrite numEquiv A n =
+toExprNumN {A} (suc n) {{num}} = 
    toExprNum (toExprNumN n)
 
 semantics1 : ∀ {A : Set} {{num : Num A}} → Expr A → A → A
@@ -115,42 +98,8 @@ semantics1 = foldExpr id const
 
 semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
 semantics zero x tt = x
-semantics {A} (suc n) e (t , es) rewrite numEquiv A n =
+semantics {A} (suc n) e (t , es) =
     semantics n (semantics1 {{toExprNumN n}} e t) es
-
--- semantics-aux : ∀ {A : Set} {n} → {w : Set} → w → w ≡ Expr (ExprN A n) → Expr (ExprN A n)
--- semantics-aux e refl = e
---
--- semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
--- semantics zero x tt = x
--- semantics {A} (suc n) e (t , es)
---     = let ins = toExprNumN n
---       in semantics n (semantics1 {{ins}} (semantics-aux {A} {n} e (numEquiv A n)) t) es
---
--- nestToNestRange : ∀ {A : Set} → {m : ℕ} → Nest A m → NestRange A m m
--- nestToNestRange {m = zero} n = tt
--- nestToNestRange {m = suc m} (proj₁ , proj₂)
---     = proj₁ , (nestToNestRange proj₂)
---
--- nest-rev : ∀ {A : Set} (m n o : ℕ) → Nest A o
---     → m + n ≡ o → NestRange A o m × Nest A n
--- nest-rev m zero o exp p rewrite zero-red {m} | p = nestToNestRange exp , tt
--- nest-rev zero (suc n) zero exp ()
--- nest-rev {A} zero (suc n) (suc o) (proj₁ , proj₂) p
---    rewrite suc-≡-elim n o p = tt , proj₁ , proj₂
--- nest-rev (suc m) (suc n) zero exp ()
--- nest-rev (suc m) (suc n) (suc .(m + suc n)) (proj₁ , p) refl
---    rewrite a+suc-b==suc-a+b m n
---    = let a , b = nest-rev m (suc n) (suc (m + n)) p (a+suc-b==suc-a+b m n)
---      in (proj₁ , a) , b
-
--- comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
---    → (exp : ExprN A n)
---    → (env : Nest A n)
---    → (h : Heap A)
---    → semantics n exp env ≡ runSSA (compAll n env exp) h
--- comp-sem zero exp env h rewrite get-put [[ 0 ]] exp h = refl
--- comp-sem {A} (suc n) exp env h rewrite numEquiv A n = {!!}
 
 idExpr2 : ∀ {A : Set} {{num : Num A}} → Expr2 A → Expr2 A
 idExpr2 = foldExpr {{toExprNumN 2}} Ind
@@ -164,5 +113,5 @@ rotaExprN : ∀ {A : Set} {{num : Num A}} (n : ℕ) → ExprN A n → ExprN A n
 rotaExprN zero = id
 rotaExprN (suc zero) = id
 rotaExprN (suc (suc zero)) = rotaExpr2
-rotaExprN (suc (suc (suc n))) =
-   fmapN {_} {1} (suc n) rotaExpr2 ∘ rotaExprN {{toExprNumN 1}} (suc (suc n))
+rotaExprN (suc (suc (suc n))) = subst (λ x → Expr (Expr x) → Expr (Expr x)) (numEquiv _ n)
+                                      (fmapN {_} {1} (suc n) rotaExpr2 ∘ rotaExprN {{toExprNumN 1}} (suc (suc n)))
