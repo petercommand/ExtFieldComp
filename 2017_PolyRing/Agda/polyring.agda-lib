@@ -1,0 +1,3 @@
+name: polyring
+include: .
+depend: standard-library
