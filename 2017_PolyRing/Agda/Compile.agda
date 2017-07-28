@@ -127,7 +127,7 @@ runCompile {n = n} rs r₀ e h =
 data HeapCons {A : Set} (h : Heap A) :
         ∀ {n : ℕ} → Nest A n → Vec Addr n → Set where
   [] : HeapCons h tt []
-  _∷_ : ∀ {n : ℕ} {es rs e r} {num : Num A}
+  _∷_ : ∀ {n : ℕ} {es rs e r}
          → ((num : Num A) → getHeap r h ≡ semantics {{num}} n e es)
          → HeapCons h {n} es rs
          → HeapCons h (e , es) (r ∷ rs)
@@ -136,10 +136,41 @@ data All {a b} {A : Set a}
   [] : All P 0 []
   _∷_ : ∀ {n x xs} (px : P x) (pxs : All P n xs) → All P (suc n) (x ∷ xs)
 
+allInc : ∀ {n a b}{vec : Vec ℕ n}
+   -> a ≤ b
+   -> All (\x -> x < a) n vec
+   -> All (\x -> x < b) n vec
+allInc p [] = []
+allInc p (px ∷ vecAll) = ≤-trans px p ∷ allInc p vecAll
+
+All-P : ∀ {l m n o} {A : Set l}{vec : Vec A o} {P : A → Set m} {Q : A → Set n}
+   → All P o vec
+   → (∀ {a : A} → P a → Q a)
+   → All Q o vec
+All-P [] p = []
+All-P (px ∷ all₁) p = p px ∷ All-P all₁ p
+
+
+
 data LAll {a b} {A : Set a}
           (P : A → Set b) : List A → Set (a ⊔ b) where
   [] : LAll P []
   _∷_ : ∀ {x xs} (px : P x) (pxs : LAll P xs) → LAll P (x ∷ xs)
+
+
+LAll-P : ∀ {l m n} {A : Set l}{list : List A} {P : A → Set m} {Q : A → Set n}
+   → LAll P list
+   → (∀ {a : A} → P a → Q a)
+   → LAll Q list
+LAll-P [] p = []
+LAll-P (px ∷ all₁) p = p px ∷ LAll-P all₁ p
+
+
+LAll++ : ∀ {a p} {A : Set a} {P : A → Set p} {xs ys : List A} →
+        LAll P xs → LAll P ys → LAll P (xs ++ ys)
+LAll++ []         pys = pys
+LAll++ (px ∷ pxs) pys = px ∷ LAll++ pxs pys
+
 
 Ignorable : (A : Set) {{_ : Num A}} → ℕ → Ins A → Set
 Ignorable _ n = LAll (λ x → ¬ n ≡ target x)
@@ -188,7 +219,238 @@ ignore {A} {{num}} r₀ (x₁ ∷ ins₀) ign (acc ac) h | head₁ , MulI x₂ x
          | runIns-compose head₁ (MulI x₂ x₃ x₄ ∷ []) h
          | get-put' {A} r₀ x₂ ((num Num.* getHeap x₃ (runIns h head₁)) (getHeap x₄ (runIns h head₁))) (runIns h head₁) tail_p
          = ignore r₀ head₁ head_p (ac (length head₁) len_p) h
-  
+         
+HeapInc : ∀ (A : Set) {{_ : Num A}} (n : ℕ)
+  → Set
+HeapInc A n = ∀ n₀ env expr → let (ret , ins) , n₁ = SSA.ssa1 (compile {A} n env expr) n₀
+                                in n₁ ≥ n₀
+
+compHeapInc : ∀ {A : Set} {{_ : Num A}} (n : ℕ) → HeapInc A n
+compHeapInc zero n₀ env expr = (≤-suc n₀ n₀ ≤-refl)
+compHeapInc (suc n) n₀ (x₁ ∷ env) (Ind) = ≤-refl
+compHeapInc (suc n) n₀ (x₁ ∷ env) (Lit x₂) = compHeapInc n _ _ _
+compHeapInc (suc n) n₀ (x₁ ∷ env) (Add expr expr₁)
+    with compHeapInc (suc n) n₀ (x₁ ∷ env) expr
+... | inc₀
+    with compile (suc n) (x₁ ∷ env) expr
+... | comp₀
+    with SSA.ssa1 comp₀ n₀
+... | (ret₀ , ins₀) , n₁
+    with compHeapInc (suc n) n₁ (x₁ ∷ env) expr₁
+... | inc₁
+    with compile (suc n) (x₁ ∷ env) expr₁
+... | comp₁
+    with SSA.ssa1 comp₁ n₁
+... | (ret₁ , ins₁) , n₂ = ≤-trans inc₀ (≤-trans inc₁ (≤-suc n₂ n₂ ≤-refl))
+compHeapInc (suc n) n₀ (x₁ ∷ env) (Sub expr expr₁)
+    with compHeapInc (suc n) n₀ (x₁ ∷ env) expr
+... | inc₀
+    with compile (suc n) (x₁ ∷ env) expr
+... | comp₀
+    with SSA.ssa1 comp₀ n₀
+... | (ret₀ , ins₀) , n₁
+    with compHeapInc (suc n) n₁ (x₁ ∷ env) expr₁
+... | inc₁
+    with compile (suc n) (x₁ ∷ env) expr₁
+... | comp₁
+    with SSA.ssa1 comp₁ n₁
+... | (ret₁ , ins₁) , n₂ = ≤-trans inc₀ (≤-trans inc₁ (≤-suc n₂ n₂ ≤-refl))
+compHeapInc (suc n) n₀ (x₁ ∷ env) (Mul expr expr₁)
+    with compHeapInc (suc n) n₀ (x₁ ∷ env) expr
+... | inc₀
+    with compile (suc n) (x₁ ∷ env) expr
+... | comp₀
+    with SSA.ssa1 comp₀ n₀
+... | (ret₀ , ins₀) , n₁
+    with compHeapInc (suc n) n₁ (x₁ ∷ env) expr₁
+... | inc₁
+    with compile (suc n) (x₁ ∷ env) expr₁
+... | comp₁
+    with SSA.ssa1 comp₁ n₁
+... | (ret₁ , ins₁) , n₂ = ≤-trans inc₀ (≤-trans inc₁ (≤-suc n₂ n₂ ≤-refl))
+
+InsAddrInc : ∀ (A : Set) {{_ : Num A}} (n : ℕ) → Set
+InsAddrInc A n = ∀ n₀ env expr → let (ret , ins) , n₁ =
+                                            SSA.ssa1 (compile {A} n env expr) n₀
+                                 in LAll (λ x → target x ≥ n₀) ins
+
+compInsAddrInc : ∀ {A : Set} {{_ : Num A}} (n : ℕ) → InsAddrInc A n
+compInsAddrInc zero n₀ [] expr = ≤-refl ∷ []
+compInsAddrInc (suc n) n₀ (x₁ ∷ env) Ind = []
+compInsAddrInc (suc n) n₀ (x₁ ∷ env) (Lit x₂) = compInsAddrInc n n₀ env x₂
+compInsAddrInc (suc n) n₀ (x₁ ∷ env) (Add expr expr₁)
+  = LAll++ (compInsAddrInc (suc n) n₀ (x₁ ∷ env) expr)
+      (LAll++ (LAll-P (compInsAddrInc (suc n) _ (x₁ ∷ env) expr₁)
+         (λ x → ≤-trans (compHeapInc (suc n) n₀ (x₁ ∷ env) expr) x))
+           ((≤-trans (compHeapInc (suc n) n₀ (x₁ ∷ env) expr)
+               (≤-trans (compHeapInc (suc n) _ (x₁ ∷ env) expr₁)
+                  ≤-refl)) ∷ []))
+compInsAddrInc (suc n) n₀ (x₁ ∷ env) (Sub expr expr₁)
+  = LAll++ (compInsAddrInc (suc n) n₀ (x₁ ∷ env) expr)
+      (LAll++ (LAll-P (compInsAddrInc (suc n) _ (x₁ ∷ env) expr₁)
+         (λ x → ≤-trans (compHeapInc (suc n) n₀ (x₁ ∷ env) expr) x))
+           ((≤-trans (compHeapInc (suc n) n₀ (x₁ ∷ env) expr)
+               (≤-trans (compHeapInc (suc n) _ (x₁ ∷ env) expr₁)
+                  ≤-refl)) ∷ []))
+compInsAddrInc (suc n) n₀ (x₁ ∷ env) (Mul expr expr₁)
+  = LAll++ (compInsAddrInc (suc n) n₀ (x₁ ∷ env) expr)
+      (LAll++ (LAll-P (compInsAddrInc (suc n) _ (x₁ ∷ env) expr₁)
+         (λ x → ≤-trans (compHeapInc (suc n) n₀ (x₁ ∷ env) expr) x))
+           ((≤-trans (compHeapInc (suc n) n₀ (x₁ ∷ env) expr)
+               (≤-trans (compHeapInc (suc n) _ (x₁ ∷ env) expr₁)
+                  ≤-refl)) ∷ []))
+
+comp-irrelevance : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
+  → (n₀ n₁ : ℕ)
+  → n₀ < n₁
+  → ∀ env expr
+  → let (_ , ins) , _ = SSA.ssa1 (compile {A} n env expr) n₁
+    in Ignorable A n₀ ins
+comp-irrelevance zero n₀ n₁ p env expr = (a<c->¬a≡c n₀ n₁ p) ∷ []
+comp-irrelevance (suc n) n₀ n₁ p (x₁ ∷ env) Ind = []
+comp-irrelevance (suc n) n₀ n₁ p (x₁ ∷ env) (Lit x₂)
+   = comp-irrelevance n n₀ n₁ p env x₂
+comp-irrelevance (suc n) n₀ n₁ p (x₁ ∷ env) (Add expr expr₁)
+    with comp-irrelevance (suc n) n₀ n₁ p (x₁ ∷ env) expr
+... | irre1
+    with compHeapInc (suc n) n₁ (x₁ ∷ env) expr
+... | heapInc1
+    with SSA.ssa1 (compile (suc n) (x₁ ∷ env) expr) n₁
+... | (ret1 , ins1) , n₂
+    with compHeapInc (suc n) n₂ (x₁ ∷ env) expr₁
+... | heapInc2
+    with comp-irrelevance (suc n) n₀ n₂ (≤-trans p heapInc1) (x₁ ∷ env) expr₁
+... | irre2
+    with SSA.ssa1 (compile (suc n) (x₁ ∷ env) expr₁) n₂
+... | (ret2 , ins2) , n₃
+      = LAll++ irre1 (LAll++ irre2 (a<c->¬a≡c n₀ n₃
+          (≤-trans p (≤-trans heapInc1 heapInc2)) ∷ []))
+comp-irrelevance (suc n) n₀ n₁ p (x₁ ∷ env) (Sub expr expr₁)
+    with comp-irrelevance (suc n) n₀ n₁ p (x₁ ∷ env) expr
+... | irre1
+    with compHeapInc (suc n) n₁ (x₁ ∷ env) expr
+... | heapInc1
+    with SSA.ssa1 (compile (suc n) (x₁ ∷ env) expr) n₁
+... | (ret1 , ins1) , n₂
+    with compHeapInc (suc n) n₂ (x₁ ∷ env) expr₁
+... | heapInc2
+    with comp-irrelevance (suc n) n₀ n₂ (≤-trans p heapInc1) (x₁ ∷ env) expr₁
+... | irre2
+    with SSA.ssa1 (compile (suc n) (x₁ ∷ env) expr₁) n₂
+... | (ret2 , ins2) , n₃
+      = LAll++ irre1 (LAll++ irre2 (a<c->¬a≡c n₀ n₃
+          (≤-trans p (≤-trans heapInc1 heapInc2)) ∷ []))
+comp-irrelevance (suc n) n₀ n₁ p (x₁ ∷ env) (Mul expr expr₁)
+    with comp-irrelevance (suc n) n₀ n₁ p (x₁ ∷ env) expr
+... | irre1
+    with compHeapInc (suc n) n₁ (x₁ ∷ env) expr
+... | heapInc1
+    with SSA.ssa1 (compile (suc n) (x₁ ∷ env) expr) n₁
+... | (ret1 , ins1) , n₂
+    with compHeapInc (suc n) n₂ (x₁ ∷ env) expr₁
+... | heapInc2
+    with comp-irrelevance (suc n) n₀ n₂ (≤-trans p heapInc1) (x₁ ∷ env) expr₁
+... | irre2
+    with SSA.ssa1 (compile (suc n) (x₁ ∷ env) expr₁) n₂
+... | (ret2 , ins2) , n₃
+      = LAll++ irre1 (LAll++ irre2 (a<c->¬a≡c n₀ n₃
+          (≤-trans p (≤-trans heapInc1 heapInc2)) ∷ []))
+cons-run : ∀ {A} {{num : Num A}} n n₀
+   → (es : Nest A n)
+   → (rs : Vec Addr n)
+   → (h : Heap A)
+   → (ins : Ins A)
+   → All (λ e → n₀ > e) n rs
+   → LAll (λ x → target x ≥ n₀) ins
+   → HeapCons h es rs
+   → HeapCons (runIns h ins) es rs
+cons-run zero n₀ es [] h ins all₁ _ cons = []
+cons-run {{num}} (suc n) n₀ (proj₃ , proj₄) (x ∷ rs) h (ins ∷ ins_x) (bg ∷ bgx) (ins_p ∷ ins_px) (cons ∷ consx)
+  = (λ num → trans (ignore x (ins ∷ ins_x) (LAll-P (ins_p ∷ ins_px)
+        (λ x₁ x₂ → t x (subst (λ a → suc x ≤ a) (sym x₂) (≤-trans bg x₁)))) (<-wf _) h) (cons num))
+           ∷ cons-run {{num}} n n₀ proj₄ rs h (ins ∷ ins_x) bgx (ins_p ∷ ins_px) consx
+  where
+    t : ∀ x → ¬ suc x ≤ x
+    t zero = λ ()
+    t (suc x₁) (s≤s n) = t x₁ n
+cons-run (suc n) n₀ (proj₃ , proj₄) (x ∷ rs) h [] (bg ∷ bgx) [] (cons ∷ consx) = cons ∷ consx
+
+ret<st : ∀ {A} {{num : Num A}} n n₀ env expr → All (λ e → n₀ > e) n env 
+                             → let (ret , ins) , n₁ =
+                                            SSA.ssa1 (compile {A} n env expr) n₀
+                               in ret < n₁
+ret<st zero n₀ env expr all = ≤-refl
+ret<st (suc n) n₀ (x ∷ env) Ind (px ∷ all₁) = px
+ret<st (suc n) n₀ (x ∷ env) (Lit x₁) (px ∷ all₁) = ret<st n n₀ env x₁ all₁
+ret<st (suc n) n₀ (x ∷ env) (Add expr expr₁) all
+    with ret<st (suc n) n₀ (x ∷ env) expr all
+... | sta
+    with compHeapInc (suc n) n₀ (x ∷ env) expr
+... | inc₁
+    with SSA.ssa1 (compile (suc n) (x ∷ env) expr) n₀
+... | (ret , ins) , n₁
+    with ret<st (suc n) n₁ (x ∷ env) expr₁ (allInc inc₁ all)
+... | stb
+    with SSA.ssa1 (compile (suc n) (x ∷ env) expr₁) n₁
+... | (ret2 , ins2) , n₂
+    = ≤-refl
+ret<st (suc n) n₀ (x ∷ env) (Sub expr expr₁) all
+    with ret<st (suc n) n₀ (x ∷ env) expr all
+... | sta
+    with compHeapInc (suc n) n₀ (x ∷ env) expr
+... | inc₁
+    with SSA.ssa1 (compile (suc n) (x ∷ env) expr) n₀
+... | (ret , ins) , n₁
+    with ret<st (suc n) n₁ (x ∷ env) expr₁ (allInc inc₁ all)
+... | stb
+    with SSA.ssa1 (compile (suc n) (x ∷ env) expr₁) n₁
+... | (ret2 , ins2) , n₂
+    = ≤-refl
+ret<st (suc n) n₀ (x ∷ env) (Mul expr expr₁) all
+    with ret<st (suc n) n₀ (x ∷ env) expr all
+... | sta
+    with compHeapInc (suc n) n₀ (x ∷ env) expr
+... | inc₁
+    with SSA.ssa1 (compile (suc n) (x ∷ env) expr) n₀
+... | (ret , ins) , n₁
+    with ret<st (suc n) n₁ (x ∷ env) expr₁ (allInc inc₁ all)
+... | stb
+    with SSA.ssa1 (compile (suc n) (x ∷ env) expr₁) n₁
+... | (ret2 , ins2) , n₂
+    = ≤-refl
+
+
+postulate
+  sem-lem+ : ∀ {A : Set} {{num : Num A}} (n : ℕ)
+    → (e e₁ : ExprN A (suc n))
+    → (en : ExprN A n)
+    → (es : Nest A n)
+    → let instance ins = toExprNumN {A} n
+      in Num._+_ num (semantics n (foldExpr id const e en) es)
+         (semantics n (foldExpr id const e₁ en) es)
+      ≡
+      semantics n (((Num._+_ (toExprNumN n)) (foldExpr id const e en))
+                   (foldExpr id const e₁ en)) es
+  sem-lem- : ∀ {A : Set} {{num : Num A}} (n : ℕ)
+    → (e e₁ : ExprN A (suc n))
+    → (en : ExprN A n)
+    → (es : Nest A n)
+    → let instance ins = toExprNumN {A} n
+      in Num._-_ num (semantics n (foldExpr id const e en) es)
+         (semantics n (foldExpr id const e₁ en) es)
+      ≡
+      semantics n (((Num._-_ (toExprNumN n)) (foldExpr id const e en))
+                   (foldExpr id const e₁ en)) es
+  sem-lem* : ∀ {A : Set} {{num : Num A}} (n : ℕ)
+    → (e e₁ : ExprN A (suc n))
+    → (en : ExprN A n)
+    → (es : Nest A n)
+    → let instance ins = toExprNumN {A} n
+      in Num._*_ num (semantics n (foldExpr id const e en) es)
+         (semantics n (foldExpr id const e₁ en) es)
+      ≡
+      semantics n (((Num._*_ (toExprNumN n)) (foldExpr id const e en))
+                   (foldExpr id const e₁ en)) es
 
 mutual
  comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
@@ -214,22 +476,102 @@ mutual
  comp-sem' {{num}} n Ind en es r rs r₀ (c ∷ hc) r₀> = c num
  comp-sem' n (Lit e) en es r rs r₀ (_ ∷ hc) (_ ∷ r₀>) =
    comp-sem n e es rs r₀ hc r₀>
- comp-sem' n (Add e e₁) en es {h} r rs r₀ hc r₀>
+ comp-sem' {A} {{num}} n (Add e e₁) en es {h} r rs r₀ hc r₀>
      with comp-sem' n e en es r rs r₀ hc r₀>
  ... | comp-sem₀
-     with comp-sem' n e₁ en es r rs r₀ hc r₀>
- ... | comp-sem₁
+     with compHeapInc (suc n) r₀ (r ∷ rs) e
+ ... | inc₁
+     with compInsAddrInc (suc n) r₀ (r ∷ rs) e
+ ... | ins-inc₁
+     with ret<st (suc n) r₀ (r ∷ rs) e r₀>
+ ... | ret<st₁
      with compile (suc n) (r ∷ rs) e
  ... | comp₀
      with SSA.ssa1 comp₀ r₀
  ... | (ret₁ , ins₁) , r₁
+     with comp-irrelevance (suc n) ret₁ r₁ ret<st₁ (r ∷ rs) e₁
+ ... | irre
+     with comp-sem' n e₁ en es {runIns h ins₁} r rs r₁
+            (cons-run (suc n) r₀ (en , es) (r ∷ rs) h ins₁ r₀> ins-inc₁ hc)
+            (allInc inc₁ r₀>)
+ ... | comp-sem₁
      with compile (suc n) (r ∷ rs) e₁
  ... | comp₁
      with SSA.ssa1 comp₁ r₁
  ... | (ret₂ , ins₂) , r₂
      rewrite runIns-compose ins₁ (ins₂ ++ AddI r₂ ret₁ ret₂ ∷ []) h
            | runIns-compose ins₂ (AddI r₂ ret₁ ret₂ ∷ []) (runIns h ins₁)
-           | ignore ret₁ ins₂ {!!} (<-wf (length ins₂)) (runIns h ins₁)
-           = {!!}
- comp-sem' n (Sub e e₁) en es r rs r₀ hc r₀> = {!!}
- comp-sem' n (Mul e e₁) en es r rs r₀ hc r₀> = {!!}
+           | ignore ret₁ ins₂ irre (<-wf (length ins₂)) (runIns h ins₁)
+           | comp-sem₀
+           | comp-sem₁
+           | (let instance ins = toExprNumN {A} n
+              in get-put r₂ ((num Num.+ semantics n (foldExpr (λ x → x) (λ x _ → x) e en) es)
+                     (semantics n (foldExpr (λ x → x) (λ x _ → x) e₁ en) es))
+                       (runIns (runIns h ins₁) ins₂))
+          = sem-lem+ n e e₁ en es
+ comp-sem' {A} {{num}} n (Sub e e₁) en es {h} r rs r₀ hc r₀>
+      with comp-sem' n e en es r rs r₀ hc r₀>
+ ... | comp-sem₀
+     with compHeapInc (suc n) r₀ (r ∷ rs) e
+ ... | inc₁
+     with compInsAddrInc (suc n) r₀ (r ∷ rs) e
+ ... | ins-inc₁
+     with ret<st (suc n) r₀ (r ∷ rs) e r₀>
+ ... | ret<st₁
+     with compile (suc n) (r ∷ rs) e
+ ... | comp₀
+     with SSA.ssa1 comp₀ r₀
+ ... | (ret₁ , ins₁) , r₁
+     with comp-irrelevance (suc n) ret₁ r₁ ret<st₁ (r ∷ rs) e₁
+ ... | irre
+     with comp-sem' n e₁ en es {runIns h ins₁} r rs r₁
+              (cons-run (suc n) r₀ (en , es) (r ∷ rs) h ins₁ r₀> ins-inc₁ hc)
+              (allInc inc₁ r₀>)
+ ... | comp-sem₁
+     with compile (suc n) (r ∷ rs) e₁
+ ... | comp₁
+     with SSA.ssa1 comp₁ r₁
+ ... | (ret₂ , ins₂) , r₂
+     rewrite runIns-compose ins₁ (ins₂ ++ SubI r₂ ret₁ ret₂ ∷ []) h
+           | runIns-compose ins₂ (SubI r₂ ret₁ ret₂ ∷ []) (runIns h ins₁)
+           | ignore ret₁ ins₂ irre (<-wf (length ins₂)) (runIns h ins₁)
+           | comp-sem₀
+           | comp-sem₁
+           | (let instance ins = toExprNumN {A} n
+              in get-put r₂ ((num Num.- semantics n (foldExpr (λ x → x) (λ x _ → x) e en) es)
+                     (semantics n (foldExpr (λ x → x) (λ x _ → x) e₁ en) es))
+                       (runIns (runIns h ins₁) ins₂))
+          = sem-lem- n e e₁ en es
+ comp-sem' {A} {{num}} n (Mul e e₁) en es {h} r rs r₀ hc r₀>
+      with comp-sem' n e en es r rs r₀ hc r₀>
+ ... | comp-sem₀
+     with compHeapInc (suc n) r₀ (r ∷ rs) e
+ ... | inc₁
+      with compInsAddrInc (suc n) r₀ (r ∷ rs) e
+ ... | ins-inc₁
+     with ret<st (suc n) r₀ (r ∷ rs) e r₀>
+ ... | ret<st₁
+     with compile (suc n) (r ∷ rs) e
+ ... | comp₀
+     with SSA.ssa1 comp₀ r₀
+ ... | (ret₁ , ins₁) , r₁
+     with comp-irrelevance (suc n) ret₁ r₁ ret<st₁ (r ∷ rs) e₁
+ ... | irre
+     with comp-sem' n e₁ en es {runIns h ins₁} r rs r₁
+             (cons-run (suc n) r₀ (en , es) (r ∷ rs) h ins₁ r₀> ins-inc₁ hc)
+             (allInc inc₁ r₀>)
+ ... | comp-sem₁
+     with compile (suc n) (r ∷ rs) e₁
+ ... | comp₁
+     with SSA.ssa1 comp₁ r₁
+ ... | (ret₂ , ins₂) , r₂
+     rewrite runIns-compose ins₁ (ins₂ ++ MulI r₂ ret₁ ret₂ ∷ []) h
+           | runIns-compose ins₂ (MulI r₂ ret₁ ret₂ ∷ []) (runIns h ins₁)
+           | ignore ret₁ ins₂ irre (<-wf (length ins₂)) (runIns h ins₁)
+           | comp-sem₀
+           | comp-sem₁
+           | (let instance ins = toExprNumN {A} n
+              in get-put r₂ ((num Num.* semantics n (foldExpr (λ x → x) (λ x _ → x) e en) es)
+                     (semantics n (foldExpr (λ x → x) (λ x _ → x) e₁ en) es))
+                       (runIns (runIns h ins₁) ins₂))
+          = sem-lem* n e e₁ en es
