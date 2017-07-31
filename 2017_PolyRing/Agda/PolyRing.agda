@@ -48,12 +48,6 @@ Nest : Set -> ℕ -> Set
 Nest A zero = ⊤
 Nest A (suc n) = ExprN A n × Nest A n
 
--- NestRange : Set -> (st : ℕ) -> (len : ℕ) -> Set
--- NestRange A _ zero = ⊤
--- NestRange A zero (suc len) = ⊤
--- NestRange A (suc st) (suc len)
---    = ExprN A st × NestRange A st len
-
 instance toFuncNum : ∀ {A : Set} (num : Num A) -> Num (A -> A)
 toFuncNum record { _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_ }
    = record { _+_ = \f g x -> f x + g x
@@ -90,8 +84,10 @@ fmapN {A} {m} (suc n) f rewrite a+suc-b==suc-a+b m n
 
 toExprNumN : ∀ {A : Set} (n : ℕ){{num : Num A}} -> Num (ExprN A n)
 toExprNumN zero {{num}} = num
-toExprNumN {A} (suc n) {{num}} = 
+toExprNumN {A} (suc n) {{num}} =
    toExprNum (toExprNumN n)
+
+-- Semantics
 
 semantics1 : ∀ {A : Set} {{num : Num A}} → Expr A → A → A
 semantics1 = foldExpr id const
@@ -100,6 +96,41 @@ semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n �
 semantics zero x tt = x
 semantics {A} (suc n) e (t , es) =
     semantics n (semantics1 {{toExprNumN n}} e t) es
+
+sem-lem+ : ∀ {A : Set} {{num : Num A}} (n : ℕ)
+  → (e₁ e₂ : ExprN A n)
+  → (es : Nest A n)
+  → semantics n (Num._+_ (toExprNumN n) e₁ e₂) es ≡
+    Num._+_ num (semantics n e₁ es)
+                (semantics n e₂ es)
+sem-lem+ zero e₁ e₂ _ = refl
+sem-lem+ {{num}} (suc n) e₁ e₂ (en , es) =
+   sem-lem+ n (semantics1 {{toExprNumN n}} e₁ en)
+              (semantics1 {{toExprNumN n}} e₂ en) es
+
+sem-lem- : ∀ {A : Set} {{num : Num A}} (n : ℕ)
+  → (e₁ e₂ : ExprN A n)
+  → (es : Nest A n)
+  → semantics n (Num._-_ (toExprNumN n) e₁ e₂) es ≡
+    Num._-_ num (semantics n e₁ es)
+                (semantics n e₂ es)
+sem-lem- zero e₁ e₂ _ = refl
+sem-lem- {{num}} (suc n) e₁ e₂ (en , es) =
+   sem-lem- n (semantics1 {{toExprNumN n}} e₁ en)
+              (semantics1 {{toExprNumN n}} e₂ en) es
+
+sem-lem* : ∀ {A : Set} {{num : Num A}} (n : ℕ)
+  → (e₁ e₂ : ExprN A n)
+  → (es : Nest A n)
+  → semantics n (Num._*_ (toExprNumN n) e₁ e₂) es ≡
+    Num._*_ num (semantics n e₁ es)
+                (semantics n e₂ es)
+sem-lem* zero e₁ e₂ _ = refl
+sem-lem* {{num}} (suc n) e₁ e₂ (en , es) =
+   sem-lem* n (semantics1 {{toExprNumN n}} e₁ en)
+              (semantics1 {{toExprNumN n}} e₂ en) es
+
+-- Rotation
 
 idExpr2 : ∀ {A : Set} {{num : Num A}} → Expr2 A → Expr2 A
 idExpr2 = foldExpr {{toExprNumN 2}} Ind

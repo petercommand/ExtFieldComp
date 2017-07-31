@@ -219,7 +219,7 @@ ignore {A} {{num}} r₀ (x₁ ∷ ins₀) ign (acc ac) h | head₁ , MulI x₂ x
          | runIns-compose head₁ (MulI x₂ x₃ x₄ ∷ []) h
          | get-put' {A} r₀ x₂ ((num Num.* getHeap x₃ (runIns h head₁)) (getHeap x₄ (runIns h head₁))) (runIns h head₁) tail_p
          = ignore r₀ head₁ head_p (ac (length head₁) len_p) h
-         
+
 HeapInc : ∀ (A : Set) {{_ : Num A}} (n : ℕ)
   → Set
 HeapInc A n = ∀ n₀ env expr → let (ret , ins) , n₁ = SSA.ssa1 (compile {A} n env expr) n₀
@@ -375,7 +375,7 @@ cons-run {{num}} (suc n) n₀ (proj₃ , proj₄) (x ∷ rs) h (ins ∷ ins_x) (
     t (suc x₁) (s≤s n) = t x₁ n
 cons-run (suc n) n₀ (proj₃ , proj₄) (x ∷ rs) h [] (bg ∷ bgx) [] (cons ∷ consx) = cons ∷ consx
 
-ret<st : ∀ {A} {{num : Num A}} n n₀ env expr → All (λ e → n₀ > e) n env 
+ret<st : ∀ {A} {{num : Num A}} n n₀ env expr → All (λ e → n₀ > e) n env
                              → let (ret , ins) , n₁ =
                                             SSA.ssa1 (compile {A} n env expr) n₀
                                in ret < n₁
@@ -420,37 +420,37 @@ ret<st (suc n) n₀ (x ∷ env) (Mul expr expr₁) all
     = ≤-refl
 
 
-postulate
-  sem-lem+ : ∀ {A : Set} {{num : Num A}} (n : ℕ)
-    → (e e₁ : ExprN A (suc n))
-    → (en : ExprN A n)
-    → (es : Nest A n)
-    → let instance ins = toExprNumN {A} n
-      in Num._+_ num (semantics n (foldExpr id const e en) es)
-         (semantics n (foldExpr id const e₁ en) es)
-      ≡
-      semantics n (((Num._+_ (toExprNumN n)) (foldExpr id const e en))
-                   (foldExpr id const e₁ en)) es
-  sem-lem- : ∀ {A : Set} {{num : Num A}} (n : ℕ)
-    → (e e₁ : ExprN A (suc n))
-    → (en : ExprN A n)
-    → (es : Nest A n)
-    → let instance ins = toExprNumN {A} n
-      in Num._-_ num (semantics n (foldExpr id const e en) es)
-         (semantics n (foldExpr id const e₁ en) es)
-      ≡
-      semantics n (((Num._-_ (toExprNumN n)) (foldExpr id const e en))
-                   (foldExpr id const e₁ en)) es
-  sem-lem* : ∀ {A : Set} {{num : Num A}} (n : ℕ)
-    → (e e₁ : ExprN A (suc n))
-    → (en : ExprN A n)
-    → (es : Nest A n)
-    → let instance ins = toExprNumN {A} n
-      in Num._*_ num (semantics n (foldExpr id const e en) es)
-         (semantics n (foldExpr id const e₁ en) es)
-      ≡
-      semantics n (((Num._*_ (toExprNumN n)) (foldExpr id const e en))
-                   (foldExpr id const e₁ en)) es
+-- postulate
+  -- sem-lem+ : ∀ {A : Set} {{num : Num A}} (n : ℕ)
+  --   → (e e₁ : ExprN A (suc n))
+  --   → (en : ExprN A n)
+  --   → (es : Nest A n)
+  --   → let instance ins = toExprNumN {A} n
+  --     in Num._+_ num (semantics n (foldExpr id const e en) es)
+  --        (semantics n (foldExpr id const e₁ en) es)
+  --     ≡
+  --     semantics n (((Num._+_ (toExprNumN n)) (foldExpr id const e en))
+  --                  (foldExpr id const e₁ en)) es
+  -- sem-lem- : ∀ {A : Set} {{num : Num A}} (n : ℕ)
+  --   → (e e₁ : ExprN A (suc n))
+  --   → (en : ExprN A n)
+  --   → (es : Nest A n)
+  --   → let instance ins = toExprNumN {A} n
+  --     in Num._-_ num (semantics n (foldExpr id const e en) es)
+  --        (semantics n (foldExpr id const e₁ en) es)
+  --     ≡
+  --     semantics n (((Num._-_ (toExprNumN n)) (foldExpr id const e en))
+  --                  (foldExpr id const e₁ en)) es
+  -- sem-lem* : ∀ {A : Set} {{num : Num A}} (n : ℕ)
+  --   → (e e₁ : ExprN A (suc n))
+  --   → (en : ExprN A n)
+  --   → (es : Nest A n)
+  --   → let instance ins = toExprNumN {A} n
+  --     in Num._*_ num (semantics n (foldExpr id const e en) es)
+  --        (semantics n (foldExpr id const e₁ en) es)
+  --     ≡
+  --     semantics n (((Num._*_ (toExprNumN n)) (foldExpr id const e en))
+  --                  (foldExpr id const e₁ en)) es
 
 mutual
  comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
@@ -505,10 +505,11 @@ mutual
            | comp-sem₀
            | comp-sem₁
            | (let instance ins = toExprNumN {A} n
-              in get-put r₂ ((num Num.+ semantics n (foldExpr (λ x → x) (λ x _ → x) e en) es)
-                     (semantics n (foldExpr (λ x → x) (λ x _ → x) e₁ en) es))
+              in get-put r₂ ((num Num.+ semantics n (semantics1 {{toExprNumN n}} e en) es)
+                     (semantics n (semantics1 {{toExprNumN n}} e₁ en) es))
                        (runIns (runIns h ins₁) ins₂))
-          = sem-lem+ n e e₁ en es
+          = sym (sem-lem+ n (semantics1 {{toExprNumN n}} e en)
+                            (semantics1 {{toExprNumN n}} e₁ en) es)
  comp-sem' {A} {{num}} n (Sub e e₁) en es {h} r rs r₀ hc r₀>
       with comp-sem' n e en es r rs r₀ hc r₀>
  ... | comp-sem₀
@@ -538,10 +539,11 @@ mutual
            | comp-sem₀
            | comp-sem₁
            | (let instance ins = toExprNumN {A} n
-              in get-put r₂ ((num Num.- semantics n (foldExpr (λ x → x) (λ x _ → x) e en) es)
-                     (semantics n (foldExpr (λ x → x) (λ x _ → x) e₁ en) es))
+              in get-put r₂ ((num Num.- semantics n (semantics1 {{toExprNumN n}} e en) es)
+                     (semantics n (semantics1 {{toExprNumN n}} e₁ en) es))
                        (runIns (runIns h ins₁) ins₂))
-          = sem-lem- n e e₁ en es
+          = sym (sem-lem- n (semantics1 {{toExprNumN n}} e en)
+                            (semantics1 {{toExprNumN n}} e₁ en) es)
  comp-sem' {A} {{num}} n (Mul e e₁) en es {h} r rs r₀ hc r₀>
       with comp-sem' n e en es r rs r₀ hc r₀>
  ... | comp-sem₀
@@ -571,7 +573,8 @@ mutual
            | comp-sem₀
            | comp-sem₁
            | (let instance ins = toExprNumN {A} n
-              in get-put r₂ ((num Num.* semantics n (foldExpr (λ x → x) (λ x _ → x) e en) es)
-                     (semantics n (foldExpr (λ x → x) (λ x _ → x) e₁ en) es))
+              in get-put r₂ ((num Num.* semantics n (semantics1 {{toExprNumN n}} e en) es)
+                     (semantics n (semantics1 {{toExprNumN n}} e₁ en) es))
                        (runIns (runIns h ins₁) ins₂))
-          = sem-lem* n e e₁ en es
+          = sym (sem-lem* n (semantics1 {{toExprNumN n}} e en)
+                            (semantics1 {{toExprNumN n}} e₁ en) es)
