@@ -48,6 +48,10 @@ Nest : Set -> ℕ -> Set
 Nest A zero = ⊤
 Nest A (suc n) = ExprN A n × Nest A n
 
+liftExpr : ∀ {l} {A : Set l} {m n : ℕ} → m ≤′ n → ExprN A m → ExprN A n
+liftExpr {m = m} {.m} ≤′-refl e = e
+liftExpr {m = m} {.(suc _)} (≤′-step p) e = Lit (liftExpr p e)
+
 instance toFuncNum : ∀ {A : Set} (num : Num A) -> Num (A -> A)
 toFuncNum record { _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_ }
    = record { _+_ = \f g x -> f x + g x
@@ -72,6 +76,11 @@ fmap f (Mul e e₁) = Mul (fmap f e) (fmap f e₁)
 numEquiv : ∀ (A : Set) (n : ℕ) -> ExprN (Expr A) n ≡ Expr (ExprN A n)
 numEquiv _ zero = refl
 numEquiv _ (suc n) = cong Expr (numEquiv _ n)
+
+ExprN-comm : ∀ {A : Set} m n → ExprN (ExprN A m) n ≡ ExprN A (m + n)
+ExprN-comm zero n = refl
+ExprN-comm {A} (suc m) n rewrite numEquiv (ExprN A m) n = cong Expr (ExprN-comm m n)
+
 
 compose : ∀ {A : Set} -> (n : ℕ) -> (A -> A) -> (A -> A)
 compose zero f = id
