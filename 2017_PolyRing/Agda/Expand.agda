@@ -65,7 +65,8 @@ expand'-aux :
   → ExprN (F A) k → F (ExprN A (k * n))
 expand'-aux n zero F base numAn numE e = e
 expand'-aux {A} n (suc zero) F {{func}} {{ext}} numAn numE base
-  = subst (λ x → Expr (F A) → F (ExprN A x)) (+-comm 0 n) (base (numAn 0) ext (numE n))
+  = subst (λ x → Expr (F A) → F (ExprN A x))
+       (+-comm 0 n) (base (numAn 0) ext (numE n))
 expand'-aux {A} n (suc (suc k)) F {{func}} {{ext}} numAn numE base e
   = subst F (ExprN-comb {A} n (n + k * n))
           (expand'-aux n (suc k) F (λ n₁ → subst Num (sym (ExprN-comb n n₁)) (toExprNumN (n + n₁) {{numAn 0}}))

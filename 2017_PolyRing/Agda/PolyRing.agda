@@ -77,9 +77,9 @@ numEquiv : ∀ (A : Set) (n : ℕ) -> ExprN (Expr A) n ≡ Expr (ExprN A n)
 numEquiv _ zero = refl
 numEquiv _ (suc n) = cong Expr (numEquiv _ n)
 
-ExprN-comm : ∀ {A : Set} m n → ExprN (ExprN A m) n ≡ ExprN A (m + n)
-ExprN-comm zero n = refl
-ExprN-comm {A} (suc m) n rewrite numEquiv (ExprN A m) n = cong Expr (ExprN-comm m n)
+ExprN-comb : ∀ {A : Set} m n → ExprN (ExprN A m) n ≡ ExprN A (m + n)
+ExprN-comb zero n = refl
+ExprN-comb {A} (suc m) n rewrite numEquiv (ExprN A m) n = cong Expr (ExprN-comb m n)
 
 
 compose : ∀ {A : Set} -> (n : ℕ) -> (A -> A) -> (A -> A)

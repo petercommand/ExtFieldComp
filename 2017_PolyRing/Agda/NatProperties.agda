@@ -1,6 +1,7 @@
 open import Data.Nat
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
+open import Data.Product
 import Data.Nat.Properties.Simple as NS
 
 max : ℕ -> ℕ -> ℕ
@@ -106,6 +107,14 @@ a<c->¬a≡c .0 (suc c) (s≤s z≤n) a≡c = aux a≡c
 a<c->¬a≡c _ (suc _) (s≤s (s≤s a≤c₁)) a≡c = a<c->¬a≡c _ _ (suc-<-intro a≤c₁)
                                           (cong (λ { (suc n) -> n
                                                    ; zero -> zero }) a≡c)
+
+n+m≡0 : ∀ n m → n + m ≡ 0 → n ≡ 0 × m ≡ 0
+n+m≡0 zero .0 refl = refl , refl
+n+m≡0 (suc n) m ()
+
++-inj : ∀ a b c → a + b ≡ a + c → b ≡ c
++-inj zero b .b refl = refl
++-inj (suc a) b c p = +-inj a b c (cong (λ { zero → zero ; (suc n) → n }) p)
 
 a<c->¬c≡a : ∀ (a c : ℕ) -> a < c -> ¬ (c ≡ a)
 a<c->¬c≡a a c a<c = λ x → a<c->¬a≡c a c a<c (sym x)
