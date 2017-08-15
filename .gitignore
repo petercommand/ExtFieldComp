@@ -3,3 +3,13 @@
 2017_PolyRing/\.DS_Store
 
 \.DS_Store
+
+*.log
+
+*.aux
+
+*.ptb
+
+FLOPS/exf-flops\.pdf
+
+2017_PolyRing/On Paper/proofs\.pdf
