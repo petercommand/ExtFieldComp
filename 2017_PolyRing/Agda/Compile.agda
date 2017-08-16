@@ -452,129 +452,118 @@ ret<st (suc n) n₀ (x ∷ env) (Mul expr expr₁) all
   --     semantics n (((Num._*_ (toExprNumN n)) (foldExpr id const e en))
   --                  (foldExpr id const e₁ en)) es
 
-mutual
- comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
-   → (e : ExprN A n)
-   → (es : Nest A n)
-   → {h : Heap A}
-   → (rs : Vec Addr n) → (r₀ : Addr)
-   → HeapCons h es rs
-   → All (λ e → r₀ > e) n rs
-   → runCompile rs r₀ e h ≡ semantics n e es
- comp-sem zero e es rs r₀ hc r₀> = get-put r₀ e _
- comp-sem {A} (suc n) e (en , es) (r ∷ rs) r₀ hc r₀> = comp-sem' n e en es r rs r₀ hc r₀>
-
- comp-sem' : ∀ {A : Set} {{num : Num A}} (n : ℕ)
-           → (e : Expr (ExprN A n))
-           → (en : ExprN A n) (es : Nest A n)
-           → {h : Heap A}
-           → (r : Addr) → (rs : Vec Addr n) → (r₀ : Addr)
-           → HeapCons h (en , es) (r ∷ rs)
-           → All (λ e → r₀ > e) (suc n) (r ∷ rs)
-           → runSSA {n = n} (compile (suc n) (r ∷ rs) e) r₀ h ≡
-                     semantics n (semantics1 {{toExprNumN n}} e en) es
- comp-sem' {{num}} n Ind en es r rs r₀ (c ∷ hc) r₀> = c num
- comp-sem' n (Lit e) en es r rs r₀ (_ ∷ hc) (_ ∷ r₀>) =
-   comp-sem n e es rs r₀ hc r₀>
- comp-sem' {A} {{num}} n (Add e e₁) en es {h} r rs r₀ hc r₀>
-     with comp-sem' n e en es r rs r₀ hc r₀>
- ... | comp-sem₀
-     with compHeapInc (suc n) r₀ (r ∷ rs) e
- ... | inc₁
-     with compInsAddrInc (suc n) r₀ (r ∷ rs) e
- ... | ins-inc₁
-     with ret<st (suc n) r₀ (r ∷ rs) e r₀>
- ... | ret<st₁
-     with compile (suc n) (r ∷ rs) e
- ... | comp₀
-     with SSA.ssa1 comp₀ r₀
- ... | (ret₁ , ins₁) , r₁
-     with comp-irrelevance (suc n) ret₁ r₁ ret<st₁ (r ∷ rs) e₁
- ... | irre
-     with comp-sem' n e₁ en es {runIns h ins₁} r rs r₁
-            (cons-run (suc n) r₀ (en , es) (r ∷ rs) h ins₁ r₀> ins-inc₁ hc)
-            (allInc inc₁ r₀>)
- ... | comp-sem₁
-     with compile (suc n) (r ∷ rs) e₁
- ... | comp₁
-     with SSA.ssa1 comp₁ r₁
- ... | (ret₂ , ins₂) , r₂
-     rewrite runIns-compose ins₁ (ins₂ ++ AddI r₂ ret₁ ret₂ ∷ []) h
-           | runIns-compose ins₂ (AddI r₂ ret₁ ret₂ ∷ []) (runIns h ins₁)
-           | ignore ret₁ ins₂ irre (<-wf (length ins₂)) (runIns h ins₁)
-           | comp-sem₀
-           | comp-sem₁
-           | (let instance ins = toExprNumN {A} n
-              in get-put r₂ ((num Num.+ semantics n (semantics1 {{toExprNumN n}} e en) es)
-                     (semantics n (semantics1 {{toExprNumN n}} e₁ en) es))
-                       (runIns (runIns h ins₁) ins₂))
-          = sym (sem-lem+ n (semantics1 {{toExprNumN n}} e en)
-                            (semantics1 {{toExprNumN n}} e₁ en) es)
- comp-sem' {A} {{num}} n (Sub e e₁) en es {h} r rs r₀ hc r₀>
-      with comp-sem' n e en es r rs r₀ hc r₀>
- ... | comp-sem₀
-     with compHeapInc (suc n) r₀ (r ∷ rs) e
- ... | inc₁
-     with compInsAddrInc (suc n) r₀ (r ∷ rs) e
- ... | ins-inc₁
-     with ret<st (suc n) r₀ (r ∷ rs) e r₀>
- ... | ret<st₁
-     with compile (suc n) (r ∷ rs) e
- ... | comp₀
-     with SSA.ssa1 comp₀ r₀
- ... | (ret₁ , ins₁) , r₁
-     with comp-irrelevance (suc n) ret₁ r₁ ret<st₁ (r ∷ rs) e₁
- ... | irre
-     with comp-sem' n e₁ en es {runIns h ins₁} r rs r₁
-              (cons-run (suc n) r₀ (en , es) (r ∷ rs) h ins₁ r₀> ins-inc₁ hc)
-              (allInc inc₁ r₀>)
- ... | comp-sem₁
-     with compile (suc n) (r ∷ rs) e₁
- ... | comp₁
-     with SSA.ssa1 comp₁ r₁
- ... | (ret₂ , ins₂) , r₂
-     rewrite runIns-compose ins₁ (ins₂ ++ SubI r₂ ret₁ ret₂ ∷ []) h
-           | runIns-compose ins₂ (SubI r₂ ret₁ ret₂ ∷ []) (runIns h ins₁)
-           | ignore ret₁ ins₂ irre (<-wf (length ins₂)) (runIns h ins₁)
-           | comp-sem₀
-           | comp-sem₁
-           | (let instance ins = toExprNumN {A} n
-              in get-put r₂ ((num Num.- semantics n (semantics1 {{toExprNumN n}} e en) es)
-                     (semantics n (semantics1 {{toExprNumN n}} e₁ en) es))
-                       (runIns (runIns h ins₁) ins₂))
-          = sym (sem-lem- n (semantics1 {{toExprNumN n}} e en)
-                            (semantics1 {{toExprNumN n}} e₁ en) es)
- comp-sem' {A} {{num}} n (Mul e e₁) en es {h} r rs r₀ hc r₀>
-      with comp-sem' n e en es r rs r₀ hc r₀>
- ... | comp-sem₀
-     with compHeapInc (suc n) r₀ (r ∷ rs) e
- ... | inc₁
-      with compInsAddrInc (suc n) r₀ (r ∷ rs) e
- ... | ins-inc₁
-     with ret<st (suc n) r₀ (r ∷ rs) e r₀>
- ... | ret<st₁
-     with compile (suc n) (r ∷ rs) e
- ... | comp₀
-     with SSA.ssa1 comp₀ r₀
- ... | (ret₁ , ins₁) , r₁
-     with comp-irrelevance (suc n) ret₁ r₁ ret<st₁ (r ∷ rs) e₁
- ... | irre
-     with comp-sem' n e₁ en es {runIns h ins₁} r rs r₁
+comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
+  → (e : ExprN A n)
+  → (es : Nest A n)
+  → {h : Heap A}
+  → (rs : Vec Addr n) → (r₀ : Addr)
+  → HeapCons h es rs
+  → All (λ e → r₀ > e) n rs
+  → runCompile rs r₀ e h ≡ semantics n e es
+comp-sem zero e es rs r₀ hc r₀> = get-put r₀ e _
+comp-sem {{num}} (suc n) Ind (en , es) (r ∷ rs) r₀ (c ∷ hc) r₀> = c num
+comp-sem (suc n) (Lit e) (en , es) (r ∷ rs) r₀ (_ ∷ hc) (_ ∷ r₀>) =
+  comp-sem n e es rs r₀ hc r₀>
+comp-sem {A} {{num}} (suc n) (Add e e₁) (en , es) {h} (r ∷ rs) r₀ hc r₀>
+    with comp-sem (suc n) e (en , es) (r ∷ rs) r₀ hc r₀>
+... | comp-sem₀
+    with compHeapInc (suc n) r₀ (r ∷ rs) e
+... | inc₁
+    with compInsAddrInc (suc n) r₀ (r ∷ rs) e
+... | ins-inc₁
+    with ret<st (suc n) r₀ (r ∷ rs) e r₀>
+... | ret<st₁
+    with compile (suc n) (r ∷ rs) e
+... | comp₀
+    with SSA.ssa1 comp₀ r₀
+... | (ret₁ , ins₁) , r₁
+    with comp-irrelevance (suc n) ret₁ r₁ ret<st₁ (r ∷ rs) e₁
+... | irre
+    with comp-sem (suc n) e₁ (en , es) {runIns h ins₁} (r ∷ rs) r₁
+           (cons-run (suc n) r₀ (en , es) (r ∷ rs) h ins₁ r₀> ins-inc₁ hc)
+           (allInc inc₁ r₀>)
+... | comp-sem₁
+    with compile (suc n) (r ∷ rs) e₁
+... | comp₁
+    with SSA.ssa1 comp₁ r₁
+... | (ret₂ , ins₂) , r₂
+    rewrite runIns-compose ins₁ (ins₂ ++ AddI r₂ ret₁ ret₂ ∷ []) h
+          | runIns-compose ins₂ (AddI r₂ ret₁ ret₂ ∷ []) (runIns h ins₁)
+          | ignore ret₁ ins₂ irre (<-wf (length ins₂)) (runIns h ins₁)
+          | comp-sem₀
+          | comp-sem₁
+          | (let instance ins = toExprNumN {A} n
+             in get-put r₂ ((num Num.+ semantics n (semantics1 {{toExprNumN n}} e en) es)
+                    (semantics n (semantics1 {{toExprNumN n}} e₁ en) es))
+                      (runIns (runIns h ins₁) ins₂))
+         = sym (sem-lem+ n (semantics1 {{toExprNumN n}} e en)
+                           (semantics1 {{toExprNumN n}} e₁ en) es)
+comp-sem {A} {{num}} (suc n) (Sub e e₁) (en , es) {h} (r ∷ rs) r₀ hc r₀>
+    with comp-sem (suc n) e (en , es) (r ∷ rs) r₀ hc r₀>
+... | comp-sem₀
+    with compHeapInc (suc n) r₀ (r ∷ rs) e
+... | inc₁
+    with compInsAddrInc (suc n) r₀ (r ∷ rs) e
+... | ins-inc₁
+    with ret<st (suc n) r₀ (r ∷ rs) e r₀>
+... | ret<st₁
+    with compile (suc n) (r ∷ rs) e
+... | comp₀
+    with SSA.ssa1 comp₀ r₀
+... | (ret₁ , ins₁) , r₁
+    with comp-irrelevance (suc n) ret₁ r₁ ret<st₁ (r ∷ rs) e₁
+... | irre
+    with comp-sem (suc n) e₁ (en , es) {runIns h ins₁} (r ∷ rs) r₁
              (cons-run (suc n) r₀ (en , es) (r ∷ rs) h ins₁ r₀> ins-inc₁ hc)
              (allInc inc₁ r₀>)
- ... | comp-sem₁
-     with compile (suc n) (r ∷ rs) e₁
- ... | comp₁
-     with SSA.ssa1 comp₁ r₁
- ... | (ret₂ , ins₂) , r₂
-     rewrite runIns-compose ins₁ (ins₂ ++ MulI r₂ ret₁ ret₂ ∷ []) h
-           | runIns-compose ins₂ (MulI r₂ ret₁ ret₂ ∷ []) (runIns h ins₁)
-           | ignore ret₁ ins₂ irre (<-wf (length ins₂)) (runIns h ins₁)
-           | comp-sem₀
-           | comp-sem₁
-           | (let instance ins = toExprNumN {A} n
-              in get-put r₂ ((num Num.* semantics n (semantics1 {{toExprNumN n}} e en) es)
-                     (semantics n (semantics1 {{toExprNumN n}} e₁ en) es))
-                       (runIns (runIns h ins₁) ins₂))
-          = sym (sem-lem* n (semantics1 {{toExprNumN n}} e en)
-                            (semantics1 {{toExprNumN n}} e₁ en) es)
+... | comp-sem₁
+    with compile (suc n) (r ∷ rs) e₁
+... | comp₁
+    with SSA.ssa1 comp₁ r₁
+... | (ret₂ , ins₂) , r₂
+    rewrite runIns-compose ins₁ (ins₂ ++ SubI r₂ ret₁ ret₂ ∷ []) h
+          | runIns-compose ins₂ (SubI r₂ ret₁ ret₂ ∷ []) (runIns h ins₁)
+          | ignore ret₁ ins₂ irre (<-wf (length ins₂)) (runIns h ins₁)
+          | comp-sem₀
+          | comp-sem₁
+          | (let instance ins = toExprNumN {A} n
+             in get-put r₂ ((num Num.- semantics n (semantics1 {{toExprNumN n}} e en) es)
+                    (semantics n (semantics1 {{toExprNumN n}} e₁ en) es))
+                      (runIns (runIns h ins₁) ins₂))
+         = sym (sem-lem- n (semantics1 {{toExprNumN n}} e en)
+                           (semantics1 {{toExprNumN n}} e₁ en) es)
+comp-sem {A} {{num}} (suc n) (Mul e e₁) (en , es) {h} (r ∷ rs) r₀ hc r₀>
+     with comp-sem (suc n) e (en , es) (r ∷ rs) r₀ hc r₀>
+... | comp-sem₀
+    with compHeapInc (suc n) r₀ (r ∷ rs) e
+... | inc₁
+     with compInsAddrInc (suc n) r₀ (r ∷ rs) e
+... | ins-inc₁
+    with ret<st (suc n) r₀ (r ∷ rs) e r₀>
+... | ret<st₁
+    with compile (suc n) (r ∷ rs) e
+... | comp₀
+    with SSA.ssa1 comp₀ r₀
+... | (ret₁ , ins₁) , r₁
+    with comp-irrelevance (suc n) ret₁ r₁ ret<st₁ (r ∷ rs) e₁
+... | irre
+    with comp-sem (suc n) e₁ (en , es) {runIns h ins₁} (r ∷ rs) r₁
+            (cons-run (suc n) r₀ (en , es) (r ∷ rs) h ins₁ r₀> ins-inc₁ hc)
+            (allInc inc₁ r₀>)
+... | comp-sem₁
+    with compile (suc n) (r ∷ rs) e₁
+... | comp₁
+    with SSA.ssa1 comp₁ r₁
+... | (ret₂ , ins₂) , r₂
+    rewrite runIns-compose ins₁ (ins₂ ++ MulI r₂ ret₁ ret₂ ∷ []) h
+          | runIns-compose ins₂ (MulI r₂ ret₁ ret₂ ∷ []) (runIns h ins₁)
+          | ignore ret₁ ins₂ irre (<-wf (length ins₂)) (runIns h ins₁)
+          | comp-sem₀
+          | comp-sem₁
+          | (let instance ins = toExprNumN {A} n
+             in get-put r₂ ((num Num.* semantics n (semantics1 {{toExprNumN n}} e en) es)
+                    (semantics n (semantics1 {{toExprNumN n}} e₁ en) es))
+                      (runIns (runIns h ins₁) ins₂))
+         = sym (sem-lem* n (semantics1 {{toExprNumN n}} e en)
+                           (semantics1 {{toExprNumN n}} e₁ en) es)
+  
