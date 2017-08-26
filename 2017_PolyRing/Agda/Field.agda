@@ -4,8 +4,8 @@ open import Num
 open import Relation.Binary.PropositionalEquality
 
 record Field
-   (A : Set) (num : Num A) (_≈_ : A → A → Set) : Set where
-  open Num.Num num
+   (A : Set) (am : AddMul A) (_≈_ : A → A → Set) : Set where
+  open AddMul am
   field
 
     -- Abelian Group (Addition)

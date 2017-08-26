@@ -17,6 +17,12 @@ record Num (A : Set) : Set where
     _-_ : A -> A -> A
     _*_ : A -> A -> A
 
+record AddMul (A : Set) : Set where
+  field
+    _+_ : A -> A -> A
+    _*_ : A -> A -> A
+
+
 ℕ- : (a b : ℕ) -> a ≥ b -> ℕ
 ℕ- a .0 z≤n = a
 ℕ- (suc m) (suc n) (s≤s p) = ℕ- m n p
