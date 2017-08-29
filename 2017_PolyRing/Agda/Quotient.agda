@@ -1,4 +1,3 @@
-{-# OPTIONS --sized-types #-}
 module Quotient where
 open import Relation.Nullary
 open import Relation.Binary
@@ -15,8 +14,8 @@ open import NatProperties
 open import Field
 open import Num
 
-open import Size
 
+open Reveal_·_is_ hiding (eq)
 data All {A} (P : A → Set) : List A → Set where
   [] : All P []
   _∷_ : ∀ {x xs} → P x → All P xs → All P (x ∷ xs)
@@ -32,7 +31,9 @@ Atail (x₁ ∷ all₁) = all₁
 ∃₃ C = ∃ λ a → ∃ λ b → ∃ λ c → C a b c
 
 module Quotient (A : Set) (p : List A)
-     (num : AddMul A) (decEq : Decidable (_≡_ {_} {A})) (fi : Field A num _≡_) where
+     (num : AddMul A)
+     (decEq : Decidable (_≡_ {_} {A}))
+     (fi : Field A num _≡_) where
 
 
   decAllEq : ∀ a l → Dec (All {A} (_≡_ a) l)
@@ -66,6 +67,10 @@ module Quotient (A : Set) (p : List A)
   rev [] = []
   rev (x ∷ p₁) = rev p₁ ++ (x ∷ [])
 
+  rev-empty : (p : Poly) → rev p ≡ [] → p ≡ []
+  rev-empty [] x = refl
+  rev-empty (x ∷ p₁) x₁ = {!!}
+
   rev-rev-aux : ∀ t x → rev (t ++ (x ∷ [])) ≡ x ∷ rev t
   rev-rev-aux [] x = refl
   rev-rev-aux (x ∷ t) x₁
@@ -76,26 +81,45 @@ module Quotient (A : Set) (p : List A)
   rev-rev (x ∷ p₁) rewrite rev-rev-aux (rev p₁) x
        = cong (_∷_ x) (rev-rev p₁)
 
+  norm₂ : Poly → Poly
+  norm₂ [] = +-ε ∷ []
+  norm₂ (x ∷ p₁) = x ∷ p₁
+
+  norm₁ : Poly → Poly
+  norm₁ p = rev (remove-zero (rev p))
+
   norm : Poly → Poly
-  norm p = rev (remove-zero (rev p))
+  norm p = norm₂ (norm₁ p)
+
+  norm-stable-aux : (p : Poly) → norm₂ (norm₁ (norm₂ (norm₁ p))) ≡ norm₂ (norm₁ (norm₁ p))
+  norm-stable-aux p with rev (remove-zero (rev p)) | inspect rev (remove-zero (rev p))
+  norm-stable-aux p₁ | [] | insl with decEq +-ε +-ε
+  norm-stable-aux p₂ | [] | insl | yes p = refl
+  norm-stable-aux p₁ | [] | insl | no ¬p = refl
+  norm-stable-aux p₁ | x ∷ l | insl = refl
 
   norm-stable : (p : Poly) → norm (norm p) ≡ norm p
-  norm-stable [] = refl
-  norm-stable (x ∷ p₁)
-       rewrite rev-rev (remove-zero (rev p₁ ++ x ∷ []))
-             | remove-stable (rev p₁ ++ (x ∷ []))
-       = refl
+  norm-stable [] with decEq +-ε +-ε
+  norm-stable [] | yes p₁ = refl
+  norm-stable [] | no ¬p = refl
+  norm-stable (x ∷ p₁) rewrite norm-stable-aux (x ∷ p₁)
+                             | rev-rev (remove-zero (rev p₁ ++ x ∷ []))
+                             | remove-stable (rev p₁ ++ x ∷ []) = refl
+
 
   lead' : ∀ (n : Poly) → length n > 0 → A
   lead' [] ()
   lead' (x ∷ []) p₁ = x
   lead' (x ∷ x₁ ∷ n) p₁ = lead' (x₁ ∷ n) (s≤s z≤n)
 
-  norm-len : ∀ n → length n > 0 → length (norm n) > 0
-  norm-len n p = {!!}
+  norm-len : ∀ n → length (norm n) > 0
+  norm-len [] = s≤s z≤n
+  norm-len (x ∷ n) with rev (remove-zero (rev n ++ x ∷ []))
+  norm-len (x ∷ n) | [] = s≤s z≤n
+  norm-len (x ∷ n) | x₁ ∷ t = s≤s z≤n
   
   lead : ∀ (n : Poly) → length n > 0 → A
-  lead n p = lead' (norm n) (norm-len n p)
+  lead n p = lead' (norm n) (norm-len n)
 
   deg' : Poly → ℕ
   deg' [] = 0
@@ -163,15 +187,6 @@ module Quotient (A : Set) (p : List A)
   lem-+- : ∀ k m → m ≡ k +P (m -P k)
   lem-+- k m = {!!}
 
-  lem-cancel' : ∀ m n p1 p2
-     → deg m ≡ deg n
-     → deg m > 0
-     → lead m p1 ≡ lead n p2 → deg (m -P n) < deg m
-  lem-cancel' = {!!}
-  lem-cancel : ∀ m n p1 p2 → deg (m -P ((lead m p1 * proj₁ (*-inv (lead n p2)) ∷ []) *P n)) < deg m
-  lem-cancel m n p1 p2 with *-inv (lead n p2)
-  ... | ln⁻¹ , p = {!!}
-
   divMod : (m n : Poly)
        → length m > 0 → (p : length n > 0)
        → ¬ (lead n p ≡ +-ε)
@@ -182,8 +197,8 @@ module Quotient (A : Set) (p : List A)
             length q > 0 ×
             length r > 0
   divMod m n p1 p2 p3 (acc ac)
-      with deg m | inspect deg m       | deg n | inspect deg n
-  ...    | dm    | Reveal_·_is_.[ eq ] | dn    | Reveal_·_is_.[ eq₁ ]
+      with deg m | inspect deg m | deg n | inspect deg n
+  ...    | dm    | [ eq ]        | dn    | [ eq₁ ]
       with compare dm dn
   ... | (less .dm k) rewrite sym eq
                            | eq₁
