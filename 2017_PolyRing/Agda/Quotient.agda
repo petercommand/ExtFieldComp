@@ -47,47 +47,53 @@ module Quotient (A : Set) (p : List A)
 
   open Num.AddMul num
   open Field.Field fi
+  
+  remove-zero : Poly → Poly
+  remove-zero [] = []
+  remove-zero (x ∷ p₁) with decEq +-ε x
+  remove-zero (x ∷ p₂) | yes p₁ = remove-zero p₂
+  remove-zero (x ∷ p₁) | no ¬p = x ∷ p₁
 
-  norm-type : Poly → Set
-  norm-type [] = Poly
-  norm-type (x ∷ []) = Poly
-  norm-type (x ∷ x₁ ∷ l) = Dec (All (_≡_ +-ε) (x₁ ∷ l)) → Poly
+  remove-stable : (p : Poly) → remove-zero (remove-zero p) ≡ remove-zero p
+  remove-stable [] = refl
+  remove-stable (x ∷ p₁) with decEq +-ε x
+  remove-stable (x ∷ p₂) | yes p₁ = remove-stable p₂
+  remove-stable (x ∷ p₁) | no ¬p with decEq +-ε x
+  remove-stable (x ∷ p₂) | no ¬p | (yes p) = ⊥-elim (¬p p)
+  remove-stable (x ∷ p₁) | no ¬p₁ | (no ¬p) = refl
 
-  norm' : (l : Poly) → norm-type l
-  norm' [] = +-ε ∷ []
-  norm' (x ∷ []) = x ∷ []
-  norm' (x ∷ x₁ ∷ l) (yes p₁) = x ∷ []
-  norm' (x ∷ x₁ ∷ []) (no ¬p) = x ∷ x₁ ∷ []
-  norm' (x ∷ x₁ ∷ x₂ ∷ l) (no ¬p) = x ∷ norm' (x₁ ∷ x₂ ∷ l) (decAllEq +-ε (x₂ ∷ l))
+  rev : Poly → Poly
+  rev [] = []
+  rev (x ∷ p₁) = rev p₁ ++ (x ∷ [])
+
+  rev-rev-aux : ∀ t x → rev (t ++ (x ∷ [])) ≡ x ∷ rev t
+  rev-rev-aux [] x = refl
+  rev-rev-aux (x ∷ t) x₁
+       = cong (λ y → y ++ (x ∷ [])) (rev-rev-aux t x₁)
+  
+  rev-rev : (p : Poly) → rev (rev p) ≡ p
+  rev-rev [] = refl
+  rev-rev (x ∷ p₁) rewrite rev-rev-aux (rev p₁) x
+       = cong (_∷_ x) (rev-rev p₁)
 
   norm : Poly → Poly
-  norm [] = norm' []
-  norm (x ∷ []) = norm' (x ∷ [])
-  norm (x ∷ x₁ ∷ l) = norm' (x ∷ x₁ ∷ l) (decAllEq +-ε (x₁ ∷ l))
+  norm p = rev (remove-zero (rev p))
 
-  norm-stable : ∀ p → norm (norm p) ≡ norm p
+  norm-stable : (p : Poly) → norm (norm p) ≡ norm p
   norm-stable [] = refl
-  norm-stable (x ∷ []) = refl
-  norm-stable (x ∷ x₁ ∷ l) with decAllEq +-ε (x₁ ∷ l)
-  norm-stable (x ∷ x₁ ∷ l) | yes p₁ = refl
-  norm-stable (x ∷ x₁ ∷ []) | no ¬p with decAllEq +-ε (x₁ ∷ [])
-  norm-stable (x ∷ x₁ ∷ []) | no ¬p | (yes p₁) = ⊥-elim (¬p p₁)
-  norm-stable (x ∷ x₁ ∷ []) | no ¬p₁ | (no ¬p) = refl
-  norm-stable (x₂ ∷ x₁ ∷ x ∷ l) | no ¬p = {!!}
-  
+  norm-stable (x ∷ p₁)
+       rewrite rev-rev (remove-zero (rev p₁ ++ x ∷ []))
+             | remove-stable (rev p₁ ++ (x ∷ []))
+       = refl
+
   lead' : ∀ (n : Poly) → length n > 0 → A
   lead' [] ()
   lead' (x ∷ []) p₁ = x
   lead' (x ∷ x₁ ∷ n) p₁ = lead' (x₁ ∷ n) (s≤s z≤n)
 
   norm-len : ∀ n → length n > 0 → length (norm n) > 0
-  norm-len [] ()
-  norm-len (x ∷ []) (s≤s p₁) = s≤s z≤n
-  norm-len (x₁ ∷ x ∷ n) (s≤s p₁) with decAllEq +-ε (x ∷ n)
-  norm-len (x₁ ∷ x ∷ n) (s≤s p₂) | yes p₁ = ≤-refl
-  norm-len (x₁ ∷ x ∷ []) (s≤s p₁) | no ¬p = s≤s z≤n
-  norm-len (x₂ ∷ x₁ ∷ x ∷ n) (s≤s p₁) | no ¬p = s≤s z≤n
-
+  norm-len n p = {!!}
+  
   lead : ∀ (n : Poly) → length n > 0 → A
   lead n p = lead' (norm n) (norm-len n p)
 
@@ -161,24 +167,7 @@ module Quotient (A : Set) (p : List A)
      → deg m ≡ deg n
      → deg m > 0
      → lead m p1 ≡ lead n p2 → deg (m -P n) < deg m
-  lem-cancel' [] n () p2 p3 p4 p5
-  lem-cancel' (x ∷ m) [] p1 () p3 p4 p5
-  lem-cancel' (x ∷ []) (x₁ ∷ []) p1 p2 p3 () p5
-  lem-cancel' (x ∷ []) (x₁ ∷ x₂ ∷ n) p1 p2 p3 () p5
-  lem-cancel' (x ∷ x₁ ∷ m) (x₂ ∷ []) p1 p2 p3 p4 p5 rewrite p3 with p4
-  ... | ()
-  lem-cancel' (x ∷ x₁ ∷ m) (x₂ ∷ x₃ ∷ n) (s≤s p1) (s≤s p2) p3 p4 p5 with decAllEq +-ε (x₁ ∷ m) | decAllEq +-ε (x₃ ∷ n)
-  lem-cancel' (x ∷ x₁ ∷ m) (x₂ ∷ x₃ ∷ n) (s≤s p1) (s≤s p2) p3 p4 p5 | yes p₁ | (yes p₂) with p4
-  ... | ()
-  lem-cancel' (x ∷ x₁ ∷ m) (x₂ ∷ x₃ ∷ n) (s≤s p1) (s≤s p2) p3 p4 p5 | yes p₁ | (no ¬p) with p4
-  ... | ()
-  lem-cancel' (x ∷ x₁ ∷ m) (x₂ ∷ x₃ ∷ n) (s≤s p1) (s≤s p2) p3 p4 p5 | no ¬p | (yes p₁) rewrite p3 with p4
-  ... | ()
-  lem-cancel' (x ∷ x₁ ∷ m) (x₂ ∷ x₃ ∷ n) (s≤s p1) (s≤s p2) p3 p4 p5 | no ¬p | (no ¬p₁) with decAllEq +-ε ((x₁ + (proj₁ (+-inv x₃))) ∷ (m -P' n))
-  lem-cancel' (x ∷ x₁ ∷ m) (x₂ ∷ x₃ ∷ n) (s≤s p1) (s≤s p2) p3 p4 p5 | no ¬p | (no ¬p₁) | yes p' = p4
-  lem-cancel' (x ∷ x₁ ∷ m) (x₂ ∷ x₃ ∷ n) (s≤s p1) (s≤s p2) p3 p4 p5 | no ¬p | (no ¬p₁) | no ¬p'
-     = {!lem-cancel' (x₁ ∷ m) (x₃ ∷ n)  ? ? ? ? ?!}
-  
+  lem-cancel' = {!!}
   lem-cancel : ∀ m n p1 p2 → deg (m -P ((lead m p1 * proj₁ (*-inv (lead n p2)) ∷ []) *P n)) < deg m
   lem-cancel m n p1 p2 with *-inv (lead n p2)
   ... | ln⁻¹ , p = {!!}
