@@ -1,5 +1,6 @@
 \documentclass{llncs}
-%
+
+%include agda.fmt
 
 \title{Extension Field -- What Title Should We Use?}
 %\titlerunning{Abbreviated Title}
@@ -7,9 +8,11 @@
 \author{Ivar Ekeland\inst{1} \and Roger Temam\inst{2}}
 \institute{<name of an institute> \and <name of the next institute> \and <name of the next institute>}
 
+\let\proof\relax
+\let\endproof\relax
+
 \usepackage{amsmath}
 \usepackage{amsthm}
-\usepackage[utf8]{inputenc}
 
 \input{Preamble}
 
