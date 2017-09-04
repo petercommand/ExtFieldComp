@@ -22,10 +22,38 @@
 %
 %\pagestyle{headings}  % switches on printing of running heads
 \begin{abstract}
-Abstract here.
+  % 
+  Polynomials are a central concept to many branches in mathematics
+  and computer science.
+  % 
+  In particular, manipulation of polynomial expressions can be used to
+  model a wide variety of computation.
+  %
+  In this paper, we consider a simple recursive construction of
+  multivariate polynomials over a base ring such as the integers or a
+  (finite) field.
+  %
+  We show that this construction allows easy implementation of
+  polynomial operations such as arithmetic, evaluation, substitution,
+  etc.
+  %
+  Furthermore, we can compile a polynomial expression into in a
+  sequence of arithmetic expressions in the base ring and prove the
+  correctness of this compilation in Agda.
+  %
+  As a demonstration, we show how to recursively compile polynomial
+  expressions over a tower of finite fields into scalar expressions
+  over the ground field.
+  % 
+  Such a technique is not only interesting in its own right but also
+  finds plentiful application in research areas such as cryptography.
+  % 
 \end{abstract}
 
  \input{sections/Introduction}
  \input{sections/Expr}
+
+\bibliographystyle{abbrv}
+\bibliography{dblp,local}
 
 \end{document}

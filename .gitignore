@@ -8,10 +8,19 @@
 
 *.aux
 
+*.bbl
+
+*.blg
+
+*.dvi
+
 *.ptb
 
 FLOPS/exf-flops\.pdf
 
 FLOPS-multi/main-flops\.pdf
+FLOPS-multi/main-flops\.tex
+FLOPS-multi/sections/Expr\.tex
+FLOPS-multi/sections/Introduction\.tex
 
 2017_PolyRing/On Paper/proofs\.pdf
