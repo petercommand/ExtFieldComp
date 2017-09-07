@@ -91,7 +91,8 @@ polynomials in a categorical style as outlined by, e.g., Bird and de
 Moor~\cite{DBLP:books/daglib/0096998}.
 % 
 That is, we can define a base bifunctor $F$ as
-\[ F(A,B)=1+A+(B\times B)+(B\times B). \]
+\begin{equation} \label{eq:datatype} F(A,B)=1+A+(B\times B)+(B\times
+  B). \end{equation}
 % 
 Then a datatype $TA$ for (univariate) polynomials over a base ring of
 type $A$ will be $TA=F(A,TA)$, and that for multivariate polynomials

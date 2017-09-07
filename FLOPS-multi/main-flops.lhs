@@ -11,10 +11,11 @@
 \let\proof\relax
 \let\endproof\relax
 
-\usepackage{amsmath}
-\usepackage{amsthm}
+\usepackage{amsmath,amsthm,xspace}
 
 \input{Preamble}
+
+\newcommand{\cata}[1]{\ensuremath{(\! [#1]\! )}\xspace}
 
 \begin{document}
 %
@@ -51,6 +52,7 @@
 \end{abstract}
 
  \input{sections/Introduction}
+ \input{sections/Datatype}
  \input{sections/Expr}
 
 \bibliographystyle{abbrv}
