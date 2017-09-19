@@ -52,6 +52,10 @@ liftExpr : ∀ {l} {A : Set l} {m n : ℕ} → m ≤′ n → ExprN A m → Expr
 liftExpr {m = m} {.m} ≤′-refl e = e
 liftExpr {m = m} {.(suc _)} (≤′-step p) e = Lit (liftExpr p e)
 
+liftVal : ∀ {l}{A : Set l} n → A → ExprN A n
+liftVal zero x = x
+liftVal (suc n) x = Lit (liftVal n x)
+
 instance toFuncNum : ∀ {A : Set} (num : Num A) -> Num (A -> A)
 toFuncNum record { _+_ = _+_ ; _-_ = _-_ ; _*_ = _*_ }
    = record { _+_ = \f g x -> f x + g x
