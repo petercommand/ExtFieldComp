@@ -4,24 +4,33 @@ open import Data.Unit using (⊤; tt)
 open import Data.Product hiding (map)
 open import Function using (_∘_)
 open import Data.Nat
-open import Data.Vec
+open import Data.Vec hiding (map)
 open import Num
 open import PolyRing renaming (fmap to Pfmap)
 open import Relation.Binary.PropositionalEquality
 open import Data.Nat.Properties.Simple
 
-{- descInds 3 = (Lit . Lit $ Ind) ∷ Lit Ind ∷ Ind ∷ []
-   decs stands for "descending".
-   No, this is wrong. -}
--- descInds : ∀ {A : Set} n → Vec (ExprN A n) n
--- descInds n = desc n n
---   where lits : ∀ {A : Set} n k → ExprN A n
---         lits n zero = {! Ind  !}
---         lits n (suc k) = {!   !}
---
---         desc : ∀ {A : Set} n k → Vec (ExprN A n) k
---         desc n zero = []
---         desc n (suc k) = lits n k ∷ desc n k
+{- The built-in map is defined in terms of replicate and _⊛_,
+   for its own reason. For our context, the "traditional" definition
+   below allows us to work in a more abstract level. -}
+
+map : ∀ {l} {A B : Set l} {n} → (A → B) → Vec A n → Vec B n
+map f [] = []
+map f (x ∷ xs) = f x ∷ map f xs
+
+postulate
+  map-compose : ∀ {l} {n : ℕ} {A B C : Set l}
+    → (f : B → C) → (g : A → B) → (xs : Vec A n)
+    → map f (map g xs) ≡ map (f ∘ g) xs
+
+  map-cong : ∀ {l} {n : ℕ} {A B : Set l}
+      → (f g : A → B) → (∀ x → f x ≡ g x)
+      → (xs : Vec A n)
+      → map f xs ≡ map g xs
+
+  map-id : ∀ {l} {n : ℕ} {A : Set l}
+      → (xs : Vec A n)
+      → map (λ x → x) xs ≡ xs
 
 genInd : ∀ {A : Set} (n : ℕ) → Vec (ExprN A n) n
 genInd zero = []
@@ -51,23 +60,10 @@ private
  refl-Ind (x ∷ []) = refl
  refl-Ind {n = suc (suc n)} (x ∷ y ∷ xs)
    rewrite sem-lift-cancel n (toNest n xs) x
-   = {!   !}
-
-
-postulate
-  replicate-compose : ∀ {l} {n : ℕ} {A B C : Set l}
-    → (f : B → C) → (g : A → B) → (xs : Vec A n)
-    → (replicate f ⊛ (replicate g ⊛ xs)) ≡ (replicate (f ∘ g) ⊛ xs)
-
-  replicate-cong : ∀ {l} {n : ℕ} {A B : Set l}
-      → (f g : A → B)
-      → (∀ x → f x ≡ g x)
-      → (xs : Vec A n)
-      → (replicate f ⊛ xs) ≡ (replicate g ⊛ xs)
-
-  replicate-id : ∀ {l} {n : ℕ} {A : Set l}
-      → (xs : Vec A n)
-      → (replicate (λ x → x) ⊛ xs) ≡ xs
+         | map-compose (λ e → semantics _ e (toNest _ (x ∷ y ∷ xs)))
+                       Lit (genInd (suc n))
+         | refl-Ind (y ∷ xs)
+   = refl
 
 expand-correct : ∀ {A n}
   → {{num : Num A}}
@@ -77,11 +73,10 @@ expand-correct : ∀ {A n}
   → semantics1 e xs ≡ map (λ e → semantics n e (toNest n xs)) (expand n e)
 expand-correct Ind xs = refl-Ind xs
 expand-correct {n = n} (Lit ys) xs
-  rewrite replicate-compose (λ e → semantics n e (toNest n xs))
-              (liftVal n) ys
-        | replicate-cong (λ x → semantics n (liftVal n x) (toNest n xs))
-              (λ x → x) (sem-lift-cancel n (toNest n xs)) ys
-        | replicate-id ys
+   rewrite map-compose (λ e → semantics n e (toNest n xs)) (liftVal n) ys
+         | map-cong (λ x → semantics n (liftVal n x) (toNest n xs))
+               (λ x → x) (sem-lift-cancel n (toNest n xs)) ys
+         | map-id ys
    = refl
 expand-correct (Add e e₁) xs = {!   !}
 expand-correct (Sub e e₁) xs = {!   !}
