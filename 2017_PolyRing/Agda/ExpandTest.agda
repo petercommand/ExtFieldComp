@@ -38,7 +38,6 @@ genInd (suc zero) = Ind ∷ []
 genInd (suc (suc n)) = Ind ∷ (map Lit (genInd (suc n)))
 
 expand : ∀ {A} n
-  → {{num : Num A}}
   → {{numE : Num (Vec (ExprN A n) n)}}
   → Expr (Vec A n) → Vec (ExprN A n) n
 expand n = foldExpr (genInd n) (map (liftVal n))
@@ -65,19 +64,56 @@ private
          | refl-Ind (y ∷ xs)
    = refl
 
+numV-natural : (∀ {A : Set} → Num A → ∀ {n} → Num (Vec A n)) → Set₁
+numV-natural toNumV =
+   ∀ {A B : Set} (trans : A → B) (num₁ : Num A) (num₂ : Num B) {n : ℕ} →
+   ∀ (xs ys : Vec A n) →
+   let numV₁ = toNumV num₁ {n}
+       (_+₁_ , _-₁_ , _*₁_) = (Num._+_ numV₁ , Num._-_ numV₁ , Num._*_ numV₁)
+       numV₂ = toNumV num₂ {n}
+       (_+₂_ , _-₂_ , _*₂_) = (Num._+_ numV₂ , Num._-_ numV₂ , Num._*_ numV₂)
+   in map trans (xs +₁ ys) ≡ (map trans xs +₂ map trans ys) ×
+      map trans (xs -₁ ys) ≡ (map trans xs -₂ map trans ys) ×
+      map trans (xs *₁ ys) ≡ (map trans xs *₂ map trans ys)
+
 expand-correct : ∀ {A n}
   → {{num : Num A}}
-  → {{numV : Num (Vec A n)}}
-  → {{numE : Num (Vec (ExprN A n) n)}}
+  → {toNumV : (∀ {A : Set} → Num A → ∀ {n} → Num (Vec A n))}
+  → numV-natural toNumV
   → (e : Expr (Vec A n)) → (xs : Vec A n)
-  → semantics1 e xs ≡ map (λ e → semantics n e (toNest n xs)) (expand n e)
-expand-correct Ind xs = refl-Ind xs
-expand-correct {n = n} (Lit ys) xs
+  → semantics1 {{toNumV num}} e xs ≡
+       map (λ e → semantics n e (toNest n xs))
+            (expand n {{toNumV (toExprNumN n)}} e)
+expand-correct _ Ind xs = refl-Ind xs
+expand-correct {n = n} _ (Lit ys) xs
    rewrite map-compose (λ e → semantics n e (toNest n xs)) (liftVal n) ys
          | map-cong (λ x → semantics n (liftVal n x) (toNest n xs))
                (λ x → x) (sem-lift-cancel n (toNest n xs)) ys
          | map-id ys
    = refl
-expand-correct (Add e e₁) xs = {!   !}
-expand-correct (Sub e e₁) xs = {!   !}
-expand-correct (Mul e e₁) xs = {!   !}
+expand-correct {n = n} {{num}} {toNumV} toNumVNat (Add e₀ e₁) xs
+   rewrite expand-correct toNumVNat e₀ xs
+         | expand-correct toNumVNat e₁ xs
+         | proj₁ (toNumVNat (λ e → semantics n e (toNest n xs))
+                    (toExprNumN n) num
+                    (expand n {{toNumV (toExprNumN n)}} e₀)
+                    (expand n {{toNumV (toExprNumN n)}} e₁))
+   = refl
+expand-correct {n = n} {{num}} {toNumV} toNumVNat (Sub e₀ e₁) xs
+   rewrite expand-correct toNumVNat e₀ xs
+         | expand-correct toNumVNat e₁ xs
+         | proj₁ (proj₂
+             (toNumVNat (λ e → semantics n e (toNest n xs))
+                    (toExprNumN n) num
+                    (expand n {{toNumV (toExprNumN n)}} e₀)
+                    (expand n {{toNumV (toExprNumN n)}} e₁)))
+   = refl
+expand-correct {n = n} {{num}} {toNumV} toNumVNat (Mul e₀ e₁) xs
+   rewrite expand-correct toNumVNat e₀ xs
+         | expand-correct toNumVNat e₁ xs
+         | proj₂ (proj₂
+             (toNumVNat (λ e → semantics n e (toNest n xs))
+                    (toExprNumN n) num
+                    (expand n {{toNumV (toExprNumN n)}} e₀)
+                    (expand n {{toNumV (toExprNumN n)}} e₁)))
+   = refl

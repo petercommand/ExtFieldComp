@@ -85,7 +85,6 @@ ExprN-comb : ∀ {A : Set} m n → ExprN (ExprN A m) n ≡ ExprN A (m + n)
 ExprN-comb zero n = refl
 ExprN-comb {A} (suc m) n rewrite numEquiv (ExprN A m) n = cong Expr (ExprN-comb m n)
 
-
 compose : ∀ {A : Set} -> (n : ℕ) -> (A -> A) -> (A -> A)
 compose zero f = id
 compose (suc n) f = f ∘ compose n f
