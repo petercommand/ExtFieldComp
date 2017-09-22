@@ -17,6 +17,12 @@
 \newtheorem{corollary}[theorem]{Corollary}
 \begin{document}
 
+\title{Proofs Regarding Extension Fields}
+\author{}
+\date{}
+
+\maketitle
+
 %format sem0 = "\Varid{sem}_{0}"
 %format sem1 = "\Varid{sem}_{1}"
 %format en1 = "\Varid{e}_{1+n}"
@@ -30,6 +36,8 @@
 %format sem1 = "\Varid{sem}_{1}"
 
 %format reg n = "\Varid{r}_{" n "}"
+
+\subsection*{Semantics and Compilation}
 
 \paragraph{Definitions} Define the semantics:
 \begin{spec}
@@ -171,5 +179,35 @@ When running the compiled program:
   sem (1 + n) (d1 oplus d2) (en , esn) {-"~~."-}
 \end{spec}
 \end{proof}
+
+\subsection*{Expansion}
+
+\begin{spec}
+expand : ∀ {A} n
+  → {{numE : Num (Vec (ExprN A n) n)}}
+  → Expr (Vec A n) → Vec (ExprN A n) n
+expand n = foldExpr (genInd n) (map (liftVal n))
+\end{spec}
+
+\begin{spec}
+genInd : ∀ {A : Set} (n : ℕ) → Vec (ExprN A n) n
+genInd zero           = []
+genInd (suc zero)     = Ind ∷ []
+genInd (suc (suc n))  = Ind ∷ (map Lit (genInd (suc n)))
+
+liftVal : ∀ {l}{A : Set l} n → A → ExprN A n
+liftVal zero x = x
+liftVal (suc n) x = Lit (liftVal n x)
+
+toNest : ∀ {A} n → Vec A n → Nest A n
+toNest zero     _         = tt
+toNest (suc n)  (x ∷ xs)  = liftVal n x , toNest n xs
+\end{spec}
+
+\begin{lemma} For all |n|, |x|, and |xs : Nest A n|, we have |sem n (liftVal n x) xs = x|.
+\end{lemma}
+
+\begin{lemma} For all |n| and |xs : Vec A n|, we have |map (\ e → sem n e (toNest n xs)) (genInd n) = xs|.
+\end{lemma}
 
 \end{document}
