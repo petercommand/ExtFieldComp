@@ -1,52 +1,50 @@
  %%include lhs2TeX.fmt
 %include agda.fmt
  %%include polycode.fmt
- %%include Formatting.fmt
+%include Formatting.fmt
 
-\section{Datatype}
-\label{sec:datatype}
+\section{Univariate and Multivariate Polynomials}
+\label{sec:expressions}
 
+In this section we present our representation for univariate and
+multivariate polynomials, and their semantics.
+%In this section, we shall elaborate on what we mean by
+%Equation~\ref{eq:datatype} in Section~\ref{sec:introduction}.
 
-%
-In this section, we shall elaborate on what we mean by
-Equation~\ref{eq:datatype} in Section~\ref{sec:introduction}.
-%
-We start with the categorical style as outlined by Bird and de
+Recall the categorical style outlined by Bird and de
 Moor~\cite{DBLP:books/daglib/0096998} and consider the following
-recursively defined datatype over a datatype $A$:
+recursively defined datatype that denotes univariate polynomials
+over type |R|:
 %
-\[ expr R ::= ind \mid lit\ R \mid add\ (expr\ R,expr\ R) \mid mul\
-  (expr\ R,expr\ R). \]
+\[ expr\,R ::= ind \mid lit\,R \mid add\ (expr\,R,expr\,R) \mid mul\
+  (expr\,R,expr\,R). \]
 %
-This declares $[ind,lit,add,mul]_R:F(R,expr\ R)\rightarrow expr\ R$ as
+This declares $[ind,lit,add,mul]_R:F(R,expr\,R)\rightarrow expr\ R$ as
 the initial algebra of the functor $F(R,\cdot)$, where
 $F(A,B)=1+A+(B\times B)+(B\times B)$ as defined in
 Equation~\ref{eq:datatype}.
 %
 The datatype $expr\ R$ is a tree having two kinds of leaf nodes,
-$ind$ and $lit\ R$, representing the indeterminate $X$ itself and
-constants from $R$, respectively.
+$ind$ and $lit\,R$, respectively representing the indeterminate $X$ itself and
+constants from $R$.
 %
 Furthermore, there are two ways to join two such binary trees, i.e.,
-$add$ and $mul$, representing the addition and multiplication
-operations in $R[X]$, respectively.
+$add$ and $mul$, respectively representing the addition and multiplication
+operations in $R[X]$.
 %
 Clearly, each instance of such binary tree corresponds to the syntax
 tree of a univariate polynomial from $R[X]$.
 %
-
-%
-Naturally, the categorical-style definition of the datatype $expr\ R$
+Naturally, the categorical-style definition of the datatype $expr\,R$
 gives catamorphisms via $\mi{fold}$,
 i.e.,
 \begin{equation} \label{eq:catamorphism}
   \cata{f_i,f_\ell,f_a,f_m} % =fold\ (f_i,f_\ell,f_a,f_m)
-    : expr~R\rightarrow S, \end{equation} where $f_i : 1\rightarrow S$,
+    : expr\,R\rightarrow S, \end{equation} where $f_i : 1\rightarrow S$,
 $f_\ell : R\rightarrow S$, $f_a : S\rightarrow S\rightarrow S$, and
 $f_m : S\rightarrow S\rightarrow S$.
 %
 This allows us to derive various functions in an economical way.
-
 
 In Agda, the datatype can be expressed by the following declaration:
 \begin{spec}
@@ -54,30 +52,65 @@ data Expr (A : Set) : Set where
   Ind : Expr A
   Lit : A -> Expr A
   Add : Expr A -> Expr A -> Expr A
-  Mul : Expr A -> Expr A -> Expr A {-"~~,"-}
+  Mul : Expr A -> Expr A -> Expr A {-"~~."-}
 \end{spec}
-and the $\mi{fold}$ it induces can be given by:
+As a convention, the $\mi{fold}$ it induces usually takes four arguments, each
+replacing one of the four constructors. To facilitate our discussion later,
+we group the last two together and define:
 \begin{spec}
-foldE : ∀ {A B : Set} -> B -> (A -> B) -> Num B -> Expr A -> B
-foldE x f num        Ind          = x
-foldE x f num        (Lit y)      = f y
-foldE x f ((+) , _)  (Add e1 e2)  = foldE x f e1 + foldE x f e2
-foldE x f (_ , (*))  (Mul e1 e2)  = foldE x f e1 * foldE x f e2 {-"~~,"-}
+Ring : Set -> Set
+Ring A = (A -> A -> A) × (A -> A -> A) {-"~~."-}
 \end{spec}
-where is a pair of operators specifying what operators to replace |Add| and |Mul| with. Each instance of |Num B| defines how to perform addition and multiplication for |B|.
-
-\paragraph{Evaluation} Assuming a base type |A| for which |Num A| is defined, consider evaluating an expression of type |Expr A|.
-
+That is, |Ring A| is a pair of binary operators. We then define the
+$\mi{fold}$ for |Expr|:
 \begin{spec}
-num→ : ∀ {A B : Set} → Num B → Num (A → B)
-num→ ((+),(*)) = ( \f g x -> f x + g x,
-                   \f g x -> f x * g x) {-"~~."-}
+foldE : ∀ {A B : Set} -> B -> (A -> B) -> Ring B -> Expr A -> B
+foldE x f ring       Ind          = x
+foldE x f ring       (Lit y)      = f y
+foldE x f ((+),(*))  (Add e1 e2)  =
+    foldE x f ((+),(*)) e1 + foldE x f ((+),(*)) e2
+foldE x f ((+),(*))  (Mul e1 e2)  =
+    foldE x f ((+),(*)) e1 * foldE x f ((+),(*)) e2 {-"~~."-}
+\end{spec}
+The intention is that each instance of |Ring A| defines how to perform addition
+and multiplication for the type |A|.%
+\footnote{While we do expect all the ring properties such as existence of
+additive identity, inverse, and distributivity, etc., to hold, we do not
+enforce them in this datatype.}
+In our Haskell implementation, |Ring| is a type class for types whose addition
+and multiplication are defined, and particular instances of |Ring| can usually be inferred. When proving properties
+about |foldE|, however, it turns out that it is sometimes clearer to make the
+construction of |Ring| instances explicit.
+
+\paragraph{Evaluation} Assuming a base type |A| for which |Ring A| is defined,
+consider evaluating a polynomial of type |Expr A|. Without the presence of
+constructor |Ind|, an |Expr A| is an expresson without variable, and evaluating
+it is simply a matter of folding over the expression using |Ring A|. With |Ind|,
+however, the semantics of |Expr A| should be a function |A → A| --- a function
+that takes the value of the indeterminate and returns a value.
+
+We define the following operation that lifts the addition and multiplication
+of some type |B| to |A → B|:
+\begin{spec}
+ring→ : ∀ {A B : Set} → Ring B → Ring (A → B)
+ring→ ((+),(*)) = (  \ f g x -> f x + g x,
+                     \ f g x -> f x * g x) {-"~~."-}
+\end{spec}
+The semantics of a univariate polynomial is thus given by:
+\begin{spec}
+semantics1 : ∀ {A} → Ring A → Expr A → A → A
+semantics1 rng = foldExpr id const (ring→ rng) {-"~~."-}
 \end{spec}
 
-\begin{spec}
-semantics1 : ∀ {A} → Num A → Expr A → A → A
-semantics1 num = foldExpr id const (num→ num)
-\end{spec}
+\paragraph{Multivariate polynomials}
+As we have mentioned in Section~\ref{sec:introduction}, we will
+construct multivariate polynomials by identifying
+$R[X_1,X_2\ldots,X_m]$ as a univariate polynomial ring $S[X_m]$ over
+the base ring $S=R[X_1,X_2,\ldots,X_{m-1}]$.
+%
+Let us first consider the simplest multivariate polynomial ring,
+namely, a bivariate polynomial ring $R[X,Y]\cong R[X][Y]$, which shall
+be modeled using $expr\ (expr\ R)$.
 
 {\bf Old contents below}
 
@@ -100,15 +133,6 @@ natural'' catamorphism.
 %
 The situation for multivariate polynomials is similar but a bit more
 complicated.
-%
-As we have mentioned in Section~\ref{sec:introduction}, we will
-construct multivariate polynomials by identifying
-$R[X_1,X_2\ldots,X_m]$ as a univariate polynomial ring $S[X_m]$ over
-the base ring $S=R[X_1,X_2,\ldots,X_{m-1}]$.
-%
-Let us first consider the simplest multivariate polynomial ring,
-namely, a bivariate polynomial ring $R[X,Y]\cong R[X][Y]$, which shall
-be modeled using $expr\ (expr\ R)$.
 %
 Ideally, the semantics of a bivariate polynomial should be a (curried)
 function of type $R\rightarrow R\rightarrow R$, i.e., the semantics

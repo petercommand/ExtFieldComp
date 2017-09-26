@@ -3,11 +3,16 @@
 %include agda.fmt
 %include Formatting.fmt
 
-\title{Extension Field -- What Title Should We Use?}
-%\titlerunning{Abbreviated Title}
+\title{Functional Pearl: Extension Field}
+\titlerunning{Needing a More Catchy Name}
 %\subtitle{If We Need Any}
-\author{Ivar Ekeland\inst{1} \and Roger Temam\inst{2}}
-\institute{<name of an institute> \and <name of the next institute> \and <name of the next institute>}
+\author{Chen-Mou Cheng\inst{1} \and
+        Ruey-Lin Hsu\inst{2} \and
+        Shin-Cheng Mu\inst{3}}
+\institute{%
+  National Taiwan University \and
+  National Central University \and
+  Academia Sinica}
 
 \let\proof\relax
 \let\endproof\relax
