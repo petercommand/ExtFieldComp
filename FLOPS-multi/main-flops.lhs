@@ -1,6 +1,7 @@
 \documentclass{llncs}
 
 %include agda.fmt
+%include Formatting.fmt
 
 \title{Extension Field -- What Title Should We Use?}
 %\titlerunning{Abbreviated Title}
@@ -14,6 +15,7 @@
 \usepackage{amsmath,amsthm,xspace}
 
 \input{Preamble}
+\input{macros}
 
 \newcommand{\cata}[1]{\ensuremath{(\! [#1]\! )}\xspace}
 
@@ -23,10 +25,10 @@
 %
 %\pagestyle{headings}  % switches on printing of running heads
 \begin{abstract}
-  % 
+  %
   Polynomials are a central concept to many branches in mathematics
   and computer science.
-  % 
+  %
   In particular, manipulation of polynomial expressions can be used to
   model a wide variety of computation.
   %
@@ -45,10 +47,10 @@
   As a demonstration, we show how to recursively compile polynomial
   expressions over a tower of finite fields into scalar expressions
   over the ground field.
-  % 
+  %
   Such a technique is not only interesting in its own right but also
   finds plentiful application in research areas such as cryptography.
-  % 
+  %
 \end{abstract}
 
  \input{sections/Introduction}

@@ -2,7 +2,7 @@
 # Programs
 #-----------------------------------------------------------------------------
 LHS2TEX     := lhs2TeX
-PDFLATEX    := xelatex
+PDFLATEX    := pdflatex
 LATEX       := latex
 BIBTEX      := bibtex
 GHCI        := ghci
