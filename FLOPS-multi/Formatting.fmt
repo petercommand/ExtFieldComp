@@ -42,6 +42,7 @@
 %format semantics2 = "\Varid{semantics}_{2}"
 %format ExprN (n) = "\Varid{Expr}^{" n "}"
 %format ExprNn = "\Varid{Expr}^{\Varid{n}}"
+%format ringE1 = "\Varid{ringE}_1"
 
 \def\commentbegin{\quad\{\ }
 \def\commentend{\}}

@@ -59,8 +59,9 @@
 \end{abstract}
 
  \input{sections/Introduction}
- \input{sections/Datatype}
  \input{sections/Expr}
+ \input{sections/Operations}
+ \input{sections/Compilation}
 
 \bibliographystyle{abbrv}
 \bibliography{dblp,local}
