@@ -34,8 +34,14 @@
 
 %format [] = "\lbrack\,\rbrack"
 
+%format :+ = "\mathbin{:\!\!+}"
+%format :× = "\mathbin{:\!\!×}"
+
 %format ring→ = "\Varid{ring}_{\rightarrow}"
 %format semantics1 = "\Varid{semantics}_{1}"
+%format semantics2 = "\Varid{semantics}_{2}"
+%format ExprN (n) = "\Varid{Expr}^{" n "}"
+%format ExprNn = "\Varid{Expr}^{\Varid{n}}"
 
 \def\commentbegin{\quad\{\ }
 \def\commentend{\}}

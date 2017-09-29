@@ -14,7 +14,7 @@ multivariate polynomials, and their semantics.
 Recall the categorical style outlined by Bird and de
 Moor~\cite{DBLP:books/daglib/0096998} and consider the following
 recursively defined datatype that denotes univariate polynomials
-over type |R|:
+over type $R$:
 %
 \[ expr\,R ::= ind \mid lit\,R \mid add\ (expr\,R,expr\,R) \mid mul\
   (expr\,R,expr\,R). \]
@@ -24,7 +24,7 @@ the initial algebra of the functor $F(R,\cdot)$, where
 $F(A,B)=1+A+(B\times B)+(B\times B)$ as defined in
 Equation~\ref{eq:datatype}.
 %
-The datatype $expr\ R$ is a tree having two kinds of leaf nodes,
+The datatype $expr\,R$ is a tree having two kinds of leaf nodes,
 $ind$ and $lit\,R$, respectively representing the indeterminate $X$ itself and
 constants from $R$.
 %
@@ -36,7 +36,7 @@ Clearly, each instance of such binary tree corresponds to the syntax
 tree of a univariate polynomial from $R[X]$.
 %
 Naturally, the categorical-style definition of the datatype $expr\,R$
-gives catamorphisms via $\mi{fold}$,
+gives induces a catamorphisms (a $\mi{fold}$),
 i.e.,
 \begin{equation} \label{eq:catamorphism}
   \cata{f_i,f_\ell,f_a,f_m} % =fold\ (f_i,f_\ell,f_a,f_m)
@@ -49,11 +49,13 @@ This allows us to derive various functions in an economical way.
 In Agda, the datatype can be expressed by the following declaration:
 \begin{spec}
 data Expr (A : Set) : Set where
-  Ind : Expr A
-  Lit : A -> Expr A
-  Add : Expr A -> Expr A -> Expr A
-  Mul : Expr A -> Expr A -> Expr A {-"~~."-}
+  Ind  : Expr A
+  Lit  : A -> Expr A
+  Add  : Expr A -> Expr A -> Expr A
+  Mul  : Expr A -> Expr A -> Expr A {-"~~."-}
 \end{spec}
+%format e1 = "\Varid{e}_{1}"
+%format e2 = "\Varid{e}_{2}"
 As a convention, the $\mi{fold}$ it induces usually takes four arguments, each
 replacing one of the four constructors. To facilitate our discussion later,
 we group the last two together and define:
@@ -65,22 +67,22 @@ That is, |Ring A| is a pair of binary operators. We then define the
 $\mi{fold}$ for |Expr|:
 \begin{spec}
 foldE : ∀ {A B : Set} -> B -> (A -> B) -> Ring B -> Expr A -> B
-foldE x f ring       Ind          = x
-foldE x f ring       (Lit y)      = f y
-foldE x f ((+),(*))  (Add e1 e2)  =
-    foldE x f ((+),(*)) e1 + foldE x f ((+),(*)) e2
-foldE x f ((+),(*))  (Mul e1 e2)  =
-    foldE x f ((+),(*)) e1 * foldE x f ((+),(*)) e2 {-"~~."-}
+foldE x f rng        Ind          = x
+foldE x f rng        (Lit y)      = f y
+foldE x f ((+),(*))  (Add e1 e2)  =  foldE x f ((+),(*)) e1 +
+                                     foldE x f ((+),(*)) e2
+foldE x f ((+),(*))  (Mul e1 e2)  =  foldE x f ((+),(*)) e1 *
+                                     foldE x f ((+),(*)) e2 {-"~~."-}
 \end{spec}
 The intention is that each instance of |Ring A| defines how to perform addition
-and multiplication for the type |A|.%
+and multiplication for values of type |A|.%
 \footnote{While we do expect all the ring properties such as existence of
 additive identity, inverse, and distributivity, etc., to hold, we do not
 enforce them in this datatype.}
 In our Haskell implementation, |Ring| is a type class for types whose addition
-and multiplication are defined, and particular instances of |Ring| can usually be inferred. When proving properties
-about |foldE|, however, it turns out that it is sometimes clearer to make the
-construction of |Ring| instances explicit.
+and multiplication are defined, and it can usually be inferred what instance of
+|Ring| to use. When proving properties about |foldE|, however, it is sometimes
+clearer to make the construction of |Ring| instances explicit.
 
 \paragraph{Evaluation} Assuming a base type |A| for which |Ring A| is defined,
 consider evaluating a polynomial of type |Expr A|. Without the presence of
@@ -102,16 +104,81 @@ semantics1 : ∀ {A} → Ring A → Expr A → A → A
 semantics1 rng = foldExpr id const (ring→ rng) {-"~~."-}
 \end{spec}
 
-\paragraph{Multivariate polynomials}
-As we have mentioned in Section~\ref{sec:introduction}, we will
-construct multivariate polynomials by identifying
-$R[X_1,X_2\ldots,X_m]$ as a univariate polynomial ring $S[X_m]$ over
-the base ring $S=R[X_1,X_2,\ldots,X_{m-1}]$.
-%
-Let us first consider the simplest multivariate polynomial ring,
-namely, a bivariate polynomial ring $R[X,Y]\cong R[X][Y]$, which shall
-be modeled using $expr\ (expr\ R)$.
+%format Ind1 = "\Conid{Ind}_{1}"
+%format Ind2 = "\Conid{Ind}_{2}"
 
+\paragraph{Bivariate polynomials}
+To represent polynomials with two indeterminate, we could extend
+the |Expr| type with an additional constructors: |Ind'|, in addition
+to |Ind|. It turns out to be not necessary: a polynomial over base ring
+|A| with two indeterminates can be represented by |Expr (Expr A)|.
+
+For an example, consider the following expression of type |Expr (Expr ℕ)|,
+where we denote |Add| and |Mul| by infixe notation |(:+)| and |(:×)|:
+\begin{spec}
+  e = Lit (Lit 3) :× Ind :× Lit (Ind :+ Lit 4) :+ Lit Ind :+ Ind {-"~~."-}
+\end{spec}
+Note that |Lit| in the first level takes |Expr ℕ| as arguments, thus to
+represent a literal |3| we have to write |Lit (Lit 3)|. To evaluate |e| using
+|semantics1|, we have to define |Ring (Expr ℕ)|. A natural choice is to connect
+two expressions using corresponding constructors:
+\begin{spec}
+ringE : ∀ {A} → Ring (Expr A)
+ringE = (Add, Mul) {-"~~."-}
+\end{spec}
+With |ringE| defined, |semantics1 ringE e| has type |Expr A → Expr A|.
+Evaluating, for example |semantics1 ringE e (Ind :+ Lit 1)|, yields
+\begin{spec}
+  Lit 3 :× (Ind :+ Lit 1) :× (Ind :+ Lit 4) :+
+     Lit 2 :× Ind :+ (Ind :+ Lit 1) {-"~~."-}
+\end{spec}
+Note that |Lit Ind| is replaced by the argument |Ind :+ Lit 1|. Furthermore,
+one layer of |Lit| is removed, thus both |Lit 3| and |Ind :+ Lit 4| is exposed.
+The expression may then be evaluated by |semantics1 rngℕ|, yielding a natural
+number. In summary, the function |semantics2| that evalulates |Expr (Expr A)|
+can be defined by:
+\begin{spec}
+semantics2 : ∀ {A} → Ring A → Expr (Expr A) → Expr A → A → A
+semantics2 rng e2 e1 x = semantics1 rng (semantics1 ringE e2 e1) x {-"~~."-}
+\end{spec}
+
+Therefore, |Expr (Expr ℕ)| simulates bivariate polynomials: the two indeterminates
+are respectively represented by |Ind| and |Lit Ind|. During evaluation, |Ind|
+can be instantiated to an expression |arg| of type |Expr ℕ|, while |Lit Ind| can be instantiated to a |ℕ|. If |arg| contains |Ind|, it refers to the next indeterminate.
+What about subexpressions like |Lit (Ind :+ Lit 4)|? One can see that
+its semantics is the same as |Lit Ind :+ Lit (Lit 4)|, the expression we get by
+pushing |Lit| to the leaves.
+
+We have in fact showed that the bivariate polynomial ring $R[X,Y]$ is isomorphic
+to $R[X][Y]$.
+
+\paragraph{Multivariate polynomials}
+In general, as we have mentioned in Section~\ref{sec:introduction}, the
+multivariate polynomial $R[X_1,X_2\ldots,X_m]$ is isomorphic to
+univariate polynomial ring $S[X_m]$ over the base ring
+$S=R[X_1,X_2,\ldots,X_{m-1}]$. That is, a polynomial over |A| with |n| indeterminates
+can be represented by |ExprN n A|, where
+\begin{spec}
+ExprN zero A = A
+ExprN (suc n) A = Expr (ExprN n A) {-"~~."-}
+\end{spec}
+To define the semantics of |ExprN n A|, recall that, among its |n| indeterminates,
+the outermost indeterminate shall be instantiated to an expression of type
+|ExprN (n-1) A|, the next indeterminate to |ExprN (n-2) A|..., and the inner most indeterminate to |A|, before yielding a value of type |A|. Define
+\begin{spec}
+Tele : Set -> ℕ -> Set
+Tele A zero = ⊤
+Tele A (suc n) = ExprNn A × Tele A n {-"~~,"-}
+\end{spec}
+that is, |Tele A n| is a list of |n| elements, with the first having type |ExprN (n-1) A|, the second |ExprN (n-2)|, and so on. The name |Tele| came from ``telescope'' in
+dependent types.
+\begin{spec}
+semantics : ∀ {A} -> Num A -> (n : ℕ) -> ExprNn A -> Tele A n -> A
+semantics r zero x tt = x
+semantics r (suc n) e (t , es) = semantics n (semantics1 e t) es
+\end{spec}
+
+\vspace{1cm}
 {\bf Old contents below}
 
 For example, it is natural to define the semantics of a polynomial
