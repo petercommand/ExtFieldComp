@@ -158,3 +158,27 @@ rotaExprN (suc zero) = id
 rotaExprN (suc (suc zero)) = rotaExpr2
 rotaExprN (suc (suc (suc n))) = subst (λ x → Expr (Expr x) → Expr (Expr x)) (numEquiv _ n)
                                       (fmapN {_} {1} (suc n) rotaExpr2 ∘ rotaExprN {{toExprNumN 1}} (suc (suc n)))
+
+rotaExprN-m : ∀ {A : Set} {{num : Num A}} (n m : ℕ) → ExprN A n → ExprN A n
+rotaExprN-m n zero e = e
+rotaExprN-m n (suc m) e = rotaExprN-m n m (rotaExprN n e)
+
+
+prodReplicate : (A : Set) (n : ℕ) → Set
+prodReplicate a zero = ⊤
+prodReplicate a (suc n) = a × prodReplicate a n
+
+
+prodReplicate→Nest : ∀ {A : Set} (n : ℕ) → prodReplicate A n → Nest A n
+prodReplicate→Nest zero p = p
+prodReplicate→Nest (suc n) (proj₃ , proj₄) = liftVal n proj₃ , prodReplicate→Nest n proj₄
+
+substitute : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> ExprN A n -> prodReplicate (ExprN A n) n -> ExprN A n
+substitute zero e e' = e
+substitute {A} (suc n) e e'
+   = semantics {ExprN A (suc n)} {{toExprNumN {A} (suc n)}} (suc n)
+        (subst id (sym (ExprN-comb {A} (suc n) (suc n)))
+          (rotaExprN-m (suc n + suc n) (suc n)
+             (liftExpr {_} {_} {suc n} {suc n + suc n}
+               (≤→≤′ (suc n) (suc (n + suc n)) (s≤s (≤-weakening n n (suc n) ≤-refl))) e)))
+        (prodReplicate→Nest (suc n) e')
