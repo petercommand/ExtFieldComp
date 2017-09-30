@@ -43,6 +43,7 @@
 %format ExprN (n) = "\Varid{Expr}^{" n "}"
 %format ExprNn = "\Varid{Expr}^{\Varid{n}}"
 %format ringE1 = "\Varid{ringE}_1"
+%format ringES = "\Varid{ringE}^{\star}"
 
 \def\commentbegin{\quad\{\ }
 \def\commentend{\}}

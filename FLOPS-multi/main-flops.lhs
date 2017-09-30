@@ -3,16 +3,16 @@
 %include agda.fmt
 %include Formatting.fmt
 
-\title{Functional Pearl: Extension Field}
-\titlerunning{Needing a More Catchy Name}
+\title{Functional Pearl:\\ Fun with Polynomials of Polynomials}
+%\titlerunning{Needing a More Catchy Name}
 %\subtitle{If We Need Any}
 \author{Chen-Mou Cheng\inst{1} \and
         Ruey-Lin Hsu\inst{2} \and
         Shin-Cheng Mu\inst{3}}
 \institute{%
-  National Taiwan University \and
-  National Central University \and
-  Academia Sinica}
+  National Taiwan University, Taiwan \and
+  National Central University, Taiwan \and
+  Academia Sinica, Taiwan}
 
 \let\proof\relax
 \let\endproof\relax
