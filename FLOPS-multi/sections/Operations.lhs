@@ -88,19 +88,27 @@ substitute2 e e' e'' =
 
 We now consider the general case with |e : ExprN n A| and a vector of |n|
 expressions, each of type |ExprN n A|.
-(to do: can be simplified) 
+(to do: can be simplified)
 \begin{spec}
-substitute : ∀ {A} n -> ExprNn A -> Vec (ExprN n A) n -> ExprNn A
-substitute zero e e' = e
-substitute {A} (suc n) e e'
-   = semantics {ExprN A (suc n)} {{toExprNumN {A} (suc n)}} (suc n)
-        (subst id (sym (ExprN-comb {A} (suc n) (suc n)))
-          (rotaExprN-m (suc n + suc n) (suc n)
-             (liftExpr {_} {_} {suc n} {suc n + suc n}
-               (≤→≤′ (suc n) (suc (n + suc n)) (s≤s (≤-weakening n n (suc n) ≤-refl))) e)))
-        (prodReplicate→Nest (suc n) e')
+substitute : ∀ {A} n -> ExprNn A -> Vec (ExprNn A) n -> ExprNn A
+substitute {A} n e e'
+   = semantics {ExprN A n} {{toExprNumN {A} n}} n
+        (subst id (sym (ExprN-comb {A} n n))
+          (rotaExprN-m (n + n) n
+             (liftExpr {_} {_} {n} {n + n}
+               (≤→≤′ n (n + n) (≤-weakening n n n ≤-refl)) e)))
+        (Vec→Nest n e')
 \end{spec}
 
 \subsection{Expansion}
 
-expansion
+In this section we will discuss an operation that we will put specific emphasis
+on. As mentioned in Section \ref{sec:introduction}, in cryptography we often
+have to deal with polynomials over base types that are not just a number.
+Consider, for example, evaluating the following polynomial over complex number:
+\begin{align*}
+  & ((3 + 2i) x + 4) \times ((2+i)x + 2) \\
+=~& (3 + 2i)(2+i)x^2 + (2(3+2i) + 4(2+i)) x + 8\\
+=~& (4 + 7i) x^2 + (14 + 6i)x + 8\\
+=~& (4x^2 + 14x + 8) + (7x^2 + 6x)i\mbox{~~.}
+\end{align*}
