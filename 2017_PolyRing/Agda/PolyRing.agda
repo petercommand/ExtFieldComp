@@ -164,21 +164,15 @@ rotaExprN-m n zero e = e
 rotaExprN-m n (suc m) e = rotaExprN-m n m (rotaExprN n e)
 
 
-prodReplicate : (A : Set) (n : ℕ) → Set
-prodReplicate a zero = ⊤
-prodReplicate a (suc n) = a × prodReplicate a n
+Vec→Nest : ∀ {A : Set} (n : ℕ) → Vec A n → Nest A n
+Vec→Nest zero [] = tt
+Vec→Nest (suc n) (x ∷ xs) = liftVal n x , Vec→Nest n xs
 
-
-prodReplicate→Nest : ∀ {A : Set} (n : ℕ) → prodReplicate A n → Nest A n
-prodReplicate→Nest zero p = p
-prodReplicate→Nest (suc n) (proj₃ , proj₄) = liftVal n proj₃ , prodReplicate→Nest n proj₄
-
-substitute : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> ExprN A n -> prodReplicate (ExprN A n) n -> ExprN A n
-substitute zero e e' = e
-substitute {A} (suc n) e e'
-   = semantics {ExprN A (suc n)} {{toExprNumN {A} (suc n)}} (suc n)
-        (subst id (sym (ExprN-comb {A} (suc n) (suc n)))
-          (rotaExprN-m (suc n + suc n) (suc n)
-             (liftExpr {_} {_} {suc n} {suc n + suc n}
-               (≤→≤′ (suc n) (suc (n + suc n)) (s≤s (≤-weakening n n (suc n) ≤-refl))) e)))
-        (prodReplicate→Nest (suc n) e')
+substitute : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> ExprN A n -> Vec (ExprN A n) n -> ExprN A n
+substitute {A} n e e'
+   = semantics {ExprN A n} {{toExprNumN {A} n}} n
+        (subst id (sym (ExprN-comb {A} n n))
+          (rotaExprN-m (n + n) n
+             (liftExpr {_} {_} {n} {n + n}
+               (≤→≤′ n (n + n) (≤-weakening n n n ≤-refl)) e)))
+        (Vec→Nest n e')
