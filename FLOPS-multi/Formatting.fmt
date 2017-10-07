@@ -50,9 +50,11 @@
 %format rotaExpr3 = "\Varid{rotaExpr}_{3}"
 %format rotaExpr4 = "\Varid{rotaExpr}_{4}"
 %format (fmapN (n)) = "\Varid{fmap}^{" n "}"
+%format Set1 = "\Varid{Set}_{1}"
+%format Real = "{\mathbb R}"
 
-%format (.) = "\cdot"
-
+%format (.) = "\!\cdot\!"
+%format ∘ = "\!\cdot\!"
 
 \def\commentbegin{\quad\{\ }
 \def\commentend{\}}

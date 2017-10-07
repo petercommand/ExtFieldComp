@@ -102,13 +102,86 @@ substitute {A} n e e'
 
 \subsection{Expansion}
 
-In this section we will discuss an operation that we will put specific emphasis
-on. As mentioned in Section \ref{sec:introduction}, in cryptography we often
-have to deal with polynomials over base types that are not just a number.
-Consider, for example, evaluating the following polynomial over complex number:
+Expansion is an operation we will put specific emphasis on, since its application
+is what motivated us in the first place. As mentioned in
+Section \ref{sec:introduction}, in cryptography we often have to deal with
+polynomials over base types that are not just a number. For example,
+the polynomial over complex numbers $(3 + 2i) x^2 + (2 + i)x + 1$
+can be represented by |Expr (Real × Real)|, whose semantics is
+a function |(Real × Real) -> (Real × Real)|. Let $x$ be $x_1 + x_2 i$, the
+polynomial can be expanded as below:
 \begin{align*}
-  & ((3 + 2i) x + 4) \times ((2+i)x + 2) \\
-=~& (3 + 2i)(2+i)x^2 + (2(3+2i) + 4(2+i)) x + 8\\
-=~& (4 + 7i) x^2 + (14 + 6i)x + 8\\
-=~& (4x^2 + 14x + 8) + (7x^2 + 6x)i\mbox{~~.}
+  & (3 + 2i)(x_1 + x_2 i)^2 + (2 + i)(x_1 + x_2 i) + 1 \\
+=~& (3 x^2_1 - 4 x_1 x_2 - 3 x^2_2) + (2 x^2_1 + 6 x_1 x_2 - 2 x^2_2) i +
+  (2 x_1 - x_2) + (x_1 + 2 x_2) i + 1\\
+=~& (3 x^2_1 + 2 x_1 - 4 x_1 x_2 - x_2 - 3 x^2_2 + 1) +
+   (2 x^2_1 + x_1 + 6 x_1 x_2 + 2 x_2 - 2x^2_2) i \mbox{~~.}
 \end{align*}
+%format WordN = "\Varid{Word}^{\Varid{n}}"
+That is, a univariate polynomial over pairs, |Expr (Real × Real)|, can be expanded to
+|(Expr2 Real × Expr2 Real)|, a pair of bivariate expressions.
+The expansion depends on the definitions of addition and multiplication of
+complex numbers. It might turn out that |Real| is represented by a fixed
+length of machine words, |Real = WordN|, and |Expr WordN| can be further
+expanded to $|(ExprN n Word)|^\Varid{n}$, this time using arithmetic
+operations defined for |Word|. Now that each polynomial is defined
+over |Word|, whose arithmetic operation is supported by the machine, we may
+compile the expressions, in ways discussed in the next section, into assembly
+language. Such conversion and compilation are typically done by hand. We
+would like to define expansion in this section and compilation in the next,
+as well as proving their correctness. Furthermore, expansion and it proof of
+correctness should take the arithmetic operation of its base type as parameters.
+
+%format LitN1 = "\Varid{Lit}^{\Varid{n-1}}"
+%format x1 = "\Varid{x}_1"
+%format x2 = "\Varid{x}_2"
+In general, a univariate polynomial of |n|-vectors, |Expr (Vec A n)|, can be
+expanded to a |n|-vector of |n|-variate polynomial, |Vec (ExprN n A) n|. To
+formally define expansion we need some helper functions. Firstly,
+|genInd n| generates a vector |Ind ∷ Lit Ind ∷ ... LitN1 Ind ∷ []|. It corresponds
+to expanding |x| to |(x1 , x2)|.
+\begin{spec}
+genInd : ∀ {A} n → Vec (ExprN n A) n
+genInd zero           = []
+genInd (suc zero)     = Ind ∷ []
+genInd (suc (suc n))  = Ind ∷ (map Lit (genInd (suc n))) {-"~~."-}
+\end{spec}
+Secondly, |liftVal : ∀ {A} n → A → ExprNn A| lifts |A| to |ExprNn A| by applying
+|Lit| to it |n| times. The definition is routine. Finally, we need an operation
+defining arithmetic operators for a vector of |A|, given arithmetic operators
+for |A|. We give such operations a type:
+\begin{spec}
+RingVec : Set1
+RingVec = ∀ {A} n -> Ring A -> Ring (Vec A n) {-"~~."-}
+\end{spec}
+
+Expansion can now be defined by:
+\begin{spec}
+expand : ∀ {A} n → RingVec → Expr (Vec A n) → Vec (ExprN n A) n
+expand ringVec n = foldE (genInd n) (map (liftVal n)) (ringVec ringE) {-"~~."-}
+\end{spec}
+For the |Ind| case, one indeterminant is expanded to |n| using |genInd|. For the
+|Lit xs| case, |xs : Vec A n| can be lifted to |Vec (ExprN n A) n| by |map (liftVal n)|.
+For addition and multiplication, we let |ringVec| decide how to combine vectors
+of expressions, but specifying |((:+), (:×))| as atomic operations.
+
+\paragraph{Correctness of |expand|}
+
+\begin{lemma}\label{lma:sem-liftVal}
+For all |n|, |x|, |es : Tele A n|, and |r : Ring A|,
+we have |semantics r n (liftVal n x) es = x|.
+\end{lemma}
+
+\begin{lemma} \label{lma:sem-genInd}
+For all |n|, |xs : Vec A n|, and |r : Ring A|, we have
+|map (\ e → semantics r n e (toTele xs)) (genInd n) = xs|.
+\end{lemma}
+
+\begin{theorem} For all |n|, |e : Expr (Vec A n)|, |xs : Vec A n|,
+|r : Ring A|, and |ringVec : RingVec|, we have
+\begin{spec}
+  semantics1 (ringVec r) e xs =
+    map (\ e → semantics r n e (toTele xs)) (expand ringVec n e) {-"~~,"-}
+\end{spec}
+if |ringVec| is polymorphic.
+\end{theorem}
