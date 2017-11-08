@@ -8,62 +8,73 @@
 
 In this section we present our representation for univariate and
 multivariate polynomials, and their semantics.
-%In this section, we shall elaborate on what we mean by
-%Equation~\ref{eq:datatype} in Section~\ref{sec:introduction}.
-
-Recall the categorical style outlined by Bird and de
-Moor~\cite{DBLP:books/daglib/0096998} and consider the following
-recursively defined datatype that denotes univariate polynomials
-over type $R$:
 %
-\[ expr\,R ::= ind \mid lit\,R \mid add\ (expr\,R,expr\,R) \mid mul\
-  (expr\,R,expr\,R). \]
-%
-This declares $[ind,lit,add,mul]_R:F(R,expr\,R)\rightarrow expr\ R$ as
-the initial algebra of the functor $F(R,\cdot)$, where
-$F(A,B)=1+A+(B\times B)+(B\times B)$ as defined in
-Equation~\ref{eq:datatype}.
-%
-The datatype $expr\,R$ is a tree having two kinds of leaf nodes,
-$ind$ and $lit\,R$, respectively representing the indeterminate $X$ itself and
-constants from $R$.
-%
-Furthermore, there are two ways to join two such binary trees, i.e.,
-$add$ and $mul$, respectively representing the addition and multiplication
-operations in $R[X]$.
-%
-Clearly, each instance of such binary tree corresponds to the syntax
-tree of a univariate polynomial from $R[X]$.
-%
-Naturally, the categorical-style definition of the datatype $expr\,R$
-gives induces a catamorphisms (a $\mi{fold}$),
-i.e.,
-\begin{equation} \label{eq:catamorphism}
-  \cata{f_i,f_\ell,f_a,f_m} % =fold\ (f_i,f_\ell,f_a,f_m)
-    : expr\,R\rightarrow S, \end{equation} where $f_i : 1\rightarrow S$,
-$f_\ell : R\rightarrow S$, $f_a : S\rightarrow S\rightarrow S$, and
-$f_m : S\rightarrow S\rightarrow S$.
-%
-This allows us to derive various functions in an economical way.
-
-\subsection{Univariate Polynomial and its Semantics}
-
-In Agda, the datatype can be expressed by the following declaration:%
+The following Haskell/Agda datatype denotes a univariate polynomial whose coefficients are of type |A|:%
 \footnote{We use Haskell convention that infix data constructors start with
 a colon and, for a more concise typesetting, write |(:+)| instead of the Agda
 notation $\_$|:+|$\_$.}
 \begin{spec}
-data Expr (A : Set) : Set where
-  Ind   : Expr A
-  Lit   : A -> Expr A
-  (:+)  : Expr A -> Expr A -> Expr A
-  (:×)  : Expr A -> Expr A -> Expr A {-"~~."-}
+data Poly (A : Set) : Set where
+  Ind   : Poly A
+  Lit   : A -> Poly A
+  (:+)  : Poly A -> Poly A -> Poly A
+  (:×)  : Poly A -> Poly A -> Poly A {-"~~,"-}
 \end{spec}
+where |Ind| denotes the indeterminate, |Lit| denotes a constant (of type |A|), while |(:+)| and |(:×)| respectively denote addition and multiplication, with |(:×)| binding tighter than |(:+)|. A polynomial $2 x^2 + 3x + 1$ could be denoted by the following expression
+of type |Poly ℕ|:
+\begin{spec}
+ (Lit 2 :× Ind :× Ind) :+ (Lit 3 :× Ind) :+ Lit 1 {-"~~."-}
+\end{spec}
+Notice that the type parameter |A| is abstracted over the type of coefficients. This allows us to represent polynomials whose coefficient are of complex types, in particular, polynomials whose coefficients are themselves polynomials. Do not confuse this with the more conventional representation of arithmetic expressions:
+\begin{spec}
+data Poly A = Var A | Lit Int | Poly A :+ Poly A | Poly A :× Poly A {-"~~,"-}
+\end{spec}
+where the literals are usually assigned a fixed type (in this example, |Int|), and the type parameter is abstracted over variables |Var|.
+
+%In this section, we shall elaborate on what we mean by
+%Equation~\ref{eq:datatype} in Section~\ref{sec:introduction}.
+
+% Recall the categorical style outlined by Bird and de
+% Moor~\cite{DBLP:books/daglib/0096998} and consider the following
+% recursively defined datatype that denotes univariate polynomials
+% over type $R$:
+% %
+% \[ expr\,R ::= ind \mid lit\,R \mid add\ (expr\,R,expr\,R) \mid mul\
+%   (expr\,R,expr\,R). \]
+% %
+% This declares $[ind,lit,add,mul]_R:F(R,expr\,R)\rightarrow expr\ R$ as
+% the initial algebra of the functor $F(R,\cdot)$, where
+% $F(A,B)=1+A+(B\times B)+(B\times B)$ as defined in
+% Equation~\ref{eq:datatype}.
+% %
+% The datatype $expr\,R$ is a tree having two kinds of leaf nodes,
+% $ind$ and $lit\,R$, respectively representing the indeterminate $X$ itself and
+% constants from $R$.
+% %
+% Furthermore, there are two ways to join two such binary trees, i.e.,
+% $add$ and $mul$, respectively representing the addition and multiplication
+% operations in $R[X]$.
+% %
+% Clearly, each instance of such binary tree corresponds to the syntax
+% tree of a univariate polynomial from $R[X]$.
+% %
+% Naturally, the categorical-style definition of the datatype $expr\,R$
+% gives induces a catamorphisms (a $\mi{fold}$),
+% i.e.,
+% \begin{equation} \label{eq:catamorphism}
+%   \cata{f_i,f_\ell,f_a,f_m} % =fold\ (f_i,f_\ell,f_a,f_m)
+%     : expr\,R\rightarrow S, \end{equation} where $f_i : 1\rightarrow S$,
+% $f_\ell : R\rightarrow S$, $f_a : S\rightarrow S\rightarrow S$, and
+% $f_m : S\rightarrow S\rightarrow S$.
+% %
+% This allows us to derive various functions in an economical way.
+
+\subsection{Univariate Polynomial and its Semantics}
+
 %format e1 = "\Varid{e}_{1}"
 %format e2 = "\Varid{e}_{2}"
-As a convention, the $\mi{fold}$ it induces usually takes four arguments, each
-replacing one of the four constructors. To facilitate our discussion later,
-we group the last two together and define:
+
+In the categorical style outlined by Bird and de Moor~\cite{DBLP:books/daglib/0096998}, every regular datatype gives rise to a |fold| operator. As a convention, |Poly| induces a |fold| that takes four arguments, each replacing one of the four constructors. To facilitate our discussion later, we group the last two arguments together and define:
 \begin{spec}
 Ring : Set -> Set
 Ring A = (A -> A -> A) × (A -> A -> A) {-"~~."-}
@@ -72,27 +83,27 @@ That is, |Ring A| is a pair of binary operators that defines how to perform addi
 and multiplication for values of type |A|.%
 \footnote{While we do expect all the ring properties such as existence of
 additive identity, inverse, and distributivity, etc., to hold, we do not
-enforce them in this datatype.} We then define the $\mi{fold}$ for |Expr|:
+enforce them in this datatype.} We then define the |fold| for |Poly|:
 \begin{spec}
-foldE : ∀ {A B : Set} -> B -> (A -> B) -> Ring B -> Expr A -> B
-foldE x f rng        Ind         = x
-foldE x f rng        (Lit y)     = f y
-foldE x f ((+),(×))  (e1 :+ e2)  =  foldE x f ((+),(×)) e1 +
-                                    foldE x f ((+),(×)) e2
-foldE x f ((+),(×))  (e1 :× e2)  =  foldE x f ((+),(×)) e1 ×
-                                    foldE x f ((+),(×)) e2 {-"~~."-}
+foldP : ∀ {A B : Set} -> B -> (A -> B) -> Ring B -> Poly A -> B
+foldP x f rng        Ind         = x
+foldP x f rng        (Lit y)     = f y
+foldP x f ((+),(×))  (e1 :+ e2)  =  foldP x f ((+),(×)) e1 +
+                                    foldP x f ((+),(×)) e2
+foldP x f ((+),(×))  (e1 :× e2)  =  foldP x f ((+),(×)) e1 ×
+                                    foldP x f ((+),(×)) e2 {-"~~."-}
 \end{spec}
 In our Haskell implementation, |Ring| is a type class for types whose addition
 and multiplication are defined, and it can usually be inferred what instance of
-|Ring| to use. When proving properties about |foldE|, it is sometimes
+|Ring| to use. When proving properties about |foldP|, it is sometimes
 clearer to make the construction of |Ring| instances explicit.
 
 \paragraph{Evaluation} Assuming a base type |A| for which |Ring A| is defined,
-consider evaluating a polynomial of type |Expr A|. Without the presence of
-constructor |Ind|, |Expr A| is an expresson without a variable, and evaluating
-it is simply a matter of folding over the expression using |Ring A|. With |Ind|,
-however, the semantics of |Expr A| should be |A → A| --- a function
-that takes the value of the indeterminate and returns a value.
+consider evaluating a polynomial of type |Poly A|.
+% Without the presence of
+% constructor |Ind|, |Poly A| is an expresson without a variable, and evaluating
+% it is simply a matter of folding over the expression using |Ring A|.
+With the presence of |Ind|, the semantics of |Poly A| should be |A → A| --- a function that takes the value of the indeterminate and returns a value.
 
 We define the following operation that lifts the addition and multiplication
 of some type |B| to |A → B|:
@@ -103,8 +114,8 @@ ring→ ((+),(×)) = (  \ f g x -> f x + g x,
 \end{spec}
 The semantics of a univariate polynomial is thus given by:
 \begin{spec}
-semantics1 : ∀ {A} → Ring A → Expr A → A → A
-semantics1 rng = foldE id const (ring→ rng) {-"~~."-}
+sem1 : ∀ {A} → Ring A → Poly A → A → A
+sem1 rng = foldP id const (ring→ rng) {-"~~."-}
 \end{spec}
 
 %format Ind1 = "\Conid{Ind}_{1}"
@@ -113,59 +124,57 @@ semantics1 rng = foldE id const (ring→ rng) {-"~~."-}
 \subsection{Bivariate Polynomials}
 
 To represent polynomials with two indeterminates, we could extend
-|Expr| with an additional constructor |Ind'| in addition
-to |Ind|. It turns out to be unnecessary: a polynomial over base ring
-|A| with two indeterminates can be represented by |Expr (Expr A)|.
+|Poly| with an additional constructor |Ind'| in addition
+to |Ind|. It turns out to be unnecessary --- it is known that the bivariate
+polynomial ring $R[X,Y]$ is isomorphic to $R[X][Y]$ (modulo the operation |litDist|, to be defined later). That is,
+a polynomial over base ring |A| with two indeterminates can be
+represented by |Poly (Poly A)|.
 
-For an example, consider the following expression of type |Expr (Expr ℕ)|:
+For an example, consider the following expression of type |Poly (Poly ℕ)|:
 \begin{spec}
-  e = Lit (Lit 3) :× Ind :× Lit (Ind :+ Lit 4) :+ Lit Ind :+ Ind {-"~~."-}
+  e = (Lit (Lit 3) :× Ind :× Lit (Ind :+ Lit 4)) :+ Lit Ind :+ Ind {-"~~."-}
 \end{spec}
-Note that |Lit| in the first level takes |Expr ℕ| as arguments, thus to
+Note that |Lit| in the first level takes |Poly ℕ| as arguments, thus to
 represent a literal |3| we have to write |Lit (Lit 3)|. To evaluate |e| using
-|semantics1|, we have to define |Ring (Expr ℕ)|. A natural choice is to connect
+|sem1|, we have to define |Ring (Poly ℕ)|. A natural choice is to connect
 two expressions using corresponding constructors:
 \begin{spec}
-ringE : ∀ {A} → Ring (Expr A)
-ringE = ((:+), (:×)) {-"~~."-}
+ringP : ∀ {A} → Ring (Poly A)
+ringP = ((:+), (:×)) {-"~~."-}
 \end{spec}
-With |ringE| defined, |semantics1 ringE e| has type |Expr A → Expr A|.
-Evaluating, for example |semantics1 ringE e (Ind :+ Lit 1)|, yields
+With |ringP| defined, |sem1 ringP e| has type |Poly A → Poly A|.
+Evaluating, for example |sem1 ringP e (Ind :+ Lit 1)|, yields
 \begin{spec}
-  e' =  Lit 3 :× (Ind :+ Lit 1) :× (Ind :+ Lit 4) :+
-          Lit 2 :× Ind :+ (Ind :+ Lit 1) {-"~~."-}
+  e' =  (Lit 3 :× (Ind :+ Lit 1) :× (Ind :+ Lit 4)) :+ Ind :+ (Ind :+ Lit 1) {-"~~."-}
 \end{spec}
 Note that |Lit Ind| in |e| is replaced by the argument |Ind :+ Lit 1|.
 Furthermore, one layer of |Lit| is removed, thus both |Lit 3| and |Ind :+ Lit 4|
 is exposed to the outermost level. The expression |e'| may then be evaluated by
-|semantics1 rngℕ|, yielding a natural number. In summary, the function
-|semantics2| that evalulates |Expr (Expr A)| can be defined by:
+|sem1 rngℕ|, yielding a natural number. In summary, the function
+|sem2| that evalulates |Poly (Poly A)| can be defined by:
 \begin{spec}
-semantics2 : ∀ {A} → Ring A → Expr (Expr A) → Expr A → A → A
-semantics2 rng e2 e1 x = semantics1 rng (semantics1 ringE e2 e1) x {-"~~."-}
+sem2 : ∀ {A} → Ring A → Poly (Poly A) → Poly A → A → A
+sem2 r e2 e1 x = sem1 r (sem1 ringP e2 e1) x {-"~~."-}
 \end{spec}
 
-This is how |Expr (Expr ℕ)| simulates bivariate polynomials: the two
+This is how |Poly (Poly ℕ)| simulates bivariate polynomials: the two
 indeterminates are respectively represented by |Ind| and |Lit Ind|. During
-evaluation, |Ind| can be instantiated to an expression |arg| of type |Expr ℕ|, while |Lit Ind| can be instantiated to a |ℕ|. If |arg| contains |Ind|, it
+evaluation, |Ind| can be instantiated to an expression |arg| of type |Poly ℕ|, while |Lit Ind| can be instantiated to a |ℕ|. If |arg| contains |Ind|, it
 refers to the next indeterminate.
 
 What about subexpressions like |Lit (Ind :+ Lit 4)|? One can see that
 its semantics is the same as |Lit Ind :+ Lit (Lit 4)|, the expression we get by
 pushing |Lit| to the leaves. In general, define the following function:
 \begin{spec}
-litDist : ∀ {A} → Expr (Expr A) → Expr (Expr A)
-litDist = foldE Ind (foldE (Lit Ind) (Lit ∘ Lit) ringE) ringE {-"~~."-}
+litDist : ∀ {A} → Poly (Poly A) → Poly (Poly A)
+litDist = foldP Ind (foldP (Lit Ind) (Lit ∘ Lit) ringP) ringP {-"~~."-}
 \end{spec}
 The function traverses through the given expression and, upon encountering
-a subtree |Lit e|, lifts |e| to |Expr (Expr A)| while distributes |Lit| inwards
+a subtree |Lit e|, lifts |e| to |Poly (Poly A)| while distributes |Lit| inwards
 |e|. We can prove the following theorem:
-\begin{theorem} For all |e : Expr (Expr A)| and |r : Ring A|, we have
-|semantics2 r (litDist e) = semantics2 r e|.
+\begin{theorem} For all |e : Poly (Poly A)| and |r : Ring A|, we have
+|sem2 r (litDist e) = sem2 r e|.
 \end{theorem}
-
-What we have shown in this section echos a known result: the bivariate
-polynomial ring $R[X,Y]$ is isomorphic to $R[X][Y]$, modulo |litDist|.
 
 \subsection{Multivariate Polynomials}
 In general, as we have mentioned in Section~\ref{sec:introduction}, the
@@ -173,38 +182,50 @@ multivariate polynomial $R[X_1,X_2\ldots,X_m]$ is isomorphic to
 univariate polynomial ring $S[X_m]$ over the base ring
 $S=R[X_1,X_2,\ldots,X_{m-1}]$ (modulo the distribution law of |Lit|).
 That is, a polynomial over |A| with |n| indeterminates
-can be represented by |ExprN n A|, where
+can be represented by |PolyN n A|, where
 \begin{spec}
-ExprN zero     A = A
-ExprN (suc n)  A = Expr (ExprN n A) {-"~~."-}
+PolyN zero     A = A
+PolyN (suc n)  A = Poly (PolyN n A) {-"~~."-}
 \end{spec}
 
-To define the semantics of |ExprN n A|, recall that, among its |n| indeterminates,
+To define the semantics of |PolyN n A|, recall that, among its |n| indeterminates,
 the outermost indeterminate shall be instantiated to an expression of type
-|ExprN (n-1) A|, the next indeterminate to |ExprN (n-2) A|..., and the inner most indeterminate to |A|, before yielding a value of type |A|. Define
+|PolyN (n-1) A|, the next indeterminate to |PolyN (n-2) A|..., and the inner most indeterminate to |A|, before yielding a value of type |A|. Define
 \begin{spec}
 Tele : Set -> ℕ -> Set
 Tele A zero     = ⊤
-Tele A (suc n)  = ExprNn A × Tele A n {-"~~,"-}
+Tele A (suc n)  = PolyNn A × Tele A n {-"~~,"-}
 \end{spec}
-that is, |Tele A n| is a list of |n| elements, with the first having type |ExprN (n-1) A|, the second |ExprN (n-2)|, and so on. The type is called |Tele| because it resembles
+that is, |Tele A n| is a list of |n| elements, with the first having type |PolyN (n-1) A|, the second |PolyN (n-2) A|, and so on. The type is called |Tele| because it resembles
 a ``telescope'' in dependent types: latter expressions may refer to variables mentioned earlier.
 
-The semantics |ExprN n A| is a function |Tele A n -> A|, which can be defined
-inductively as below:
+Provided that the arithmetic operations for |A| are defined,
+the semantics of |PolyN n A| is a function |Tele A n -> A|, defined
+inductively as below (where |tt| is the only term having type |⊤|):
 \begin{spec}
-semantics : ∀ {A} -> Num A -> (n : ℕ) -> ExprNn A -> Tele A n -> A
-semantics r zero     x  tt        = x
-semantics r (suc n)  e  (t , es)  = semantics r n (semantics1 (ringES r) e t) es {-"~~."-}
+sem : ∀ {A} -> Ring A -> (n : ℕ) -> PolyNn A -> Tele A n -> A
+sem r zero     x  tt        = x
+sem r (suc n)  e  (t , es)  = sem r n (sem1 (ringPS r) e t) es {-"~~,"-}
 \end{spec}
-Essentially, |semantics r n| is |n|-fold composition of |semantics1 (ringES r)|,
-each interpreting one level of the given expression. The function
-|ringES| delivers the |Ring (ExprN n A)| instance for all |n|:
+where |ringPS| delivers the |Ring (PolyN n A)| instance for all |n|:
 \begin{spec}
-ringES : ∀ {A} → Ring A → ∀ {n} → Ring (ExprN n A)
-ringES r zero  = r
-ringES r _     = ringE {-"~~."-}
+ringPS : ∀ {A} → Ring A → ∀ {n} → Ring (PolyN n A)
+ringPS r zero  = r
+ringPS r _     = ringP {-"~~."-}
 \end{spec}
+For |n := 2| and |3|, for example, |sem r n| expands to:
+%format t0 = "\Varid{t}_0"
+%format t0, = "\Varid{t}_0,"
+%format t1 = "\Varid{t}_1"
+%format t1, = "\Varid{t}_1,"
+%format t2 = "\Varid{t}_2"
+%format t2, = "\Varid{t}_2,"
+\begin{spec}
+sem r 2 e (t1, t0, tt)      = sem1 r (sem1 ringP e t1) t0 {-"~~,"-}
+sem r 3 e (t2, t1, t0, tt)  = sem1 r (sem1 ringP (sem1 ringP e t2) t1) t0 {-"~~."-}
+\end{spec}
+Essentially, |sem r n| is |n|-fold composition of |sem1 (ringPS r)|,
+each interpreting one level of the given expression.
 
 % \vspace{1cm}
 % {\bf Old contents below}

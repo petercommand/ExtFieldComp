@@ -29,3 +29,15 @@ FLOPS-multi/sections/Expr\.tex
 FLOPS-multi/sections/Operations\.tex
 
 FLOPS-multi/sections/Compilation\.tex
+
+*.toc
+
+slides 2017 wg2\.1/polypoly\.tex
+
+*.snm
+
+slides 2017 wg2\.1/polypoly\.pdf
+
+*.out
+
+*.nav

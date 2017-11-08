@@ -6,16 +6,18 @@
 \section{Introduction}
 \label{sec:introduction}
 
-It is a standard exercise in beginners' functional programming courses to
-define a datatype for arithmetic expressions:
-\begin{spec}
-  data Expr a = Lit a | Expr a :+ Expr a | Expr a :× Expr a {-"~~,"-}
-\end{spec}
-and define a function |Expr a -> a| to evaluate such expressions, provided that it is given
-how to perform addition and multiplication for type |a|. If we add an additional
-constructor denoting a variable, the data structure represents univariate polynomials. In this pearl, we will play around with types such as |Expr (Expr a)|, |Expr (Expr (Expr a))|... |ExprN n a|. We will claim that they are useful --- |ExprN n a| encodes a multivariate polynomial with |n| variables, and define various operations to manipulate them. Finally, we will show how such expressions can be compiled, inductively, to assembly programs that evaluates them, and prove the correctness of compilation.
+% It is a standard exercise in beginners' functional programming courses to
+% define a datatype for arithmetic expressions:
+% \begin{spec}
+%   data Expr a = Lit a | Expr a :+ Expr a | Expr a :× Expr a {-"~~,"-}
+% \end{spec}
+% and define a function |Expr a -> a| to evaluate such expressions, provided that it is given
+% how to perform addition and multiplication for type |a|. If we add an additional
+% constructor denoting a variable, the data structure represents univariate polynomials. In this pearl, we will play around with types such as |Expr (Expr a)|, |Expr (Expr (Expr a))|... |ExprN n a|. We will claim that they are useful --- |ExprN n a| encodes a multivariate polynomial with |n| variables, and define various operations to manipulate them. Finally, we will show how such expressions can be compiled, inductively, to assembly programs that evaluates them, and prove the correctness of compilation.
+%
+% But let us motivate first.
 
-But let us motivate first. A \emph{univariate polynomial} over a base ring $R$ is a finite sum of the form
+A \emph{univariate polynomial} over a base ring $R$ is a finite sum of the form
 \[ a_nX^n+a_{n-1}X^{n-1}+\cdots+a_0, \] where $a_i\in R$ are the
 coefficients, and $X$ is called an \emph{indeterminate}.
 %
