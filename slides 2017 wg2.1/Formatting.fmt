@@ -32,7 +32,37 @@
 %format <== = "\mathrel{\Leftarrow}"
 %format ==> = "\mathrel{\Rightarrow}"
 
-%format [] = "\lbrack\,\rbrack"
+ %%format [] = "\lbrack\,\rbrack"
+
+%format :+ = "\mathbin{:\!\!+}"
+%format :× = "\mathbin{:\!\!\times}"
+%format × = "\times"
+%format → = "\rightarrow"
+%format ∀ = "\forall"
+%format ℕ = "\mathbb{N}"
+%format ⊤ = "\top"
+
+%format ringFn = "\Varid{ring}_{\rightarrow}"
+%format semantics1 = "\Varid{eval}_{1}"
+%format semantics2 = "\Varid{eval}_{2}"
+%format semantics = "\Varid{eval}"
+%format ExprN (n) = "\Varid{Expr}^{" n "}"
+%format LitN (n) = "\Varid{Lit}^{" n "}"
+%format ExprNn = "\Varid{Expr}^{\Varid{n}}"
+%format Expr2 = "\Varid{Expr}^{2}"
+%format ringE1 = "\Varid{ringE}_{1}"
+%format ringES = "\Varid{ringE}^{\star}"
+%format rotaExpr2 = "\Varid{rotaExpr}_{2}"
+%format rotaExpr3 = "\Varid{rotaExpr}_{3}"
+%format rotaExpr4 = "\Varid{rotaExpr}_{4}"
+%format (fmapN (n)) = "\Varid{fmap}^{" n "}"
+%format Set1 = "\Varid{Set}_{1}"
+%format Real = "{\mathbb R}"
+
+ %%format . = "\!\cdot\!"
+%format ∘ = "\!\cdot\!"
+%format . = "\cdot"
+%format ∷ = "\mathbin{::}"
 
 \def\commentbegin{\quad\{\ }
 \def\commentend{\}}
