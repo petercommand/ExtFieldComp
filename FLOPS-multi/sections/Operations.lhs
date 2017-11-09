@@ -154,23 +154,18 @@ RingVec n = ∀ {A} -> Ring A -> Ring (Vec A n) {-"~~."-}
 %format `addC` = "\mathbin{+_c}"
 %format mulC = "(\mathbin{\times_c})"
 %format `mulC` = "\mathbin{\times_c}"
-%format x1 = "\Varid{x}_1"
-%format x1, = "\Varid{x}_1,"
-%format x2 = "\Varid{x}_2"
-%format x2, = "\Varid{x}_2,"
-%format y1 = "\Varid{y}_1"
-%format y1, = "\Varid{y}_1,"
-%format y2 = "\Varid{y}_2"
-%format y2, = "\Varid{y}_2,"
+
 For example, |rComplex| lifts arithmetic operations on |A| to
 that of complex numbers over |A|:
 \begin{spec}
 rComplex : RingVec 2
 rComplex ((+),(×)) = (addC , mulC)
-  where  (x1, y1) `addC` (x2, y2) = (x1 + x2, y1 + y2)
-         (x1, y1) `mulC` (x2, y2) = (x1 × x2 - y1 × y2, x1 × y2 + x2 × y1) {-"~~."-}
+  where  [ x1, y1 ] `addC` [ x2, y2 ] = [ x1 + x2, y1 + y2 ]
+         [ x1, y1 ] `mulC` [ x2, y2 ] = [ x1 × x2 - y1 × y2 ,  x1 × y2 + x2 × y1 ]{-"~~."-}
 \end{spec}
-
+% where  (x1 ∷ y1 ∷ []) `addC` (x2 ∷ y2 ∷ []) = (x1 + x2) ∷ (y1 + y2) ∷ []
+%        (x1 ∷ y1 ∷ []) `mulC` (x2 ∷ y2 ∷ []) =
+%          (x1 × x2 - y1 × y2) ∷ (x1 × y2 + x2 × y1) ∷ []{-"~~."-}
 Expansion can now be defined by:
 \begin{spec}
 expand : ∀ {A n} → RingVec n → Poly (Vec A n) → Vec (PolyN n A) n
@@ -181,13 +176,11 @@ For the |Ind| case, one indeterminant is expanded to |n| using |genInd|. For the
 For addition and multiplication, we let |ringVec| decide how to combine vectors
 of expressions, but specifying |((:+), (:×))| as atomic operations.
 
+The readers may raise their doubts: we have not defined much, since all the real work is done in |ringVec ringP|. Indeed, the correctness of |expand| relies on |ringVec| being well-behaved, as we shall see soon.
 
-
-The readers may legitimately raise their doubts: we have not defined much, since all the real work is done in |ringVec ringP|. Indeed, the correctness of |expand| relies on |ringVec| being well-behaved, as we shall see soon.
-
-\paragraph{Correctness} Intutively, |expand| is correct if the expanded
+\paragraph{Correctness} Intuitively, |expand| is correct if the expanded
 polynomial evaluates to the same value as the that of the original. To
-formally state the property, we have to properly supply all the needed ingredients. Consider |e : Poly (Vec A n)| --- a polynomial whose coefficients are vectors of length |n|. Let |r : Ring A| define arithmetic operators for |A|, and let |ringVec : RingVec| define how arithmetic operators for elements are lifted to vectors. We say that |expand| is correct if, for all |xs : Vec A n|:
+formally state the property, we have to properly supply all the needed ingredients. Consider |e : Poly (Vec A n)| --- a polynomial whose coefficients are vectors of length |n|. Let |r : Ring A| define arithmetic operators for |A|, and let |ringVec : RingVec n| define how arithmetic operators for elements are lifted to vectors. We say that |expand| is correct if, for all |xs : Vec A n|:
 \begin{equation}
 \begin{split}
   &|sem1 (ringVec r) e xs =|\\
@@ -195,21 +188,60 @@ formally state the property, we have to properly supply all the needed ingredien
 \end{split}
 \label{eq:expand-correct}
 \end{equation}
-On the lefthand side, |e| is evaluated by |sem1|, using operators supplied by |ringVec r|. The value of the single indeterminant is |xs : Vec A n|, and the result also has type |Vec A n|. On the righthand side, |e| is expanded to |Vec (PolyN n A) n|. Internally, |expand| uses |ringVec ringP| to combine vectors of expressions. Each polynomial in the vector is evaluated individually by |sem r n|. The function |toTele| converts a vector to a telescope. Each value in |xs| is thus supplied to the |n| indeterminants of the expanded polynomial.
+On the lefthand side, |e| is evaluated by |sem1|, using operators supplied by |ringVec r|. The value of the single indeterminant is |xs : Vec A n|, and the result also has type |Vec A n|. On the righthand side, |e| is expanded to |Vec (PolyN n A) n|. Internally, |expand| uses |ringVec ringP| to combine vectors of expressions. Each polynomial in the vector is evaluated individually by |sem r n|. The function |toTele| converts a vector to a telescope. The |n| elements in |xs| thus substitutes the |n| indeterminants of the expanded polynomial.
 
+Interestingly, it turns out that |expand| is correct if |ringVec| is polymorphic --- that is, the way it computes vectors out of vectors depends only on the shape of its input, regardless of the type and the contents.
 \begin{theorem} For all |n|, |e : Poly (Vec A n)|, |xs : Vec A n|,
-|r : Ring A|, and |ringVec : RingVec|, we have that \eqref{eq:expand-correct} holds if |ringVec| is polymorphic.
+|r : Ring A|, and |ringVec : RingVec|, property \eqref{eq:expand-correct} holds if |ringVec| is polymorphic.
 \end{theorem}
 \begin{proof}
 Induction on |e|. For the base cases we need two lemmas:
-\begin{lemma}\label{lma:sem-liftVal}
-For all |n|, |x|, |es : Tele A n|, and |r : Ring A|,
-we have\\ |sem r n (liftVal n x) es = x|.
-\end{lemma}
-\begin{lemma} \label{lma:sem-genInd}
-For all |n|, |xs : Vec A n|, and |r : Ring A|, we have\\
+\begin{itemize}
+%\begin{lemma}\label{lma:sem-liftVal}
+\item for all |n|, |x|, |es : Tele A n|, and |r : Ring A|,
+we have |sem r n (liftVal n x) es = x|;
+%\end{lemma}
+%\begin{lemma} \label{lma:sem-genInd}
+\item for all |n|, |xs : Vec A n|, and |r : Ring A|, we have\\
 |map (\ e → sem r n e (toTele xs)) (genInd n) = xs|.
-\end{lemma}
-
-For the inductive case,
+%\end{lemma}
+\end{itemize}
+%format addP = "({+_\Conid{P}})"
+%format `addP` = "\mathbin{+_\Conid{P}}"
+%format addA = "({+_\Conid{A}})"
+%format `addA` = "\mathbin{+_\Conid{A}}"
+The inductive case where |e := e1 :+ e2| eventually comes down to proving
+that (abbreviating |\ e → sem r n e (toTelexs)| to |sem'|):
+\begin{spec}
+map sem' (expand ringVec n e1) `addA` map sem' (expand ringVec n e2) =
+  map sem' (expand ringVec n e1 `addP` expand ringVec n e2)
+\end{spec}
+where |addA = fst (ringVec r)| perform addition on vectors of |A|'s, and |addP = fst (ringVec ringP)| on vectors of polynomials. But this is implied by the free theorem of |ringVec|. Specifically, |fst . ringVec| has type
+\begin{spec}
+  {A : Set}  -> (A -> A -> A) × (A -> A -> A)
+             -> (Vec A n -> Vec A n -> Vec A n) {-"~~."-}
+\end{spec}
+The free theorem it induces is
+%format add1 = "({+_1})"
+%format `add1` = "\mathbin{+_1}"
+%format add2 = "({+_2})"
+%format `add2` = "\mathbin{+_2}"
+%format addV1 = "({+_{\Conid{V}1}})"
+%format `addV1` = "\mathbin{+_{\Conid{V}1}}"
+%format addV2 = "({+_{\Conid{V}2}})"
+%format `addV2` = "\mathbin{+_{\Conid{V}2}}"
+%format mul1 = "({×_1})"
+%format `mul1` = "\mathbin{×_1}"
+%format mul2 = "({×_2})"
+%format `mul2` = "\mathbin{×_2}"
+\begin{spec}
+∀ (X Y : Set) n ->
+  ∀ (f : X -> Y)  (add1 : X -> X -> X) (mul1 : X -> X -> X)
+                  (add2 : Y -> Y -> Y) (mul2 : Y -> Y -> Y) ->
+  ∀ (xs ys : Vec X n) ->
+    let  addV1 = fst (ringVec (add1 , mul1))
+         addV2 = fst (ringVec (add2 , mul2))
+    in map f (xs `addV1` ys) = map f xs `addV2` map f ys {-"~~,"-}
+\end{spec}
+which is exactly what we need. The case for |e := e1 :× e2| is similar.
 \end{proof}

@@ -53,10 +53,22 @@
 %format (fmapN (n)) = "\Varid{fmap}^{" n "}"
 %format Set1 = "\Varid{Set}_{1}"
 %format Real = "{\mathbb R}"
+%format compile0 = "\Varid{compile}_{0}"
 
 %format (.) = "\!\cdot\!"
 %format ∘ = "\!\cdot\!"
 %format : = "\!\!:\!\!"
+
+%format e1 = "\Varid{e}_1"
+%format e2 = "\Varid{e}_2"
+%format x1 = "\Varid{x}_1"
+%format x1, = "\Varid{x}_1,"
+%format x2 = "\Varid{x}_2"
+%format x2, = "\Varid{x}_2,"
+%format y1 = "\Varid{y}_1"
+%format y1, = "\Varid{y}_1,"
+%format y2 = "\Varid{y}_2"
+%format y2, = "\Varid{y}_2,"
 
 \def\commentbegin{\quad\{\ }
 \def\commentend{\}}
