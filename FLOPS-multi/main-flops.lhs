@@ -3,7 +3,7 @@
 %include agda.fmt
 %include Formatting.fmt
 
-\title{Functional Pearl:\\ Fun with Polynomials of Polynomials}
+\title{Functional Pearl:\\ Folding Polynomials of Polynomials}
 %\titlerunning{Needing a More Catchy Name}
 %\subtitle{If We Need Any}
 \author{Chen-Mou Cheng\inst{1} \and
