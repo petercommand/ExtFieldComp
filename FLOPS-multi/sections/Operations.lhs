@@ -184,11 +184,11 @@ formally state the property, we have to properly supply all the needed ingredien
 \begin{equation}
 \begin{split}
   &|sem1 (ringVec r) e xs =|\\
-  &\quad  |map (\ e → sem r n e (toTele xs)) (expand ringVec n e)| \mbox{~~.}
+  &\quad  |map (\ e → sem r n e (toDChain xs)) (expand ringVec n e)| \mbox{~~.}
 \end{split}
 \label{eq:expand-correct}
 \end{equation}
-On the lefthand side, |e| is evaluated by |sem1|, using operators supplied by |ringVec r|. The value of the single indeterminant is |xs : Vec A n|, and the result also has type |Vec A n|. On the righthand side, |e| is expanded to |Vec (PolyN n A) n|. Internally, |expand| uses |ringVec ringP| to combine vectors of expressions. Each polynomial in the vector is evaluated individually by |sem r n|. The function |toTele| converts a vector to a telescope. The |n| elements in |xs| thus substitutes the |n| indeterminants of the expanded polynomial.
+On the lefthand side, |e| is evaluated by |sem1|, using operators supplied by |ringVec r|. The value of the single indeterminant is |xs : Vec A n|, and the result also has type |Vec A n|. On the righthand side, |e| is expanded to |Vec (PolyN n A) n|. Internally, |expand| uses |ringVec ringP| to combine vectors of expressions. Each polynomial in the vector is evaluated individually by |sem r n|. The function |toDChain| converts a vector to a descending chain. The |n| elements in |xs| thus substitutes the |n| indeterminants of the expanded polynomial.
 
 Interestingly, it turns out that |expand| is correct if |ringVec| is polymorphic --- that is, the way it computes vectors out of vectors depends only on the shape of its input, regardless of the type and the contents.
 \begin{theorem} For all |n|, |e : Poly (Vec A n)|, |xs : Vec A n|,
@@ -198,12 +198,12 @@ Interestingly, it turns out that |expand| is correct if |ringVec| is polymorphic
 Induction on |e|. For the base cases we need two lemmas:
 \begin{itemize}
 %\begin{lemma}\label{lma:sem-liftVal}
-\item for all |n|, |x|, |es : Tele A n|, and |r : Ring A|,
+\item for all |n|, |x|, |es : DChain A n|, and |r : Ring A|,
 we have |sem r n (liftVal n x) es = x|;
 %\end{lemma}
 %\begin{lemma} \label{lma:sem-genInd}
 \item for all |n|, |xs : Vec A n|, and |r : Ring A|, we have\\
-|map (\ e → sem r n e (toTele xs)) (genInd n) = xs|.
+|map (\ e → sem r n e (toDChain xs)) (genInd n) = xs|.
 %\end{lemma}
 \end{itemize}
 %format addP = "({+_\Conid{P}})"
@@ -211,7 +211,7 @@ we have |sem r n (liftVal n x) es = x|;
 %format addA = "({+_\Conid{A}})"
 %format `addA` = "\mathbin{+_\Conid{A}}"
 The inductive case where |e := e1 :+ e2| eventually comes down to proving
-that (abbreviating |\ e → sem r n e (toTelexs)| to |sem'|):
+that (abbreviating |\ e → sem r n e (toDChainxs)| to |sem'|):
 \begin{spec}
 map sem' (expand ringVec n e1) `addA` map sem' (expand ringVec n e2) =
   map sem' (expand ringVec n e1 `addP` expand ringVec n e2)

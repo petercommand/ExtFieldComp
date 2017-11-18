@@ -192,18 +192,17 @@ To define the semantics of |PolyN n A|, recall that, among its |n| indeterminate
 the outermost indeterminate shall be instantiated to an expression of type
 |PolyN (n-1) A|, the next indeterminate to |PolyN (n-2) A|..., and the inner most indeterminate to |A|, before yielding a value of type |A|. Define
 \begin{spec}
-Tele : Set -> ℕ -> Set
-Tele A zero     = ⊤
-Tele A (suc n)  = PolyNn A × Tele A n {-"~~,"-}
+DChain : Set -> ℕ -> Set
+DChain A zero     = ⊤
+DChain A (suc n)  = PolyNn A × DChain A n {-"~~,"-}
 \end{spec}
-that is, |Tele A n| is a list of |n| elements, with the first having type |PolyN (n-1) A|, the second |PolyN (n-2) A|, and so on. The type is called |Tele| because it resembles
-a ``telescope'' in dependent types: latter expressions may refer to variables mentioned earlier.
+that is, |DChain A n|, standing for a ``descending chain'', is a list of |n| elements, with the first having type |PolyN (n-1) A|, the second |PolyN (n-2) A|, and so on.
 
 Provided that the arithmetic operations for |A| are defined,
-the semantics of |PolyN n A| is a function |Tele A n -> A|, defined
+the semantics of |PolyN n A| is a function |DChain A n -> A|, defined
 inductively as below (where |tt| is the only term having type |⊤|):
 \begin{spec}
-sem : ∀ {A} -> Ring A -> (n : ℕ) -> PolyNn A -> Tele A n -> A
+sem : ∀ {A} -> Ring A -> (n : ℕ) -> PolyNn A -> DChain A n -> A
 sem r zero     x  tt        = x
 sem r (suc n)  e  (t , es)  = sem r n (sem1 (ringPS r) e t) es {-"~~,"-}
 \end{spec}
