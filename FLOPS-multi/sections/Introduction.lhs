@@ -66,34 +66,44 @@ $(a_1+b_1i)(a_2+b_2i)\bmod i^2+1=(a_1a_2-b_1b_2)+(a_1b_2+a_2b_1)i$.
 %
 
 %
-Such arithmetic in a (finite) field finds rich application in, e.g.,
-elliptic curve cryptography~\cite{DBLP:conf/crypto/Miller85}.
+In addition to arithmetic in an algebraic extension field,
+manipulation of polynomial expressions also finds rich application in
+cryptography in particular.
 %
-There we use the group structure of elliptic curves over finite fields
-to do cryptography, and the group laws are often given in polynomial
-expressions over finite fields.
+A wide variety of cryptosystems can be implemented using polynomial
+expressions over a finite field or $\mathbb Z/n\mathbb Z$, the ring of
+integers modulo $n$.
 %
-(One or two more examples here.)
+In elliptic curve cryptography~\cite{DBLP:conf/crypto/Miller85}, for
+example, we use the group structure of certain elliptic curves over
+finite fields to do cryptography, and the group laws are often given
+in polynomial expressions over finite fields.
+%
+Another example is certain classes of post-quantum cryptosystems,
+i.e., those expected to survive large quantum computers' attack.
+%
+Among the most promising candidates, we have multivariate
+cryptosystems~\cite{conf/pqcrypto/ChenCCCY08} and several particularly
+efficient lattice-based
+cryptosystems~\cite{DBLP:journals/iacr/LyubashevskyPR12,DBLP:conf/ccs/CrockettP16},
+for which encryption and decryption operations can be carried out
+using polynomial expressions over finite fields or
+$\mathbb Z/n\mathbb Z$.
 %
 
-This pearl is motivated by our research in cryptography. On the one hand,
-we often have to deal with multivariate polynomials over complicated base rings.
-Complex number is just one example (todo: what else?). On the other hand, for
-efficiency, these expressions have to be compiled to assembly language,
-which usually support only arithmetic operations that fit in one machine word.
-The conversion from mathematical expressions to assembly is usually done by hand. We wish to automate this process in stages: represent multivariates in
-terms of univariates, and convert univariates over compound base rings to
-multiple univariates over simple values that are ready for compilation. And
-we wish to formally prove each of the steps correct.
-
-\paragraph{From Univariate to Multivariate} A key observation this pearl is
-based on is that there is an isomorphism between multivariate polynomials
-$R[X_1,X_2\ldots,X_m]$ and univariate polynomial ring $S[X_m]$ over the base ring $S=R[X_1,X_2,\ldots,X_{m-1}]$, cf.~Corollary~5.7, Chapter~3 of
-Hungerford~\cite{hungerford2003algebra}. This allows us to define a datatype
-for univariate polynomials, and reuse it inductively to define multivariate
-polynomials. Operations such as evaluation, substitution, etc., of the latter
-can also be defined inductively in terms of that of the former.
-
+This pearl is initially motivated by our research in cryptography.
+%
+On the one hand, we often have to deal with multivariate polynomials
+over different base rings, as exemplified in the above examples.
+%
+% Complex number is just one example (todo: what else?). On the other hand, for
+% efficiency, these expressions have to be compiled to assembly language,
+% which usually support only arithmetic operations that fit in one machine word.
+% The conversion from mathematical expressions to assembly is usually done by hand. We wish to automate this process in stages: represent multivariates in
+% terms of univariates, and convert univariates over compound base rings to
+% multiple univariates over simple values that are ready for compilation. And
+% we wish to formally prove each of the steps correct.
+%
 % %
 % For example, we can characterize a datatype for multivariate
 % polynomials in a categorical style as outlined by, e.g., Bird and de
@@ -110,14 +120,15 @@ can also be defined inductively in terms of that of the former.
 % Here $T$ is a type functor, so the datatype $TA$ represents
 % polynomials over datatype $A$.
 %
-
 %
-Finally, we can compile a polynomial expression into in a
-sequence of arithmetic expressions in its base ring.
 %
-This is useful when, e.g., implementing elliptic curve cryptography on
-a microprocessor, on which there is no native hardware support for
-polynomial arithmetic.
+On the other hand, we also need to compile a polynomial expression
+into in a sequence of arithmetic expressions over its base ring.
+%
+This is useful when, e.g., implementing various cryptosystems on a
+microprocessor, on which there is no native hardware support for
+polynomial or integer arithmetic of cryptographic sizes, typically
+ranging from a few hundreds to thousands of bits.
 %
 Again using multiplication of two complex numbers as an example, we
 would need a sequence of real arithmetic expressions for implementing
@@ -139,13 +150,39 @@ $c_1+c_2i=(a_1+b_1i)\times(a_2+b_2i)$:
   %
 \end{enumerate}
 %
+Today such compilation is mostly done by human, sometimes even in
+low-level programming languages such as assembly for achieving maximal
+speed performance.
+%
+Naturally, we would like to automate this process as much as possible.
+%
 Furthermore, we would like to be able to prove the correctness of such
 compilations, especially when the expressions get more and more
 complicated, e.g., in real-world cryptographic algorithms.
 %
 
+\paragraph{From Univariate to Multivariate.}
 %
-The rest of this paper is organized as follows.
+A key observation on which this pearl is based is that there is an
+isomorphism between multivariate polynomial ring
+$R[X_1,X_2\ldots,X_m]$ and univariate polynomial ring $S[X_m]$ over
+the base ring $S=R[X_1,X_2,\ldots,X_{m-1}]$, cf.~Corollary~5.7,
+Chapter~3 of Hungerford~\cite{hungerford2003algebra}.
 %
-(Paper organization goes here.)
+This allows us to define a datatype for univariate polynomials, and
+reuse it inductively to define multivariate polynomials.
+%
+Operations such as evaluation, substitution, etc., of the latter can
+also be defined inductively in terms of that of the former.
+%
+We will explore this design and its various implications in depth in
+Section~\ref{sec:expressions}.
+%
+Then in Section~\ref{sec:operations}, we will present the detail of
+the inductive implementation of common polynomial operations such as
+evaluation, substitution, etc.
+%
+Finally in Section~\ref{sec:compilation}, we will show how we can
+compile polynomial expressions into a sequence of arithmetic
+expressions over the base ring.
 %
