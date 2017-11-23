@@ -94,7 +94,7 @@ $\mathbb Z/n\mathbb Z$.
 This pearl is initially motivated by our research in cryptography.
 %
 On the one hand, we often have to deal with multivariate polynomials
-over different base rings, as exemplified in the above examples.
+over various base rings, as exemplified above.
 %
 % Complex number is just one example (todo: what else?). On the other hand, for
 % efficiency, these expressions have to be compiled to assembly language,
@@ -125,10 +125,10 @@ over different base rings, as exemplified in the above examples.
 On the other hand, we also need to compile a polynomial expression
 into in a sequence of arithmetic expressions over its base ring.
 %
-This is useful when, e.g., implementing various cryptosystems on a
-microprocessor, on which there is no native hardware support for
-polynomial or integer arithmetic of cryptographic sizes, typically
-ranging from a few hundreds to thousands of bits.
+This is useful for, e.g., software implementation of cryptosystems on
+microprocessors with no native hardware support for arithmetic
+operations with polynomials or integers of cryptographic sizes, which
+typically range from a few hundreds to a few thousands of bits.
 %
 Again using multiplication of two complex numbers as an example, we
 would need a sequence of real arithmetic expressions for implementing
@@ -150,15 +150,16 @@ $c_1+c_2i=(a_1+b_1i)\times(a_2+b_2i)$:
   %
 \end{enumerate}
 %
-Today such compilation is mostly done by human, sometimes even in
-low-level programming languages such as assembly for achieving maximal
-speed performance.
+Today such compilation is mostly done manually by human programmers,
+sometimes even in low-level programming languages such as assembly
+languages for achieving maximal speed performance.
 %
 Naturally, we would like to automate this process as much as possible.
 %
-Furthermore, we would like to be able to prove the correctness of such
-compilations, especially when the expressions get more and more
-complicated, e.g., in real-world cryptographic algorithms.
+Furthermore, such a manual process is error-prone, so we would like to
+be able to prove the correctness of such compilations, especially when
+the expressions get more and more complicated in real-world
+cryptographic algorithms.
 %
 
 \paragraph{From Univariate to Multivariate.}
@@ -182,7 +183,7 @@ Then in Section~\ref{sec:operations}, we will present the detail of
 the inductive implementation of common polynomial operations such as
 evaluation, substitution, etc.
 %
-Finally in Section~\ref{sec:compilation}, we will show how we can
-compile polynomial expressions into a sequence of arithmetic
-expressions over the base ring.
+Finally in Section~\ref{sec:compilation}, we will conclude this pearl
+by showing how we can compile polynomial expressions into a sequence
+of arithmetic expressions over the base ring.
 %

@@ -7,9 +7,28 @@
 \section{Compiling Polynominal}
 \label{sec:compilation}
 
-We finally come to compilation (some more intro.).
+We finally come to compilation of potentially complicated polynomial
+expressions.
+%
+As we have seen in Section~\ref{sec:introduction} and the previous
+section, such compilation is useful for software implementation of
+cryptosystems on microprocessors with no native hardware support for
+the underlying arithmetic operations.
+%
+Furthermore, even for hardware implementation, such compilation can be
+useful, as we can break down a complicated polynomial expression into
+a sequence of simpler arithmetic operations in a smaller algebraic
+structure, reducing the design complexity.
 
-We consider a simple imaginary machine with a heap, denoted by |Heap| that may abstractly be seen as mapping between memory addresses |Addr| and machine words |Word|. The operator |(!!) : Heap -> Addr -> Word| fetches the value stored in the given address, while |ringWord : Ring Word| defines how words are added and multiplied. The simple assembly language we consider consists of three instructions:
+We consider a simple imaginary machine with a heap, denoted by |Heap|
+that may abstractly be seen as mapping between memory addresses |Addr|
+and machine words |Word|.
+%
+Albeit its simplicity, we believe that such a model can capture the
+essential aspects of a wide variety of hardware and software
+implementations.
+%
+The operator |(!!) : Heap -> Addr -> Word| fetches the value stored in the given address, while |ringWord : Ring Word| defines how words are added and multiplied. The simple assembly language we consider consists of three instructions:
 \begin{spec}
 data TAC : Set where
   Const : Addr → Word → TAC
