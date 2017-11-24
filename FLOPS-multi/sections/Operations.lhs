@@ -13,9 +13,13 @@ the operations we want. In this section we show ...
 
 \subsection{Rotation}
 
-The first operation we consider swaps the two outermost indeterminates of an
-|Poly2 A|, using |foldP|. It is perhaps instructive comparing it with
-|litDist|.
+The first operation we consider swaps the two outermost indeterminates
+of an |Poly2 A|, using |foldP|.
+%
+This implements the isomorphism between $R[X_1,\ldots,X_{m-1}][X_m]$
+and $R[X_m,X_1,\ldots,X_{m-2}][X_{m-1}]$.
+%
+It is perhaps instructive comparing it with |litDist|.
 \begin{spec}
 rotaPoly2 : ∀ {A} → Poly2 A → Poly2 A
 rotaPoly2 = foldP (Lit Ind) (foldP Ind (Lit ∘ Lit) ringP) ringP {-"~~."-}
@@ -27,7 +31,7 @@ Note that both |litDist| and |rotaPoly2| apply to |PolyN n A| for all |n ≥ 2|,
 since |A| can be instantiated to a polynomial as well.
 
 Consider |PolyN 3 A|, a polynomial with (at least) three indeterminates. To
-"rotate" the three indeterminates, that is, turn |Lit Ind| to |Ind|, |Lit (Lit Ind)| to |Lit Ind|, and |Ind| to |LitN 3 Ind|, we could do:
+``rotate'' the three indeterminates, that is, turn |Lit Ind| to |Ind|, |Lit (Lit Ind)| to |Lit Ind|, and |Ind| to |LitN 3 Ind|, we could do:
 \begin{spec}
   rotaPoly3 = fmap rotaPoly2 ∘ rotaPoly2 {-"~~,"-}
 \end{spec}
@@ -101,14 +105,21 @@ substitute {A} n e e'
 
 \subsection{Expansion}
 
-Expansion is an operation we will put specific emphasis on, since its application
-is what motivated us in the first place. As mentioned in
-Section \ref{sec:introduction}, in cryptography we often have to deal with
-polynomials over base types that are not just a number. For example,
-the polynomial over complex numbers $(3 + 2i) x^2 + (2 + i)x + 1$
-can be represented by |Poly (Real × Real)|, whose semantics is
-a function |(Real × Real) -> (Real × Real)|. Let $x$ be $x_1 + x_2 i$, the
-polynomial can be expanded as below:
+Expansion is an operation we will put specific emphasis on.
+%
+As we have seen in Section~\ref{sec:introduction}, this is especially
+useful when implementing cryptosystems on microprocessors with no
+native hardware support for arithmetic operations with polynomials or
+integers of cryptographic sizes.
+%
+Let us use a very simple yet specific example for further exposition.
+%
+For example, the polynomial expression over complex numbers
+$(3 + 2i) x^2 + (2 + i)x + 1$ can be represented by |Poly (Real ×
+Real)|, whose semantics is a function |(Real × Real) -> (Real ×
+Real)|.
+%
+Let $x$ be $x_1 + x_2 i$, the polynomial can be expanded as below:
 \begin{align*}
   & (3 + 2i)(x_1 + x_2 i)^2 + (2 + i)(x_1 + x_2 i) + 1 \\
 =~& (3 x^2_1 - 4 x_1 x_2 - 3 x^2_2) + (2 x^2_1 + 6 x_1 x_2 - 2 x^2_2) i +
@@ -117,19 +128,41 @@ polynomial can be expanded as below:
    (2 x^2_1 + x_1 + 6 x_1 x_2 + 2 x_2 - 2x^2_2) i \mbox{~~.}
 \end{align*}
 %format WordN = "\Varid{Word}^{\Varid{n}}"
-That is, a univariate polynomial over pairs, |Poly (Real × Real)|, can be expanded to
-|(Poly2 Real × Poly2 Real)|, a pair of bivariate expressions.
-The expansion depends on the definitions of addition and multiplication of
-complex numbers. It might turn out that |Real| is represented by a fixed
-length of machine words, |Real = WordN|, and |Poly WordN| can be further
+That is, a univariate polynomial over pairs, |Poly (Real × Real)|, can
+be expanded to |(Poly2 Real × Poly2 Real)|, a pair of bivariate
+expressions.
+%
+The expansion depends on the definitions of addition and
+multiplication of complex numbers.
+%
+It might turn out that |Real| is represented by a fixed length of
+machine words, |Real = WordN|, and |Poly WordN| can be further
 expanded to $|(PolyN n Word)|^\Varid{n}$, this time using arithmetic
-operations defined for |Word|. Now that each polynomial is defined
-over |Word|, whose arithmetic operation is supported by the machine, we may
-compile the expressions, in ways discussed in the next section, into assembly
-language. Such conversion and compilation are typically done by hand. We
-would like to define expansion in this section and compilation in the next,
-as well as proving their correctness. Furthermore, expansion and it proof of
-correctness should take the arithmetic operation of its base type as parameters.
+operations defined for |Word|.
+%
+Now that each polynomial is defined over |Word|, whose arithmetic
+operation has native support from the hardware, we may compile the
+expressions, in ways discussed in the next section, into a sequence of
+operations in a lower-level programming language such as the assembly
+language.
+%
+We also note that the roles played by the indeterminates $x$ and $i$
+are of fundamental difference: $x$ might just represent the input of
+the computation modeled by the polynomial expression, which will be
+substituted by some values at runtime, whereas $i$ intends to model
+some internal (algebraic) structures and is never substituted
+throughout the whole computation.
+%
+
+%
+Currently, such conversion and compilation are typically done by hand.
+%
+We would like to define expansion in this section and compilation in
+the next, as well as proving their correctness.
+%
+Furthermore, expansion and it proof of correctness should take the
+arithmetic operation of its base type as parameters.
+%
 
 %format LitN1 = "\Varid{Lit}^{\Varid{n-1}}"
 %format x1 = "\Varid{x}_1"
@@ -178,7 +211,7 @@ of expressions, but specifying |((:+), (:×))| as atomic operations.
 
 The readers may raise their doubts: we have not defined much, since all the real work is done in |ringVec ringP|. Indeed, the correctness of |expand| relies on |ringVec| being well-behaved, as we shall see soon.
 
-\paragraph{Correctness} Intuitively, |expand| is correct if the expanded
+\paragraph{Correctness.} Intuitively, |expand| is correct if the expanded
 polynomial evaluates to the same value as the that of the original. To
 formally state the property, we have to properly supply all the needed ingredients. Consider |e : Poly (Vec A n)| --- a polynomial whose coefficients are vectors of length |n|. Let |r : Ring A| define arithmetic operators for |A|, and let |ringVec : RingVec n| define how arithmetic operators for elements are lifted to vectors. We say that |expand| is correct if, for all |xs : Vec A n|:
 \begin{equation}

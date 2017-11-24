@@ -25,7 +25,7 @@ of type |Poly ℕ|:
 \begin{spec}
  (Lit 2 :× Ind :× Ind) :+ (Lit 3 :× Ind) :+ Lit 1 {-"~~."-}
 \end{spec}
-Notice that the type parameter |A| is abstracted over the type of coefficients. This allows us to represent polynomials whose coefficient are of complex types, in particular, polynomials whose coefficients are themselves polynomials. Do not confuse this with the more conventional representation of arithmetic expressions:
+Notice that the type parameter |A| is abstracted over the type of coefficients. This allows us to represent polynomials whose coefficient are of complex types --- in particular, polynomials whose coefficients are themselves polynomials. Do not confuse this with the more conventional representation of arithmetic expressions:
 \begin{spec}
 data Poly A = Var A | Lit Int | Poly A :+ Poly A | Poly A :× Poly A {-"~~,"-}
 \end{spec}
@@ -98,14 +98,14 @@ and multiplication are defined, and it can usually be inferred what instance of
 |Ring| to use. When proving properties about |foldP|, it is sometimes
 clearer to make the construction of |Ring| instances explicit.
 
-\paragraph{Evaluation} Assuming a base type |A| for which |Ring A| is defined,
+\paragraph{Evaluation.} Assuming a base type |A| for which |Ring A| is defined,
 consider evaluating a polynomial of type |Poly A|.
 % Without the presence of
 % constructor |Ind|, |Poly A| is an expresson without a variable, and evaluating
 % it is simply a matter of folding over the expression using |Ring A|.
 With the presence of |Ind|, the semantics of |Poly A| should be |A → A| --- a function that takes the value of the indeterminate and returns a value.
 
-We define the following operation that lifts the addition and multiplication
+We define the following operation that lifts pointwise the addition and multiplication
 of some type |B| to |A → B|:
 \begin{spec}
 ring→ : ∀ {A B : Set} → Ring B → Ring (A → B)
@@ -149,7 +149,7 @@ Evaluating, for example |sem1 ringP e (Ind :+ Lit 1)|, yields
 \end{spec}
 Note that |Lit Ind| in |e| is replaced by the argument |Ind :+ Lit 1|.
 Furthermore, one layer of |Lit| is removed, thus both |Lit 3| and |Ind :+ Lit 4|
-is exposed to the outermost level. The expression |e'| may then be evaluated by
+are exposed to the outermost level. The expression |e'| may then be evaluated by
 |sem1 rngℕ|, yielding a natural number. In summary, the function
 |sem2| that evalulates |Poly (Poly A)| can be defined by:
 \begin{spec}

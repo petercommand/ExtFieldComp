@@ -41,7 +41,7 @@
   multivariate polynomials over a base ring such as the integers or a
   (finite) field.
   %
-  We show that this construction allows easy implementation of
+  We show that this construction allows inductive implementation of
   polynomial operations such as arithmetic, evaluation, substitution,
   etc.
   %
