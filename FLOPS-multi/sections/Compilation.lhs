@@ -31,10 +31,9 @@ compile0 v =  alloc >>= \ addr →
               return (addr , Const addr v ∷ []) {-"~~."-}
 \end{spec}
 To compile a polynomial of type |PolyNn Word|, we assume that the value of the |n|
-indeterminants are already computed and stored in the heap, the locations of which are stored in a vector of |n| addresses. The function |compile| takes a vector
+indeterminants are already computed and stored in the heap, the locations of which are stored in a vector of |n| addresses.
 \begin{spec}
-compile :  ∀ n → Vec Addr n
-           → PolyNn Word → SSA (Addr × Ins)
+compile :  ∀ n → Vec Addr n → PolyNn Word → SSA (Addr × Ins)
 compile zero     addr        e = compile0 e
 compile (suc n)  (x ∷ addr)  e =
     foldE (return (x, [])) (compile n addr) ringSSA e {-"~~,"-}
@@ -48,24 +47,24 @@ where |biOp op p1 p2| runs |p1| and |p2| to obtain the compiled code, allocate
 a new address |dest|, before generating a new instruction |op dest addr1 addr2|:
 \begin{spec}
 biOp  : (Addr → Addr → Addr → TAC)
-      → SSA (Addr × Ins) → SSA (Addr × Ins)
-      → SSA (Addr × Ins)
+      → SSA (Addr × Ins) → SSA (Addr × Ins) → SSA (Addr × Ins)
 biOp op m1 m2 =  m1 >>= \ (addr1 , ins1) →
                  m2 >>= \ (addr2 , ins2) →
                  alloc >>= \ dest →
                  return (dest , ins1 ++ ins2 ++ (op dest addr1 addr2 ∷ [])) {-"~~."-}
 \end{spec}
 
-\paragraph{Correctness}
-Intuitively, if a polynomial |e| is compiled to a program |ins|, the compilation
-is correct of |ins| computes the value which |e| would be evaluated to. A formal statement of correctness is complicated by the fact that |e : PolyNn A| expects, as arguments, |n| polynomials arranged as a descending chain, and |ins| expects their values to be stored in the heap.
+\paragraph{Correctness} Given a polynomial |e|, by correctness of compilation we intuitively mean that the compiled program computes the value which |e| would be evaluated to.
+%
+A formal statement of correctness is complicated by the fact that |e : PolyNn A| expects, as arguments, |n| polynomials arranged as a descending chain, each of them expects arguments as well, and |ins| expects their values to be stored in the heap.
 
 Given a heap |h|, a chain |es : DChain Word n|, and a vector of addresses |rs|,
 the predicate |Consistent h es rs| holds if the values of each polynomial in |es| is stored in |h| at the corresponding address in |rs|.
 %
 The predicate can be expressed by the following |Agda| datatype:
 \begin{spec}
-data  Consistent (h : Heap) : ∀ {n} → DChain Word n → Vec Addr n → Set where
+data  Consistent (h : Heap) :
+      ∀ {n} → DChain Word n → Vec Addr n → Set where
   []   :  Consistent h tt []
   (∷)  :  ∀ {n : ℕ} {es rs e r}
           → (h !! r ≡ semantics n ringWord e es)
