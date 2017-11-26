@@ -93,14 +93,14 @@ substitute2 e e' e'' =
 We now consider the general case with substituting the |n| indeterminates in |e : PolyNn A| for |n| expressions, each of type |PolyN n A|. Let |Vec B n| be the type of vectors (lists of fixed lengths) of length |n|.
 (to do: can be simplified)
 \begin{spec}
-substitute : ∀ {A} n -> PolyNn A -> Vec (PolyNn A) n -> PolyNn A
-substitute {A} n e e'
-   = sem {PolyN A n} {{toPolyNumN {A} n}} n
+substitute : ∀ {A} n -> Ring A -> PolyNn A -> Vec (PolyNn A) n -> PolyNn A
+substitute {A} n r e e'
+   = sem (ringPS r {n}) n
         (subst id (sym (PolyN-comb {A} n n))
-          (rotaPolyN-m (n + n) n
-             (liftPoly {_} {_} {n} {n + n}
+          (rotaPolyNm (n + n) n
+             (liftPoly {_} {n} {n + n}
                (≤→≤′ n (n + n) (≤-weakening n n n ≤-refl)) e)))
-        (Vec→Nest n e')
+        (Vec→DChain n e')
 \end{spec}
 
 \subsection{Expansion}
