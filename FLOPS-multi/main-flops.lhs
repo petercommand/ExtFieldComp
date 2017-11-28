@@ -62,6 +62,7 @@
  \input{sections/Expr}
  \input{sections/Operations}
  \input{sections/Compilation}
+ \input{sections/Conclusions}
 
 \bibliographystyle{abbrv}
 \bibliography{dblp,local}

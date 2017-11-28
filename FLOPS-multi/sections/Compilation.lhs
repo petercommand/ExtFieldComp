@@ -43,7 +43,17 @@ The command |Const i v| stores value |v| in address |i|, |Add i j k| fetches val
 runIns : Heap → Ins → Heap {-"~~."-}
 \end{spec}
 
-To compile a program we employ a monad |SSA|, which support an operation |alloc : SSA Addr| that returns the address of an unused cell in the heap. As a naive approach, |SSA| can be implemented by a state monad that keeps a counter of the highest address that is allocated. Compilation of a polynomial yields |SSA (Addr × Ins)|, where the second component of the pair is an assembly program, and the first component is the address where the program, once run, stores the value of the polynomial. We define compilation of |PolyN n Word| by induction on |n|. For the base case |PolyN 0 Word = Word|, we simply allocate a new cell and stores the given value there using |Const|:
+To compile a program we employ a monad |SSA|, which support an operation |alloc : SSA Addr| that returns the address of an unused cell in the heap.
+%
+As a naive approach, |SSA| can be implemented by a state monad that keeps a counter of the highest address that is allocated, while |alloc| returns the current value of the counter before incrementing it.
+%
+To run a |SSA| monad we use a function |runSSA : ∀ {A St} → St →
+SSA St A → (A × St)| that takes a state |St| and yields a pair with the
+result and the new state.
+
+Compilation of a polynomial yields |SSA (Addr × Ins)|, where the second component of the pair is an assembly program, and the first component is the address where the program, once run, stores the value of the polynomial.
+%
+We define compilation of |PolyN n Word| by induction on |n|. For the base case |PolyN 0 Word = Word|, we simply allocate a new cell and stores the given value there using |Const|:
 \begin{spec}
 compile0 : Word → SSA (Addr × Ins)
 compile0 v =  alloc >>= \ addr →
@@ -73,12 +83,20 @@ biOp op m1 m2 =  m1 >>= \ (addr1 , ins1) →
                  return (dest , ins1 ++ ins2 ++ (op dest addr1 addr2 ∷ [])) {-"~~."-}
 \end{spec}
 
+The following function compiles a polynomial, runs the program, and retrieves the resulting value from the heap:
+\begin{spec}
+compileRun : ∀ {A : Set} {{_ : Num A}} {n : ℕ}
+             → Vec Addr n → Addr → PolyN A n → Heap A → A
+compileRun rs r₀ e h =
+    let  ((r , ins) , _) = runSSA r₀ (compile _ rs e)
+    in   runIns h ins !! r {-"~~."-}
+\end{spec}
+
 \paragraph{Correctness} Given a polynomial |e|, by correctness of compilation we intuitively mean that the compiled program computes the value which |e| would be evaluated to.
 %
 A formal statement of correctness is complicated by the fact that |e : PolyNn A| expects, as arguments, |n| polynomials arranged as a descending chain, each of them expects arguments as well, and |ins| expects their values to be stored in the heap.
 
-Given a heap |h|, a chain |es : DChain Word n|, and a vector of addresses |rs|,
-the predicate |Consistent h es rs| holds if the values of each polynomial in |es| is stored in |h| at the corresponding address in |rs|.
+Given a heap |h|, a chain |es : DChain Word n|, and a vector of addresses |rs|, the predicate |Consistent h es rs| holds if the values of each polynomial in |es| is stored in |h| at the corresponding address in |rs|.
 %
 The predicate can be expressed by the following |Agda| datatype:
 \begin{spec}
@@ -86,31 +104,29 @@ data  Consistent (h : Heap) :
       ∀ {n} → DChain Word n → Vec Addr n → Set where
   []   :  Consistent h tt []
   (∷)  :  ∀ {n : ℕ} {es rs e r}
-          → (h !! r ≡ semantics n ringWord e es)
+          → (h !! r ≡ sem n ringWord e es)
           → Consistent h       es        rs
-          → Consistent h (e ,  es) (r ∷  rs)
+          → Consistent h (e ,  es) (r ∷  rs) {-"~~."-}
 \end{spec}
+Observe that in the definition of |(∷)| the descending chain |es| is supplied to each invocation of |sem| to compute value of |e|, before |e| itself is accumulated to |es|.
 
+The correctness of |compile| can be stated as:
+%All (\ e → r₀ > e) n rs
 \begin{spec}
-comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
-  → (e : ExprN A n)
-  → (es : Nest A n)
-  → {h : Heap A}
+compSem : ∀ (n : ℕ) {h : Heap}
+  → (e : PolyNn Word)
+  → (es : DChain Word n)
   → (rs : Vec Addr n) → (r₀ : Addr)
-  → HeapCons h es rs
-  → All (\ e → r₀ > e) n rs
-  → runCompile rs r₀ e h ≡ semantics n e es
-
-runCompile : ∀ {A : Set} {{_ : Num A}} {n : ℕ}
-             → Vec Addr n → Addr → ExprN A n → Heap A → A
-runCompile {n = n} rs r₀ e h =
-     runSSA {n = n} (compile n rs e) r₀ h
-
---
-
-runSSA : ∀ {A : Set} {{_ : Num A}} {n : ℕ}
-       → SSA (Addr × Ins A) → Addr → Heap A → A
-runSSA (ssa m) r₀ h =
-  let ((r , ins) , _) = m r₀
-  in getHeap r (runIns h ins)
+  → Consistent h es rs
+  → NoOverlap r₀ rs
+  → compileRun rs r₀ e h ≡ sem n e es {-"~~."-}
 \end{spec}
+The predicate |Consistent h es rs| states that the values of the descending chain |es| are stored in the corresponding addresses |rs|.
+%
+The predicate |NoOverlap r₀ rs| states that, if an |SSA| monad is run with starting address |r₀|, all subsequent allocated addresses will not overlap with those in |rs|.
+%
+With the naive counter-based implementation of |SSA|, |NoOverlap r₀ rs| holds if |r₀| is larger than every element in |rs|.
+%
+The last line states that the polynomial |e| is compiled with argument addresses |es| and starting address |r₀|, and the value the program computes should be the same as the semantics of |e|, given the descending chain |es| as arguments.
+
+With all the setting up, the property |compSem n e| can be proved by induction on |n| and |e|.

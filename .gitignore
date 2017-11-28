@@ -41,3 +41,5 @@ slides 2017 wg2\.1/polypoly\.pdf
 *.out
 
 *.nav
+
+FLOPS-multi/sections/Conclusions\.tex
