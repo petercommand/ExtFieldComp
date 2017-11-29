@@ -23,6 +23,7 @@
 \input{macros}
 
 \newcommand{\cata}[1]{\ensuremath{(\! [#1]\! )}\xspace}
+\newcommand{\todo}[1]{\{{\bf todo}: #1\}}
 
 \begin{document}
 %

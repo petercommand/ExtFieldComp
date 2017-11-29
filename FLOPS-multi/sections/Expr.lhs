@@ -9,10 +9,12 @@
 In this section we present our representation for univariate and
 multivariate polynomials, and their semantics.
 %
-The following Haskell/Agda datatype denotes a univariate polynomial whose coefficients are of type |A|:%
+The following Agda datatype denotes a univariate polynomial whose coefficients are of type |A|:%
 \footnote{We use Haskell convention that infix data constructors start with
-a colon and, for a more concise typesetting, write |(:+)| instead of the Agda
-notation $\_$|:+|$\_$.}
+a colon and, for a more concise typesetting, write |(:+)| instead of the Agda notation $\_$|:+|$\_$.
+%
+In the rest of the paper we also occasionally use Haskell syntax for brevity.
+}
 \begin{spec}
 data Poly (A : Set) : Set where
   Ind   : Poly A
@@ -27,7 +29,7 @@ of type |Poly ℕ|:
 \end{spec}
 Notice that the type parameter |A| is abstracted over the type of coefficients. This allows us to represent polynomials whose coefficient are of complex types --- in particular, polynomials whose coefficients are themselves polynomials. Do not confuse this with the more conventional representation of arithmetic expressions:
 \begin{spec}
-data Poly A = Var A | Lit Int | Poly A :+ Poly A | Poly A :× Poly A {-"~~,"-}
+data Expr A = Var A | Lit Int | Expr A :+ Expr A | Expr A :× Expr A {-"~~,"-}
 \end{spec}
 where the literals are usually assigned a fixed type (in this example, |Int|), and the type parameter is abstracted over variables |Var|.
 
@@ -74,7 +76,7 @@ where the literals are usually assigned a fixed type (in this example, |Int|), a
 %format e1 = "\Varid{e}_{1}"
 %format e2 = "\Varid{e}_{2}"
 
-In the categorical style outlined by Bird and de Moor~\cite{DBLP:books/daglib/0096998}, every regular datatype gives rise to a |fold| operator. As a convention, |Poly| induces a |fold| that takes four arguments, each replacing one of the four constructors. To facilitate our discussion later, we group the last two arguments together and define:
+In the categorical style outlined by Bird and de Moor~\cite{DBLP:books/daglib/0096998}, every regular datatype gives rise to a |fold| operator. The type |Poly| induces a |fold| that, as a convention, takes four arguments, each replacing one of the four constructors. To facilitate our discussion later, we group the last two arguments together and define:
 \begin{spec}
 Ring : Set -> Set
 Ring A = (A -> A -> A) × (A -> A -> A) {-"~~."-}
@@ -93,9 +95,9 @@ foldP x f ((+),(×))  (e1 :+ e2)  =  foldP x f ((+),(×)) e1 +
 foldP x f ((+),(×))  (e1 :× e2)  =  foldP x f ((+),(×)) e1 ×
                                     foldP x f ((+),(×)) e2 {-"~~."-}
 \end{spec}
-In our Haskell implementation, |Ring| is a type class for types whose addition
-and multiplication are defined, and it can usually be inferred what instance of
-|Ring| to use. When proving properties about |foldP|, it is sometimes
+In our Haskell implementation, |Ring| is a type class for types whose addition and multiplication are defined. When |foldP| is called, it can usually be inferred what instance of |Ring| to use.
+%
+When proving properties about |foldP|, however, it is
 clearer to make the construction of |Ring| instances explicit.
 
 \paragraph{Evaluation.} Assuming a base type |A| for which |Ring A| is defined,
@@ -124,7 +126,7 @@ sem1 rng = foldP id const (ring→ rng) {-"~~."-}
 \subsection{Bivariate Polynomials}
 
 To represent polynomials with two indeterminates, we could extend
-|Poly| with an additional constructor |Ind'| in addition
+|Poly| with a constructor |Ind'| in addition
 to |Ind|. It turns out to be unnecessary --- it is known that the bivariate
 polynomial ring $R[X,Y]$ is isomorphic to $R[X][Y]$ (modulo the operation |litDist|, to be defined later). That is,
 a polynomial over base ring |A| with two indeterminates can be
@@ -148,30 +150,38 @@ Evaluating, for example |sem1 ringP e (Ind :+ Lit 1)|, yields
   e' =  (Lit 3 :× (Ind :+ Lit 1) :× (Ind :+ Lit 4)) :+ Ind :+ (Ind :+ Lit 1) {-"~~."-}
 \end{spec}
 Note that |Lit Ind| in |e| is replaced by the argument |Ind :+ Lit 1|.
-Furthermore, one layer of |Lit| is removed, thus both |Lit 3| and |Ind :+ Lit 4|
-are exposed to the outermost level. The expression |e'| may then be evaluated by
-|sem1 rngℕ|, yielding a natural number. In summary, the function
-|sem2| that evalulates |Poly (Poly A)| can be defined by:
+Furthermore, one layer of |Lit| is removed, thus both |Lit 3| and |Ind :+ Lit 4| are exposed to the outermost level.
+%
+The expression |e'| may then be evaluated by |sem1 rngℕ|, where |rngℕ : Ring ℕ|.
+%
+The result is a natural number.
+%
+In summary, the function |sem2| that evalulates |Poly (Poly A)| can be defined by:
 \begin{spec}
 sem2 : ∀ {A} → Ring A → Poly (Poly A) → Poly A → A → A
 sem2 r e2 e1 x = sem1 r (sem1 ringP e2 e1) x {-"~~."-}
 \end{spec}
 
 This is how |Poly (Poly ℕ)| simulates bivariate polynomials: the two
-indeterminates are respectively represented by |Ind| and |Lit Ind|. During
-evaluation, |Ind| can be instantiated to an expression |arg| of type |Poly ℕ|, while |Lit Ind| can be instantiated to a |ℕ|. If |arg| contains |Ind|, it
-refers to the next indeterminate.
+indeterminates are respectively represented by |Ind| and |Lit Ind|.
+%
+During evaluation, |Ind| can be instantiated to an expression |arg| of type |Poly ℕ|, while |Lit Ind| can be instantiated to a |ℕ|.
+%
+If |arg| contains |Ind|, it refers to the next indeterminate.
 
-What about subexpressions like |Lit (Ind :+ Lit 4)|? One can see that
-its semantics is the same as |Lit Ind :+ Lit (Lit 4)|, the expression we get by
-pushing |Lit| to the leaves. In general, define the following function:
+What about subexpressions like |Lit (Ind :+ Lit 4)|?
+%
+One can see that its semantics is the same as |Lit Ind :+ Lit (Lit 4)|, the expression we get by pushing |Lit| to the leaves.
+%
+In general, define the following function:
 \begin{spec}
 litDist : ∀ {A} → Poly (Poly A) → Poly (Poly A)
 litDist = foldP Ind (foldP (Lit Ind) (Lit ∘ Lit) ringP) ringP {-"~~."-}
 \end{spec}
 The function traverses through the given expression and, upon encountering
-a subtree |Lit e|, lifts |e| to |Poly (Poly A)| while distributes |Lit| inwards
-|e|. We can prove the following theorem:
+a subtree |Lit e|, lifts |e| to |Poly (Poly A)| while distributing |Lit| inwards |e|.
+%
+We can prove the following theorem:
 \begin{theorem} For all |e : Poly (Poly A)| and |r : Ring A|, we have
 |sem2 r (litDist e) = sem2 r e|.
 \end{theorem}
@@ -181,16 +191,16 @@ In general, as we have mentioned in Section~\ref{sec:introduction}, the
 multivariate polynomial $R[X_1,X_2\ldots,X_m]$ is isomorphic to
 univariate polynomial ring $S[X_m]$ over the base ring
 $S=R[X_1,X_2,\ldots,X_{m-1}]$ (modulo the distribution law of |Lit|).
-That is, a polynomial over |A| with |n| indeterminates
-can be represented by |PolyN n A|, where
+%
+That is, a polynomial over |A| with |n| indeterminates can be represented by |PolyN n A|, where
 \begin{spec}
 PolyN zero     A = A
 PolyN (suc n)  A = Poly (PolyN n A) {-"~~."-}
 \end{spec}
 
-To define the semantics of |PolyN n A|, recall that, among its |n| indeterminates,
-the outermost indeterminate shall be instantiated to an expression of type
-|PolyN (n-1) A|, the next indeterminate to |PolyN (n-2) A|..., and the inner most indeterminate to |A|, before yielding a value of type |A|. Define
+To define the semantics of |PolyN n A|, recall that, among its |n| indeterminates, the outermost indeterminate shall be instantiated to an expression of type |PolyN (n-1) A|, the next indeterminate to |PolyN (n-2) A|..., and the inner most indeterminate to |A|, before yielding a value of type |A|.
+%
+Define
 \begin{spec}
 DChain : Set -> ℕ -> Set
 DChain A zero     = ⊤
@@ -198,9 +208,7 @@ DChain A (suc n)  = PolyNn A × DChain A n {-"~~,"-}
 \end{spec}
 that is, |DChain A n|, standing for a ``descending chain'', is a list of |n| elements, with the first having type |PolyN (n-1) A|, the second |PolyN (n-2) A|, and so on.
 
-Provided that the arithmetic operations for |A| are defined,
-the semantics of |PolyN n A| is a function |DChain A n -> A|, defined
-inductively as below (where |tt| is the only term having type |⊤|):
+If there exists an implementation of |Ring A|, the semantics of |PolyN n A| is a function |DChain A n -> A|, defined inductively as below (where |tt| is the only term having type |⊤|):
 \begin{spec}
 sem : ∀ {A} -> Ring A -> (n : ℕ) -> PolyNn A -> DChain A n -> A
 sem r zero     x  tt        = x
@@ -209,8 +217,8 @@ sem r (suc n)  e  (t , es)  = sem r n (sem1 (ringPS r) e t) es {-"~~,"-}
 where |ringPS| delivers the |Ring (PolyN n A)| instance for all |n|:
 \begin{spec}
 ringPS : ∀ {A} → Ring A → ∀ {n} → Ring (PolyN n A)
-ringPS r zero  = r
-ringPS r _     = ringP {-"~~."-}
+ringPS r zero     = r
+ringPS r (suc n)  = ringP {-"~~."-}
 \end{spec}
 For |n := 2| and |3|, for example, |sem r n| expands to:
 %format t0 = "\Varid{t}_0"

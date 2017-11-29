@@ -8,8 +8,7 @@
 \label{sec:operations}
 
 Having defined a representation for multivariate polynomials, we ought to
-demonstrate that this representation is feasible --- that we can define most of
-the operations we want. In this section we show ...
+demonstrate that this representation is feasible --- that we can define most of the operations we want.
 
 \subsection{Rotation}
 
@@ -55,15 +54,18 @@ rotaPolyN (suc (suc (suc n)))  = (fmapN (suc n)) rotaPoly2 . rotaPolyN  (suc (su
 \end{spec}
 Note that in the actual Agda code we need to convince Agda that
 |PolyN n (Poly A)| is the same type as |Poly (PolyN n A)| and use |subst|
-to do type conversion. We omit the details here for clarity.
+to coerce between the two types.
+%
+We omit those details for clarity.
 
-Given |m| and |n|, |rotaPolyNm n m| compose |rotaPolyN n| with itself
-|m| times. Therefore, the first |n| indeterminates are rotated |m| times.
+Given |m| and |n|, |rotaOuter n m| compose |rotaPolyN n| with itself
+|m| times. Therefore, the outermost |n| indeterminates are rotated |m| times.
+%
 It will be handy in the next section.
 \begin{spec}
-rotaPolyNm : ∀ {A} (n m : ℕ) → PolyNn A → PolyNn A
-rotaPolyNm n zero e = e
-rotaPolyNm n (suc m) e = rotaPolyNm n m (rotaPolyN n e) {-"~~."-}
+rotaOuter : ∀ {A} (n m : ℕ) → PolyNn A → PolyNn A
+rotaOuter n zero e = e
+rotaOuter n (suc m) e = rotaOuter n m (rotaPolyN n e) {-"~~."-}
 \end{spec}
 
 \subsection{Substitution}
@@ -91,13 +93,13 @@ substitute2 e e' e'' =
 \end{spec}
 
 We now consider the general case with substituting the |n| indeterminates in |e : PolyNn A| for |n| expressions, each of type |PolyN n A|. Let |Vec B n| be the type of vectors (lists of fixed lengths) of length |n|.
-(to do: can be simplified)
+\todo{can be simplified.}
 \begin{spec}
 substitute : ∀ {A} n -> Ring A -> PolyNn A -> Vec (PolyNn A) n -> PolyNn A
 substitute {A} n r e e'
    = sem (ringPS r {n}) n
         (subst id (sym (PolyN-comb {A} n n))
-          (rotaPolyNm (n + n) n
+          (rotaOuter (n + n) n
              (liftPoly {_} {n} {n + n}
                (≤→≤′ n (n + n) (≤-weakening n n n ≤-refl)) e)))
         (Vec→DChain n e')

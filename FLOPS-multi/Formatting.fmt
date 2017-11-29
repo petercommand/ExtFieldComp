@@ -58,6 +58,7 @@
 %format (.) = "\!\cdot\!"
 %format ∘ = "\!\cdot\!"
 %format : = "\!\!:\!\!"
+%format -> = "\!\rightarrow\!"
 
 %format e1 = "\Varid{e}_1"
 %format e2 = "\Varid{e}_2"
