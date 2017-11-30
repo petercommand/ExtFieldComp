@@ -76,24 +76,27 @@ where the literals are usually assigned a fixed type (in this example, |Int|), a
 %format e1 = "\Varid{e}_{1}"
 %format e2 = "\Varid{e}_{2}"
 
-In the categorical style outlined by Bird and de Moor~\cite{DBLP:books/daglib/0096998}, every regular datatype gives rise to a |fold| operator. The type |Poly| induces a |fold| that, as a convention, takes four arguments, each replacing one of the four constructors. To facilitate our discussion later, we group the last two arguments together and define:
+In the categorical style outlined by Bird and de Moor~\cite{DBLP:books/daglib/0096998}, every regular datatype gives rise to a {\em fold}, or a {\em catamorphism}.
+%
+The type |Poly| induces a fold that, as a convention, takes four arguments, each replacing one of its four constructors.
+%
+To facilitate our discussion later, we group the last two arguments together and define:
 \begin{spec}
 Ring : Set -> Set
 Ring A = (A -> A -> A) × (A -> A -> A) {-"~~."-}
 \end{spec}
-That is, |Ring A| is a pair of binary operators that defines how to perform addition
-and multiplication for values of type |A|.%
+That is, |Ring A| is a pair of binary operators that defines how to perform addition and multiplication for values of type |A|.%
 \footnote{While we do expect all the ring properties such as existence of
 additive identity, inverse, and distributivity, etc., to hold, we do not
 enforce them in this datatype.} We then define the |fold| for |Poly|:
 \begin{spec}
 foldP : ∀ {A B : Set} -> B -> (A -> B) -> Ring B -> Poly A -> B
-foldP x f rng        Ind         = x
-foldP x f rng        (Lit y)     = f y
-foldP x f ((+),(×))  (e1 :+ e2)  =  foldP x f ((+),(×)) e1 +
-                                    foldP x f ((+),(×)) e2
-foldP x f ((+),(×))  (e1 :× e2)  =  foldP x f ((+),(×)) e1 ×
-                                    foldP x f ((+),(×)) e2 {-"~~."-}
+foldP x f rng                 Ind         = x
+foldP x f rng                 (Lit y)     = f y
+foldP x f ((oplus),(otimes))  (e1 :+ e2)  =  foldP x f ((oplus),(otimes)) e1 oplus
+                                             foldP x f ((oplus),(otimes)) e2
+foldP x f ((oplus),(otimes))  (e1 :× e2)  =  foldP x f ((oplus),(otimes)) e1 otimes
+                                             foldP x f ((oplus),(otimes)) e2 {-"~~."-}
 \end{spec}
 In our Haskell implementation, |Ring| is a type class for types whose addition and multiplication are defined. When |foldP| is called, it can usually be inferred what instance of |Ring| to use.
 %
@@ -110,7 +113,7 @@ With the presence of |Ind|, the semantics of |Poly A| should be |A → A| --- a 
 We define the following operation that lifts pointwise the addition and multiplication
 of some type |B| to |A → B|:
 \begin{spec}
-ring→ : ∀ {A B : Set} → Ring B → Ring (A → B)
+ring→ : ∀ {A B} → Ring B → Ring (A → B)
 ring→ ((+),(×)) = (  \ f g x -> f x + g x,
                      \ f g x -> f x × g x) {-"~~."-}
 \end{spec}
@@ -125,29 +128,33 @@ sem1 rng = foldP id const (ring→ rng) {-"~~."-}
 
 \subsection{Bivariate Polynomials}
 
-To represent polynomials with two indeterminates, we could extend
-|Poly| with a constructor |Ind'| in addition
-to |Ind|. It turns out to be unnecessary --- it is known that the bivariate
-polynomial ring $R[X,Y]$ is isomorphic to $R[X][Y]$ (modulo the operation |litDist|, to be defined later). That is,
-a polynomial over base ring |A| with two indeterminates can be
+To represent polynomials with two indeterminates, one might extend
+|Poly| with a constructor |Ind'| in addition to |Ind|.
+%
+It turns out to be unnecessary --- it is known that the bivariate
+polynomial ring $R[X,Y]$ is isomorphic to $R[X][Y]$ (modulo the operation |litDist|, to be defined later).
+%
+That is, a polynomial over base ring |A| with two indeterminates can be
 represented by |Poly (Poly A)|.
 
-For an example, consider the following expression of type |Poly (Poly ℕ)|:
+To see how that works, consider the following expression:
 \begin{spec}
-  e = (Lit (Lit 3) :× Ind :× Lit (Ind :+ Lit 4)) :+ Lit Ind :+ Ind {-"~~."-}
+e : Poly (Poly ℕ)
+e = (Lit (Lit 3) :× Ind :× Lit (Ind :+ Lit 4)) :+ Lit Ind :+ Ind {-"~~."-}
 \end{spec}
 Note that |Lit| in the first level takes |Poly ℕ| as arguments, thus to
 represent a literal |3| we have to write |Lit (Lit 3)|. To evaluate |e| using
 |sem1|, we have to define |Ring (Poly ℕ)|. A natural choice is to connect
 two expressions using corresponding constructors:
 \begin{spec}
-ringP : ∀ {A} → Ring (Poly A)
-ringP = ((:+), (:×)) {-"~~."-}
+ringP  : ∀ {A} → Ring (Poly A)
+ringP  = ((:+), (:×)) {-"~~."-}
 \end{spec}
 With |ringP| defined, |sem1 ringP e| has type |Poly A → Poly A|.
 Evaluating, for example |sem1 ringP e (Ind :+ Lit 1)|, yields
 \begin{spec}
-  e' =  (Lit 3 :× (Ind :+ Lit 1) :× (Ind :+ Lit 4)) :+ Ind :+ (Ind :+ Lit 1) {-"~~."-}
+e' : Poly ℕ
+e' = (Lit 3 :× (Ind :+ Lit 1) :× (Ind :+ Lit 4)) :+ Ind :+ (Ind :+ Lit 1) {-"~~."-}
 \end{spec}
 Note that |Lit Ind| in |e| is replaced by the argument |Ind :+ Lit 1|.
 Furthermore, one layer of |Lit| is removed, thus both |Lit 3| and |Ind :+ Lit 4| are exposed to the outermost level.
@@ -156,7 +163,7 @@ The expression |e'| may then be evaluated by |sem1 rngℕ|, where |rngℕ : Ring
 %
 The result is a natural number.
 %
-In summary, the function |sem2| that evalulates |Poly (Poly A)| can be defined by:
+In general, the function |sem2| that evalulates |Poly (Poly A)| can be defined by:
 \begin{spec}
 sem2 : ∀ {A} → Ring A → Poly (Poly A) → Poly A → A → A
 sem2 r e2 e1 x = sem1 r (sem1 ringP e2 e1) x {-"~~."-}
@@ -208,7 +215,7 @@ DChain A (suc n)  = PolyNn A × DChain A n {-"~~,"-}
 \end{spec}
 that is, |DChain A n|, standing for a ``descending chain'', is a list of |n| elements, with the first having type |PolyN (n-1) A|, the second |PolyN (n-2) A|, and so on.
 
-If there exists an implementation of |Ring A|, the semantics of |PolyN n A| is a function |DChain A n -> A|, defined inductively as below (where |tt| is the only term having type |⊤|):
+Given an implementation of |Ring A|, the semantics of |PolyN n A| is a function |DChain A n -> A|, defined inductively as below (where |tt| is the only term having type |⊤|):
 \begin{spec}
 sem : ∀ {A} -> Ring A -> (n : ℕ) -> PolyNn A -> DChain A n -> A
 sem r zero     x  tt        = x

@@ -185,4 +185,4 @@ evaluation, substitution, etc.
 %
 In Section~\ref{sec:compilation}, we show how to compile polynomial expressions into a sequence of arithmetic expressions over the base ring, before we conclude in Section \ref{sec:conclusions}.
 %
-The theories presented in this pearl have been implemented in both Haskell and Agda~\cite{Norell:08:Towards}, and the proofs are verified in Agda. The code is available on line at \todo{URL}.
+The functions presented in this pearl have been implemented in both Haskell and Agda~\cite{Norell:08:Towards}, and the proofs are verified in Agda. The code is available on line at \todo{URL}.

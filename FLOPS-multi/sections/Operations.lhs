@@ -11,6 +11,7 @@ Having defined a representation for multivariate polynomials, we ought to
 demonstrate that this representation is feasible --- that we can define most of the operations we want.
 
 \subsection{Rotation}
+\label{sec:rotation}
 
 The first operation we consider swaps the two outermost indeterminates
 of an |Poly2 A|, using |foldP|.
@@ -18,7 +19,7 @@ of an |Poly2 A|, using |foldP|.
 This implements the isomorphism between $R[X_1,\ldots,X_{m-1}][X_m]$
 and $R[X_m,X_1,\ldots,X_{m-2}][X_{m-1}]$.
 %
-It is perhaps instructive comparing it with |litDist|.
+It is instructive comparing it with |litDist|.
 \begin{spec}
 rotaPoly2 : ∀ {A} → Poly2 A → Poly2 A
 rotaPoly2 = foldP (Lit Ind) (foldP Ind (Lit ∘ Lit) ringP) ringP {-"~~."-}
@@ -61,7 +62,7 @@ We omit those details for clarity.
 Given |m| and |n|, |rotaOuter n m| compose |rotaPolyN n| with itself
 |m| times. Therefore, the outermost |n| indeterminates are rotated |m| times.
 %
-It will be handy in the next section.
+It will be handy in Section \ref{sec:substitution}.
 \begin{spec}
 rotaOuter : ∀ {A} (n m : ℕ) → PolyNn A → PolyNn A
 rotaOuter n zero e = e
@@ -69,6 +70,7 @@ rotaOuter n (suc m) e = rotaOuter n m (rotaPolyN n e) {-"~~."-}
 \end{spec}
 
 \subsection{Substitution}
+\label{sec:substitution}
 
 %format substitute1 = "\Varid{substitute}_{1}"
 %format substitute2 = "\Varid{substitute}_{2}"
@@ -89,21 +91,27 @@ What about |e : Poly2 A|? We may lift it to an |PolyN 4 A|, perform two
 \begin{spec}
 substitute2 :: ∀ {A} → Poly2 A -> Poly2 A -> Poly2 A -> Poly2 A
 substitute2 e e' e'' =
-  sem2 ringP (rotaPoly4 . rotaPoly4 $ Lit (Lit e)) (Lit e') e'' {-"~~."-}
+  sem2 ringP (rotaPoly4 (rotaPoly4 Lit (Lit e))) (Lit e') e'' {-"~~."-}
 \end{spec}
 
 We now consider the general case with substituting the |n| indeterminates in |e : PolyNn A| for |n| expressions, each of type |PolyN n A|. Let |Vec B n| be the type of vectors (lists of fixed lengths) of length |n|.
-\todo{can be simplified.}
+%
+A general |substitute| can be defined by:
 \begin{spec}
 substitute : ∀ {A} n -> Ring A -> PolyNn A -> Vec (PolyNn A) n -> PolyNn A
-substitute {A} n r e e'
-   = sem (ringPS r {n}) n
-        (subst id (sym (PolyN-comb {A} n n))
-          (rotaOuter (n + n) n
-             (liftPoly {_} {n} {n + n}
-               (≤→≤′ n (n + n) (≤-weakening n n n ≤-refl)) e)))
-        (Vec→DChain n e')
+substitute {A} n r e es =
+  sem (ringPS r {n}) n
+         (rotaOuter (n + n) n (liftPoly n (n + n) e))
+         (toDChain es) {-"~~,"-}
 \end{spec}
+where |liftPoly n m| (where |n{-"\!"-}<={-"\!"-}m|) lifts a |PolyN n A| to |PolyN m A| by applying |Lit|;
+%
+|rotaOuter (n + n) n|, as defined in Section \ref{sec:rotation}, composes |rotaPoly (n+n)| with itself |n| times, thereby moving the |n| original indeterminates of |e| to outermost position;
+%
+the function |toDChain| converts a vector to a descending chain;
+%
+%format PolyNmn = "\Varid{Poly}^{\Varid{m}+\Varid{n}}"
+finally, |sem| performs the substitution. Again, the actual Agda code needs more proof terms (to convince Agda that |n{-"\!"-}<={-"\!"-}n+n|) and type coercion (|PolyN n (PolyN m A) = PolyNmn A|), which are omitted here.
 
 \subsection{Expansion}
 
@@ -118,7 +126,7 @@ Let us use a very simple yet specific example for further exposition.
 %
 For example, the polynomial expression over complex numbers
 $(3 + 2i) x^2 + (2 + i)x + 1$ can be represented by |Poly (Real ×
-Real)|, whose semantics is a function |(Real × Real) -> (Real ×
+Real)|, whose semantics is a function |(Real × Real){-"\!"-}->{-"\!"-}(Real ×
 Real)|.
 %
 Let $x$ be $x_1 + x_2 i$, the polynomial can be expanded as below:
@@ -136,9 +144,9 @@ expressions.
 %
 The expansion depends on the definitions of addition and
 multiplication of complex numbers.
-%
+
 It might turn out that |Real| is represented by a fixed length of
-machine words, |Real = WordN|, and |Poly WordN| can be further
+machine words, |Real{-"\!\!"-}={-"\!\!"-}WordN|, and |Poly WordN| can be further
 expanded to $|(PolyN n Word)|^\Varid{n}$, this time using arithmetic
 operations defined for |Word|.
 %
@@ -180,7 +188,10 @@ genInd zero           = []
 genInd (suc zero)     = Ind ∷ []
 genInd (suc (suc n))  = Ind ∷ (map Lit (genInd (suc n))) {-"~~."-}
 \end{spec}
-Secondly, |liftVal : ∀ {A} n → A → PolyNn A| lifts |A| to |PolyNn A| by |n| applications of |Lit|. The definition is routine. Finally, we define the type of operations that, given arithmetic operators for |A|, define arithmetic operators for vectors of |A|:
+
+Secondly, |liftVal : ∀ {A} n → A → PolyNn A| lifts |A| to |PolyNn A| by |n| applications of |Lit|. The definition is routine.
+
+Finally, we define the type of operations that, given arithmetic operators for |A|, define arithmetic operators for vectors of |A|:
 \begin{spec}
 RingVec : ℕ -> Set1
 RingVec n = ∀ {A} -> Ring A -> Ring (Vec A n) {-"~~."-}
@@ -189,7 +200,6 @@ RingVec n = ∀ {A} -> Ring A -> Ring (Vec A n) {-"~~."-}
 %format `addC` = "\mathbin{+_c}"
 %format mulC = "(\mathbin{\times_c})"
 %format `mulC` = "\mathbin{\times_c}"
-
 For example, |rComplex| lifts arithmetic operations on |A| to
 that of complex numbers over |A|:
 \begin{spec}
@@ -225,7 +235,7 @@ formally state the property, we have to properly supply all the needed ingredien
 \end{equation}
 On the lefthand side, |e| is evaluated by |sem1|, using operators supplied by |ringVec r|. The value of the single indeterminant is |xs : Vec A n|, and the result also has type |Vec A n|. On the righthand side, |e| is expanded to |Vec (PolyN n A) n|. Internally, |expand| uses |ringVec ringP| to combine vectors of expressions. Each polynomial in the vector is evaluated individually by |sem r n|. The function |toDChain| converts a vector to a descending chain. The |n| elements in |xs| thus substitutes the |n| indeterminants of the expanded polynomial.
 
-Interestingly, it turns out that |expand| is correct if |ringVec| is polymorphic --- that is, the way it computes vectors out of vectors depends only on the shape of its input, regardless of the type and the contents.
+Interestingly, it turns out that |expand| is correct if |ringVec| is polymorphic --- that is, the way it computes vectors out of vectors depends only on the shape of its inputs, regardless of the type and values of their elements.
 \begin{theorem} For all |n|, |e : Poly (Vec A n)|, |xs : Vec A n|,
 |r : Ring A|, and |ringVec : RingVec|, property \eqref{eq:expand-correct} holds if |ringVec| is polymorphic.
 \end{theorem}
@@ -246,7 +256,7 @@ we have |sem r n (liftVal n x) es = x|;
 %format addA = "({+_\Conid{A}})"
 %format `addA` = "\mathbin{+_\Conid{A}}"
 The inductive case where |e := e1 :+ e2| eventually comes down to proving
-that (abbreviating |\ e → sem r n e (toDChainxs)| to |sem'|):
+that (abbreviating |\ e → sem r n e (toDChain xs)| to |sem'|):
 \begin{spec}
 map sem' (expand ringVec n e1) `addA` map sem' (expand ringVec n e2) =
   map sem' (expand ringVec n e1 `addP` expand ringVec n e2)

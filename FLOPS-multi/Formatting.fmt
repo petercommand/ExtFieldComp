@@ -54,6 +54,8 @@
 %format Set1 = "\Varid{Set}_{1}"
 %format Real = "{\mathbb R}"
 %format compile0 = "\Varid{compile}_{0}"
+%format oplus = "\oplus"
+%format otimes = "\otimes"
 
 %format (.) = "\!\cdot\!"
 %format ∘ = "\!\cdot\!"
