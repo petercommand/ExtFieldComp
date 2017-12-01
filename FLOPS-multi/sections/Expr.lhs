@@ -11,7 +11,7 @@ multivariate polynomials, and their semantics.
 %
 The following Agda datatype denotes a univariate polynomial whose coefficients are of type |A|:%
 \footnote{We use Haskell convention that infix data constructors start with
-a colon and, for a more concise typesetting, write |(:+)| instead of the Agda notation $\_$|:+|$\_$.
+a colon and, for concise typesetting, write |(:+)| instead of the Agda notation $\_$|:+|$\_$.
 %
 In the rest of the paper we also occasionally use Haskell syntax for brevity.
 }
@@ -22,7 +22,7 @@ data Poly (A : Set) : Set where
   (:+)  : Poly A -> Poly A -> Poly A
   (:×)  : Poly A -> Poly A -> Poly A {-"~~,"-}
 \end{spec}
-where |Ind| denotes the indeterminate, |Lit| denotes a constant (of type |A|), while |(:+)| and |(:×)| respectively denote addition and multiplication. A polynomial $2 x^2 + 3x + 1$ could be denoted by the following expression
+where |Ind| denotes the indeterminate, |Lit| denotes a constant (of type |A|), while |(:+)| and |(:×)| respectively denote addition and multiplication. A polynomial $2 x^2 + 3x + 1$ can be represented by the following expression
 of type |Poly ℕ|:
 \begin{spec}
  (Lit 2 :× Ind :× Ind) :+ (Lit 3 :× Ind) :+ Lit 1 {-"~~."-}
@@ -134,7 +134,7 @@ polynomial ring $R[X,Y]$ is isomorphic to $R[X][Y]$ (modulo the operation |litDi
 That is, a polynomial over base ring |A| with two indeterminates can be
 represented by |Poly (Poly A)|.
 
-To see how that works, consider the following expression:
+To understand the isomorphism, consider the following expression:
 \begin{spec}
 e : Poly (Poly ℕ)
 e = (Lit (Lit 3) :× Ind :× Lit (Ind :+ Lit 4)) :+ Lit Ind :+ Ind {-"~~."-}
@@ -221,8 +221,8 @@ sem r (suc n)  e  (t , es)  = sem r n (sem1 (ringPS r) e t) es {-"~~,"-}
 where |ringPS| delivers the |Ring (PolyN n A)| instance for all |n|:
 \begin{spec}
 ringPS : ∀ {A} → Ring A → ∀ {n} → Ring (PolyN n A)
-ringPS r zero     = r
-ringPS r (suc n)  = ringP {-"~~."-}
+ringPS r {zero}   = r
+ringPS r {suc n}  = ringP {-"~~."-}
 \end{spec}
 For |n := 2| and |3|, for example, |sem r n| expands to:
 %format t0 = "\Varid{t}_0"

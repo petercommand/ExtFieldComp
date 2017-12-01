@@ -6,17 +6,6 @@
 \section{Introduction}
 \label{sec:introduction}
 
-% It is a standard exercise in beginners' functional programming courses to
-% define a datatype for arithmetic expressions:
-% \begin{spec}
-%   data Expr a = Lit a | Expr a :+ Expr a | Expr a :× Expr a {-"~~,"-}
-% \end{spec}
-% and define a function |Expr a -> a| to evaluate such expressions, provided that it is given
-% how to perform addition and multiplication for type |a|. If we add an additional
-% constructor denoting a variable, the data structure represents univariate polynomials. In this pearl, we will play around with types such as |Expr (Expr a)|, |Expr (Expr (Expr a))|... |ExprN n a|. We will claim that they are useful --- |ExprN n a| encodes a multivariate polynomial with |n| variables, and define various operations to manipulate them. Finally, we will show how such expressions can be compiled, inductively, to assembly programs that evaluates them, and prove the correctness of compilation.
-%
-% But let us motivate first.
-
 A \emph{univariate polynomial} over a base ring $R$ is a finite sum of the form
 \[ a_nX^n+a_{n-1}X^{n-1}+\cdots+a_0, \] where $a_i\in R$ are the
 coefficients, and $X$ is called an \emph{indeterminate}.
@@ -65,7 +54,6 @@ $(a_1+a_2)+(b_1+b_2)i$, whereas the multiplication,
 $(a_1+b_1i)(a_2+b_2i)\bmod i^2+1=(a_1a_2-b_1b_2)+(a_1b_2+a_2b_1)i$.
 %
 
-%
 In addition to arithmetic in an algebraic extension field,
 manipulation of polynomial expressions also finds rich application in
 cryptography in particular.
@@ -160,17 +148,19 @@ Furthermore, with such safety-critical application we would like to
 have machine-verified proofs that the compilation and optimizations are
 correct.
 
-This pearl is our first step toward this goal.
+In attempting toward this goal, we have come up with this pearl.
 %
-A key observation on which this pearl is based is that there is an
+It is not yet practical but, we think, is neat and worth writing about.
+%
+A key observation is that there is an
 isomorphism between multivariate polynomial ring
 $R[X_1,X_2\ldots,X_m]$ and univariate polynomial ring $S[X_m]$ over
 the base ring $S=R[X_1,X_2,\ldots,X_{m-1}]$, cf.~Corollary~5.7,
 Chapter~3 of Hungerford~\cite{hungerford2003algebra}.
 %
 This allows us to define a datatype |Poly| for univariate polynomials, and
-reuse it inductively to define multivariate polynomials: an |n|-variate
-polynomial can be represented by |PolyN n| --- that is, |Poly| applied |n| times.
+reuse it inductively to define multivariate polynomials --- an |n|-variate
+polynomial can be represented by |PolyN n| (|Poly| applied |n| times).
 %
 Most operations on the polynomials can defined either in terms of the {\em fold}
 induced by |Poly|, or by induction on |n|, hence the title.

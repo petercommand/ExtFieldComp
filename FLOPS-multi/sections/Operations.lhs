@@ -10,9 +10,7 @@
 Having defined a representation for multivariate polynomials, we ought to
 demonstrate that this representation is feasible --- that we can define most of the operations we want.
 %
-Indeed we can.
-%
-Furthermore, it turns that most of them can be defined either in terms of |foldP| or by induction over the number of iterations |Poly| is applied.
+In fact, it turns that most of them can be defined either in terms of |foldP| or by induction over the number of iterations |Poly| is applied.
 
 \subsection{Rotation}
 \label{sec:rotation}
@@ -35,7 +33,8 @@ Note that both |litDist| and |rotaPoly2| apply to |PolyN n A| for all |n ≥ 2|,
 since |A| can be instantiated to a polynomial as well.
 
 Consider |PolyN 3 A|, a polynomial with (at least) three indeterminates. To
-``rotate'' the three indeterminates, that is, turn |Lit Ind| to |Ind|, |Lit (Lit Ind)| to |Lit Ind|, and |Ind| to |LitN 3 Ind|, we could do:
+``rotate'' the three indeterminates, that is, turn |LitN 2 Ind| to |Lit Ind|,
+|Lit Ind| to |Ind|, and |Ind| to |LitN 2 Ind|, we can define:
 \begin{spec}
   rotaPoly3 = fmap rotaPoly2 ∘ rotaPoly2 {-"~~,"-}
 \end{spec}
@@ -119,12 +118,12 @@ finally, |sem| performs the substitution. Again, the actual code needs more proo
 
 \subsection{Expansion}
 
-Expansion is an operation we will put specific emphasis on since it is
+Expansion is an operation we put specific emphasis on, since it is
 useful when implementing cryptosystems on microprocessors with no
 native hardware support for arithmetic operations with polynomials or
 integers of cryptographic sizes.
 %
-Let us use a very simple yet specific example for further exposition:
+Let us use a simple yet specific example for further exposition:
 %
 the polynomial expression over complex numbers
 $(3 + 2i) x^2 + (2 + i)x + 1$ can be represented by |Poly (Real ×
@@ -147,16 +146,19 @@ expressions.
 The expansion depends on the definitions of addition and
 multiplication of complex numbers.
 
-It might turn out that |Real| is represented by a fixed length of
-machine words, |Real{-"\!\!"-}={-"\!\!"-}WordN|, and |Poly WordN| can be further
+It might turn out that |Real| is represented by a fixed number of
+machine words: |Real{-"\!\!"-}={-"\!\!"-}WordN|.
+%
+As mentioned before, in cryptosystems |n| could be hundreds.
+%
+To compute the value of the polynomial, |Poly WordN| can be further
 expanded to $|(PolyN n Word)|^\Varid{n}$, this time using arithmetic
 operations defined for |Word|.
 %
 Now that each polynomial is defined over |Word|, whose arithmetic
-operation has native support from the hardware, we may compile the
-expressions, in ways discussed in the next section, into a sequence of
-operations in a lower-level programming language such as the assembly
-language.
+operations are natively supported, we may compile the expressions,
+in ways discussed in the next section, into a sequence of operations
+in assembly language.
 %
 We also note that the roles played by the indeterminates $x$ and $i$
 are of fundamental difference: $x$ might just represent the input of
@@ -169,7 +171,7 @@ throughout the whole computation.
 %
 Currently, such conversion and compilation are typically done by hand.
 %
-We would like to define expansion in this section and compilation in
+We define expansion in this section and compilation in
 the next, as well as proving their correctness.
 %
 % Furthermore, expansion and it proof of correctness should take the
@@ -223,10 +225,14 @@ For the |Ind| case, one indeterminant is expanded to |n| using |genInd|. For the
 For addition and multiplication, we let |ringVec| decide how to combine vectors
 of expressions, but specifying |((:+), (:×))| as atomic operations.
 
-The readers may raise their doubts: we have not defined much, since all the real work is done in |ringVec ringP|. Indeed, the correctness of |expand| relies on |ringVec| being well-behaved, as we shall see soon.
+The readers may raise their doubts: |expand| itself does not say much,
+and all the complex work is done in |ringVec ringP|.
+%
+Indeed, the correctness of |expand| relies on |ringVec| being well-behaved,
+as we shall see soon.
 
 \paragraph{Correctness.} Intuitively, |expand| is correct if the expanded
-polynomial evaluates to the same value as the that of the original. To
+polynomial evaluates to the same value as that of the original. To
 formally state the property, we have to properly supply all the needed ingredients. Consider |e : Poly (Vec A n)| --- a polynomial whose coefficients are vectors of length |n|. Let |r : Ring A| define arithmetic operators for |A|, and let |ringVec : RingVec n| define how arithmetic operators for elements are lifted to vectors. We say that |expand| is correct if, for all |xs : Vec A n|:
 \begin{equation}
 \begin{split}
@@ -235,7 +241,16 @@ formally state the property, we have to properly supply all the needed ingredien
 \end{split}
 \label{eq:expand-correct}
 \end{equation}
-On the lefthand side, |e| is evaluated by |sem1|, using operators supplied by |ringVec r|. The value of the single indeterminant is |xs : Vec A n|, and the result also has type |Vec A n|. On the righthand side, |e| is expanded to |Vec (PolyN n A) n|. Internally, |expand| uses |ringVec ringP| to combine vectors of expressions. Each polynomial in the vector is evaluated individually by |sem r n|. The function |toDChain| converts a vector to a descending chain. The |n| elements in |xs| thus substitutes the |n| indeterminants of the expanded polynomial.
+On the lefthand side, |e| is evaluated by |sem1|, using operators supplied by |ringVec r|.
+%
+The value of the single indeterminant is |xs : Vec A n|, and the result also has type |Vec A n|.
+%
+On the righthand side, |e| is expanded to |Vec (PolyN n A) n| (recall that
+|expand| uses |ringVec ringP| to combine vectors of expressions).
+%
+Each polynomial in the vector is then evaluated individually by |sem r n|.
+%
+The function |toDChain| converts a vector to a descending chain. The |n| elements in |xs| thus substitutes the |n| indeterminants of the expanded polynomial.
 
 Interestingly, it turns out that |expand| is correct if |ringVec| is polymorphic --- that is, the way it computes vectors out of vectors depends only on the shape of its inputs, regardless of the type and values of their elements.
 \begin{theorem} For all |n|, |e : Poly (Vec A n)|, |xs : Vec A n|,
@@ -263,7 +278,7 @@ that (abbreviating |\ e → sem r n e (toDChain xs)| to |sem'|):
 map sem' (expand ringVec n e1) `addA` map sem' (expand ringVec n e2) =
   map sem' (expand ringVec n e1 `addP` expand ringVec n e2)
 \end{spec}
-where |addA = fst (ringVec r)| perform addition on vectors of |A|'s, and |addP = fst (ringVec ringP)| on vectors of polynomials. But this is implied by the free theorem of |ringVec|. Specifically, |fst . ringVec| has type
+where |addA = fst (ringVec r)| defines addition on vectors of |A|'s, and |addP = fst (ringVec ringP)| on vectors of polynomials. But this is implied by the free theorem of |ringVec|. Specifically, |fst . ringVec| has type
 \begin{spec}
   {A : Set}  -> (A -> A -> A) × (A -> A -> A)
              -> (Vec A n -> Vec A n -> Vec A n) {-"~~."-}

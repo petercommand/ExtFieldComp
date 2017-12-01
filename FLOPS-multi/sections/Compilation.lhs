@@ -24,7 +24,7 @@ We consider a simple imaginary machine with a heap, denoted by |Heap|
 that may abstractly be seen as mapping between memory addresses |Addr|
 and machine words |Word|.
 %
-Albeit its simplicity, we believe that such a model can capture the
+Albeit its simplicity, we believe that such a model captures the
 essential aspects of a wide variety of hardware and software
 implementations.
 %
