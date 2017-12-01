@@ -9,6 +9,10 @@
 
 Having defined a representation for multivariate polynomials, we ought to
 demonstrate that this representation is feasible --- that we can define most of the operations we want.
+%
+Indeed we can.
+%
+Furthermore, it turns that most of them can be defined either in terms of |foldP| or by induction over the number of iterations |Poly| is applied.
 
 \subsection{Rotation}
 \label{sec:rotation}
@@ -53,7 +57,7 @@ rotaPolyN (suc zero)           = id
 rotaPolyN (suc (suc zero))     = rotaPoly2
 rotaPolyN (suc (suc (suc n)))  = (fmapN (suc n)) rotaPoly2 . rotaPolyN  (suc (suc n)) {-"~~."-}
 \end{spec}
-Note that in the actual Agda code we need to convince Agda that
+Note that in the actual code we need to convince Agda that
 |PolyN n (Poly A)| is the same type as |Poly (PolyN n A)| and use |subst|
 to coerce between the two types.
 %
@@ -65,8 +69,8 @@ Given |m| and |n|, |rotaOuter n m| compose |rotaPolyN n| with itself
 It will be handy in Section \ref{sec:substitution}.
 \begin{spec}
 rotaOuter : ∀ {A} (n m : ℕ) → PolyNn A → PolyNn A
-rotaOuter n zero e = e
-rotaOuter n (suc m) e = rotaOuter n m (rotaPolyN n e) {-"~~."-}
+rotaOuter n zero     e  = e
+rotaOuter n (suc m)  e  = rotaOuter n m (rotaPolyN n e) {-"~~."-}
 \end{spec}
 
 \subsection{Substitution}
@@ -75,18 +79,17 @@ rotaOuter n (suc m) e = rotaOuter n m (rotaPolyN n e) {-"~~."-}
 %format substitute1 = "\Varid{substitute}_{1}"
 %format substitute2 = "\Varid{substitute}_{2}"
 
-Substitution is another operation one would expect. Given an expression |e|,
-how do we substitute, for each occurrence of |Ind|, another expression |e'|,
-using operations we have defined? Recalling that the type of
-|sem1| can be instantiated to |PolyN 2 A → Poly A → Poly A|, we may
-lift |e| to |PolyN 2 A| by wrapping it with |Lit|, do a |rotaPoly2| to
-expose the |Ind| inside |e|, and use |sem1| to perform the
+Substitution is another operation that one would expect.
+%
+Given an expression |e|, how do we substitute, for each occurrence of |Ind|, another expression |e'|, using operations we have defined?
+%
+Recalling that the type of |sem1| can be instantiated to |PolyN 2 A → Poly A → Poly A|, we may lift |e| to |PolyN 2 A| by wrapping it with |Lit|, do a |rotaPoly2| to expose the |Ind| inside |e|, and use |sem1| to perform the
 substitution:
 \begin{spec}
 substitute1 : ∀ {A} → Poly A → Poly A → Poly A
 substitute1 e e' = sem1 ringP (rotaPoly2 (Lit e)) e' {-"~~."-}
 \end{spec}
-What about |e : Poly2 A|? We may lift it to an |PolyN 4 A|, perform two
+What about |e : Poly2 A|? We may lift it to |PolyN 4 A|, perform two
 |rotaPoly4| to expose its two indeterminates, before using |sem2|:
 \begin{spec}
 substitute2 :: ∀ {A} → Poly2 A -> Poly2 A -> Poly2 A -> Poly2 A
@@ -94,37 +97,36 @@ substitute2 e e' e'' =
   sem2 ringP (rotaPoly4 (rotaPoly4 Lit (Lit e))) (Lit e') e'' {-"~~."-}
 \end{spec}
 
-We now consider the general case with substituting the |n| indeterminates in |e : PolyNn A| for |n| expressions, each of type |PolyN n A|. Let |Vec B n| be the type of vectors (lists of fixed lengths) of length |n|.
+Consider the general case with substituting the |n| indeterminates in |e : PolyNn A| for |n| expressions, each of type |PolyN n A|.
+%
+Let |Vec B n| be the type of vectors (lists of fixed lengths) of length |n|.
 %
 A general |substitute| can be defined by:
 \begin{spec}
 substitute : ∀ {A} n -> Ring A -> PolyNn A -> Vec (PolyNn A) n -> PolyNn A
 substitute {A} n r e es =
-  sem (ringPS r {n}) n
-         (rotaOuter (n + n) n (liftPoly n (n + n) e))
-         (toDChain es) {-"~~,"-}
+  sem (ringPS r) n  (rotaOuter (n + n) n (liftPoly n (n + n) e))
+                    (toDChain es) {-"~~,"-}
 \end{spec}
-where |liftPoly n m| (where |n{-"\!"-}<={-"\!"-}m|) lifts a |PolyN n A| to |PolyN m A| by applying |Lit|;
+where |liftPoly n m| (with |n{-"\!"-}<={-"\!"-}m|) lifts a |PolyN n A| to |PolyN m A| by applying |Lit|;
 %
-|rotaOuter (n + n) n|, as defined in Section \ref{sec:rotation}, composes |rotaPoly (n+n)| with itself |n| times, thereby moving the |n| original indeterminates of |e| to outermost position;
+|rotaOuter (n + n) n|, as defined in Section \ref{sec:rotation}, composes |rotaPoly (n+n)| with itself |n| times, thereby moving the |n| original indeterminates of |e| to outermost positions;
 %
-the function |toDChain| converts a vector to a descending chain;
+the function |toDChain : ∀ {A} n -> Vec A n -> DChain A n| converts a vector to a descending chain;
 %
 %format PolyNmn = "\Varid{Poly}^{\Varid{m}+\Varid{n}}"
-finally, |sem| performs the substitution. Again, the actual Agda code needs more proof terms (to convince Agda that |n{-"\!"-}<={-"\!"-}n+n|) and type coercion (|PolyN n (PolyN m A) = PolyNmn A|), which are omitted here.
+finally, |sem| performs the substitution. Again, the actual code needs more proof terms (to convince Agda that |n{-"\!"-}<={-"\!"-}n+n|) and type coercion (between |PolyN n (PolyN m A)| and |PolyNmn A|), which are omitted here.
 
 \subsection{Expansion}
 
-Expansion is an operation we will put specific emphasis on.
-%
-As we have seen in Section~\ref{sec:introduction}, this is especially
+Expansion is an operation we will put specific emphasis on since it is
 useful when implementing cryptosystems on microprocessors with no
 native hardware support for arithmetic operations with polynomials or
 integers of cryptographic sizes.
 %
-Let us use a very simple yet specific example for further exposition.
+Let us use a very simple yet specific example for further exposition:
 %
-For example, the polynomial expression over complex numbers
+the polynomial expression over complex numbers
 $(3 + 2i) x^2 + (2 + i)x + 1$ can be represented by |Poly (Real ×
 Real)|, whose semantics is a function |(Real × Real){-"\!"-}->{-"\!"-}(Real ×
 Real)|.
@@ -170,14 +172,14 @@ Currently, such conversion and compilation are typically done by hand.
 We would like to define expansion in this section and compilation in
 the next, as well as proving their correctness.
 %
-Furthermore, expansion and it proof of correctness should take the
-arithmetic operation of its base type as parameters.
+% Furthermore, expansion and it proof of correctness should take the
+% arithmetic operation of its base type as parameters.
 %
 
 %format LitN1 = "\Varid{Lit}^{\Varid{n-1}}"
 %format x1 = "\Varid{x}_1"
 %format x2 = "\Varid{x}_2"
-In general, a univariate polynomial of |n|-vectors, |Poly (Vec A n)|, can be
+In general, a univariate polynomial over |n|-vectors, |Poly (Vec A n)|, can be
 expanded to a |n|-vector of |n|-variate polynomial, |Vec (PolyN n A) n|. To
 formally define expansion we need some helper functions. Firstly,
 |genInd n| generates a vector |Ind ∷ Lit Ind ∷ ... LitN1 Ind ∷ []|. It corresponds
@@ -186,7 +188,7 @@ to expanding |x| to |(x1 , x2)|.
 genInd : ∀ {A} n → Vec (PolyN n A) n
 genInd zero           = []
 genInd (suc zero)     = Ind ∷ []
-genInd (suc (suc n))  = Ind ∷ (map Lit (genInd (suc n))) {-"~~."-}
+genInd (suc (suc n))  = Ind ∷ map Lit (genInd (suc n)) {-"~~."-}
 \end{spec}
 
 Secondly, |liftVal : ∀ {A} n → A → PolyNn A| lifts |A| to |PolyNn A| by |n| applications of |Lit|. The definition is routine.

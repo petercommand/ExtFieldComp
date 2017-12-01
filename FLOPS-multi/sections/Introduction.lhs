@@ -133,7 +133,6 @@ typically range from a few hundreds to a few thousands of bits.
 Again using multiplication of two complex numbers as an example, we
 would need a sequence of real arithmetic expressions for implementing
 $c_1+c_2i=(a_1+b_1i)\times(a_2+b_2i)$:
-%
 \begin{enumerate}
   %
 \item $t_1\leftarrow a_1\times a_2$;
@@ -149,20 +148,19 @@ $c_1+c_2i=(a_1+b_1i)\times(a_2+b_2i)$:
 \item $c_2\leftarrow t_3+t_4$.
   %
 \end{enumerate}
+\todo{An example matching the description here?}
 %
-Today such compilation is mostly done manually by human programmers,
-sometimes even in low-level programming languages such as assembly
-languages for achieving maximal speed performance.
+It might be surprising that, with the advance of compiler technology
+today, such programs are still mostly coded and optimized manually,
+sometimes in assembly language, for maximal efficiency.
 %
 Naturally, we would like to automate this process as much as possible.
 %
-Furthermore, such a manual process is error-prone, so we would like to
-be able to prove the correctness of such compilations, especially when
-the expressions get more and more complicated in real-world
-cryptographic algorithms.
-%
+Furthermore, with such safety-critical application we would like to
+have machine-verified proofs that the compilation and optimizations are
+correct.
 
-\paragraph{From Univariate to Multivariate.}
+This pearl is our first step toward this goal.
 %
 A key observation on which this pearl is based is that there is an
 isomorphism between multivariate polynomial ring
@@ -170,19 +168,21 @@ $R[X_1,X_2\ldots,X_m]$ and univariate polynomial ring $S[X_m]$ over
 the base ring $S=R[X_1,X_2,\ldots,X_{m-1}]$, cf.~Corollary~5.7,
 Chapter~3 of Hungerford~\cite{hungerford2003algebra}.
 %
-This allows us to define a datatype for univariate polynomials, and
-reuse it inductively to define multivariate polynomials.
+This allows us to define a datatype |Poly| for univariate polynomials, and
+reuse it inductively to define multivariate polynomials: an |n|-variate
+polynomial can be represented by |PolyN n| --- that is, |Poly| applied |n| times.
 %
-Operations such as evaluation, substitution, etc., of the latter can
-also be defined inductively in terms of that of the former.
-%
-We will explore this design and its various implications in depth in
+Most operations on the polynomials can defined either in terms of the {\em fold}
+induced by |Poly|, or by induction on |n|, hence the title.
+
+We explore the use of |PolyN n| and its various implications in depth in
 Section~\ref{sec:expressions}.
 %
-Then in Section~\ref{sec:operations}, we will present the detail of
-the inductive implementation of common polynomial operations such as
-evaluation, substitution, etc.
+Then in Section~\ref{sec:operations}, we present implementations of common polynomial operations such as evaluation, substitution, etc.
 %
-In Section~\ref{sec:compilation}, we show how to compile polynomial expressions into a sequence of arithmetic expressions over the base ring, before we conclude in Section \ref{sec:conclusions}.
+We pay special attention to an operation |expand| and prove its correctness,
+since it is essential in compilation.
 %
-The functions presented in this pearl have been implemented in both Haskell and Agda~\cite{Norell:08:Towards}, and the proofs are verified in Agda. The code is available on line at \todo{URL}.
+In Section~\ref{sec:compilation}, we show how to compile a polynomial into an assembly program. We present a simple compilation, also defined in terms of fold, prove its correctness, while leaving further optimization to future work.
+%
+The formulation in this pearl have been implemented in both Haskell and Agda~\cite{Norell:08:Towards}, the latter also used to verify our proofs. The code is available on line at \todo{URL}.

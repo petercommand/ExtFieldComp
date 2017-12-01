@@ -22,7 +22,7 @@ data Poly (A : Set) : Set where
   (:+)  : Poly A -> Poly A -> Poly A
   (:×)  : Poly A -> Poly A -> Poly A {-"~~,"-}
 \end{spec}
-where |Ind| denotes the indeterminate, |Lit| denotes a constant (of type |A|), while |(:+)| and |(:×)| respectively denote addition and multiplication, with |(:×)| binding tighter than |(:+)|. A polynomial $2 x^2 + 3x + 1$ could be denoted by the following expression
+where |Ind| denotes the indeterminate, |Lit| denotes a constant (of type |A|), while |(:+)| and |(:×)| respectively denote addition and multiplication. A polynomial $2 x^2 + 3x + 1$ could be denoted by the following expression
 of type |Poly ℕ|:
 \begin{spec}
  (Lit 2 :× Ind :× Ind) :+ (Lit 3 :× Ind) :+ Lit 1 {-"~~."-}
@@ -76,19 +76,19 @@ where the literals are usually assigned a fixed type (in this example, |Int|), a
 %format e1 = "\Varid{e}_{1}"
 %format e2 = "\Varid{e}_{2}"
 
-In the categorical style outlined by Bird and de Moor~\cite{DBLP:books/daglib/0096998}, every regular datatype gives rise to a {\em fold}, or a {\em catamorphism}.
+In the categorical style outlined by Bird and de Moor~\cite{DBLP:books/daglib/0096998}, every {\em regular} datatype gives rise to a {\em fold}, also called a {\em catamorphism}.
 %
-The type |Poly| induces a fold that, as a convention, takes four arguments, each replacing one of its four constructors.
+The type |Poly| induces a fold that, conventionally, takes four arguments, each replacing one of its four constructors.
 %
 To facilitate our discussion later, we group the last two arguments together and define:
 \begin{spec}
 Ring : Set -> Set
 Ring A = (A -> A -> A) × (A -> A -> A) {-"~~."-}
 \end{spec}
-That is, |Ring A| is a pair of binary operators that defines how to perform addition and multiplication for values of type |A|.%
+The intention is that |Ring A| is a pair of binary operators that defines addition and multiplication for values of type |A|.%
 \footnote{While we do expect all the ring properties such as existence of
 additive identity, inverse, and distributivity, etc., to hold, we do not
-enforce them in this datatype.} We then define the |fold| for |Poly|:
+enforce them in this datatype.} We then define the fold for |Poly|:
 \begin{spec}
 foldP : ∀ {A B : Set} -> B -> (A -> B) -> Ring B -> Poly A -> B
 foldP x f rng                 Ind         = x
@@ -105,13 +105,10 @@ clearer to make the construction of |Ring| instances explicit.
 
 \paragraph{Evaluation.} Assuming a base type |A| for which |Ring A| is defined,
 consider evaluating a polynomial of type |Poly A|.
-% Without the presence of
-% constructor |Ind|, |Poly A| is an expresson without a variable, and evaluating
-% it is simply a matter of folding over the expression using |Ring A|.
+%
 With the presence of |Ind|, the semantics of |Poly A| should be |A → A| --- a function that takes the value of the indeterminate and returns a value.
 
-We define the following operation that lifts pointwise the addition and multiplication
-of some type |B| to |A → B|:
+We define the following operation that lifts pointwise the addition and multiplication of some type |B| to |A → B|:
 \begin{spec}
 ring→ : ∀ {A B} → Ring B → Ring (A → B)
 ring→ ((+),(×)) = (  \ f g x -> f x + g x,
@@ -199,7 +196,7 @@ multivariate polynomial $R[X_1,X_2\ldots,X_m]$ is isomorphic to
 univariate polynomial ring $S[X_m]$ over the base ring
 $S=R[X_1,X_2,\ldots,X_{m-1}]$ (modulo the distribution law of |Lit|).
 %
-That is, a polynomial over |A| with |n| indeterminates can be represented by |PolyN n A|, where
+That is, a polynomial over |A| with |n| indeterminates can be represented by |PolyN n A|, defined by
 \begin{spec}
 PolyN zero     A = A
 PolyN (suc n)  A = Poly (PolyN n A) {-"~~."-}
@@ -213,7 +210,7 @@ DChain : Set -> ℕ -> Set
 DChain A zero     = ⊤
 DChain A (suc n)  = PolyNn A × DChain A n {-"~~,"-}
 \end{spec}
-that is, |DChain A n|, standing for a ``descending chain'', is a list of |n| elements, with the first having type |PolyN (n-1) A|, the second |PolyN (n-2) A|, and so on.
+that is, |DChain A n| (the name standing for a ``descending chain'') is a list of |n| elements, with the first having type |PolyN (n-1) A|, the second |PolyN (n-2) A|, and so on.
 
 Given an implementation of |Ring A|, the semantics of |PolyN n A| is a function |DChain A n -> A|, defined inductively as below (where |tt| is the only term having type |⊤|):
 \begin{spec}
