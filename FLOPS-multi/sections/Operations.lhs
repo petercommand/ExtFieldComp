@@ -217,8 +217,8 @@ rComplex ((+),(×)) = (addC , mulC)
 %          (x1 × x2 - y1 × y2) ∷ (x1 × y2 + x2 × y1) ∷ []{-"~~."-}
 Expansion can now be defined by:
 \begin{spec}
-expand : ∀ {A n} → RingVec n → Poly (Vec A n) → Vec (PolyN n A) n
-expand ringVec = foldP (genInd n) (map (liftVal n)) (ringVec ringP) {-"~~."-}
+expand : ∀ {A} → RingVec n → Poly (Vec A n) → Vec (PolyN n A) n
+expand n ringVec = foldP (genInd n) (map (liftVal n)) (ringVec ringP) {-"~~."-}
 \end{spec}
 For the |Ind| case, one indeterminant is expanded to |n| using |genInd|. For the
 |Lit xs| case, |xs : Vec A n| can be lifted to |Vec (PolyN n A) n| by |map (liftVal n)|.

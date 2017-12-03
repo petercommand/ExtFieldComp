@@ -65,11 +65,11 @@ indeterminants are already computed and stored in the heap, the locations of whi
 compile :  ∀ n → Vec Addr n → PolyNn Word → SSA (Addr × Ins)
 compile zero     addr        e = compile0 e
 compile (suc n)  (x ∷ addr)  e =
-    foldE (return (x, [])) (compile n addr) ringSSA e {-"~~,"-}
+    foldP (return (x, [])) (compile n addr) ringSSA e {-"~~,"-}
 \end{spec}
 In the clause for |suc n|, |x| is the address storing the value for the outermost indeterminant. To compile |Ind|, we simply return this address without generating any code. To compile |Lit e| where |e : PolyNn Word|, we inductively call |compile n addr|. The generated code is combined by |ringSSA|, defined by
 \begin{spec}
-ringSSA : Ring (SSA (Addr × Ins A))
+ringSSA : Ring (SSA (Addr × Ins))
 ringSSA = (biOp Add, biOp Mul) {-"~~,"-}
 \end{spec}
 where |biOp op p1 p2| runs |p1| and |p2| to obtain the compiled code, allocate
@@ -85,7 +85,7 @@ biOp op m1 m2 =  m1 >>= \ (addr1 , ins1) →
 
 The following function compiles a polynomial, runs the program, and retrieves the resulting value from the heap:
 \begin{spec}
-compileRun : ∀ {A : Set} {{_ : Num A}} {n : ℕ}
+compileRun : ∀ {A : Set} {n : ℕ}
              → Vec Addr n → Addr → PolyN A n → Heap A → A
 compileRun rs r₀ e h =
     let  ((r , ins) , _) = runSSA r₀ (compile _ rs e)
