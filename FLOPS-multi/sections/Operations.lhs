@@ -104,8 +104,8 @@ A general |substitute| can be defined by:
 \begin{spec}
 substitute : ∀ {A} n -> Ring A -> PolyNn A -> Vec (PolyNn A) n -> PolyNn A
 substitute {A} n r e es =
-  sem (ringPS r) n  (rotaOuter (n + n) n (liftPoly n (n + n) e))
-                    (toDChain es) {-"~~,"-}
+  sem (ringPS r n) n  (rotaOuter (n + n) n (liftPoly n (n + n) e))
+                      (toDChain es) {-"~~,"-}
 \end{spec}
 where |liftPoly n m| (with |n{-"\!"-}<={-"\!"-}m|) lifts a |PolyN n A| to |PolyN m A| by applying |Lit|;
 %
@@ -217,8 +217,8 @@ rComplex ((+),(×)) = (addC , mulC)
 %          (x1 × x2 - y1 × y2) ∷ (x1 × y2 + x2 × y1) ∷ []{-"~~."-}
 Expansion can now be defined by:
 \begin{spec}
-expand : ∀ {A} → RingVec n → Poly (Vec A n) → Vec (PolyN n A) n
-expand n ringVec = foldP (genInd n) (map (liftVal n)) (ringVec ringP) {-"~~."-}
+expand : ∀ {A} n → Ring A → RingVec n → Poly (Vec A n) → Vec (PolyN n A) n
+expand n ringA ringVec = foldP (genInd n) (map (liftVal n)) (ringVec (ringP* ringA n)) {-"~~."-}
 \end{spec}
 For the |Ind| case, one indeterminant is expanded to |n| using |genInd|. For the
 |Lit xs| case, |xs : Vec A n| can be lifted to |Vec (PolyN n A) n| by |map (liftVal n)|.

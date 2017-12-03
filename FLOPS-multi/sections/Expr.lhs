@@ -220,9 +220,9 @@ sem r (suc n)  e  (t , es)  = sem r n (sem1 (ringPS r) e t) es {-"~~,"-}
 \end{spec}
 where |ringPS| delivers the |Ring (PolyN n A)| instance for all |n|:
 \begin{spec}
-ringPS : ∀ {A} → Ring A → ∀ {n} → Ring (PolyN n A)
-ringPS r {zero}   = r
-ringPS r {suc n}  = ringP {-"~~."-}
+ringPS : ∀ {A} → Ring A → ∀ n → Ring (PolyN n A)
+ringPS r zero   = r
+ringPS r (suc n)  = ringP {-"~~."-}
 \end{spec}
 For |n := 2| and |3|, for example, |sem r n| expands to:
 %format t0 = "\Varid{t}_0"
@@ -235,7 +235,7 @@ For |n := 2| and |3|, for example, |sem r n| expands to:
 sem r 2 e (t1, t0, tt)      = sem1 r (sem1 ringP e t1) t0 {-"~~,"-}
 sem r 3 e (t2, t1, t0, tt)  = sem1 r (sem1 ringP (sem1 ringP e t2) t1) t0 {-"~~."-}
 \end{spec}
-Essentially, |sem r n| is |n|-fold composition of |sem1 (ringPS r)|,
+Essentially, |sem r n| is |n|-fold composition of |sem1 (ringPS r n)|,
 each interpreting one level of the given expression.
 
 % \vspace{1cm}
