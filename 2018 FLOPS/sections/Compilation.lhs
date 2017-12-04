@@ -7,20 +7,18 @@
 \section{Compiling Polynominal}
 \label{sec:compilation}
 
-We finally come to compilation of potentially complicated polynomial
-expressions.
+A potentially complex polynomial can be expanded, in several passes,
+to a vector of polynomial over |Word|, which can be compiled separately.
 %
-As we have seen in Section~\ref{sec:introduction} and the previous
-section, such compilation is useful for software implementation of
-cryptosystems on microprocessors with no native hardware support for
-the underlying arithmetic operations.
+As we have mentioned, such compilation is useful for software
+implementation cryptosystems.
 %
 Furthermore, even for hardware implementation, such compilation can be
 useful, as we can break down a complicated polynomial expression into
 a sequence of simpler arithmetic operations in a smaller algebraic
 structure, reducing the design complexity.
 
-We consider a simple imaginary machine with a heap, denoted by |Heap|
+We consider a simple imaginary machine with a heap, denoted by |Heap|,
 that may abstractly be seen as mapping between memory addresses |Addr|
 and machine words |Word|.
 %
@@ -45,10 +43,10 @@ runIns : Heap → Ins → Heap {-"~~."-}
 
 To compile a program we employ a monad |SSA|, which support an operation |alloc : SSA Addr| that returns the address of an unused cell in the heap.
 %
-As a naive approach, |SSA| can be implemented by a state monad that keeps a counter of the highest address that is allocated, while |alloc| returns the current value of the counter before incrementing it.
+A naive approach is to implement |SSA| by a state monad that keeps a counter of the highest address that is allocated, while |alloc| returns the current value of the counter before incrementing it --- register allocation can be performed in a separate pass.
 %
 To run a |SSA| monad we use a function |runSSA : ∀ {A St} → St →
-SSA St A → (A × St)| that takes a state |St| and yields a pair with the
+SSA St A → (A × St)| that takes a state |St| and yields a pair containing the
 result and the new state.
 
 Compilation of a polynomial yields |SSA (Addr × Ins)|, where the second component of the pair is an assembly program, and the first component is the address where the program, once run, stores the value of the polynomial.
@@ -63,10 +61,17 @@ To compile a polynomial of type |PolyNn Word|, we assume that the value of the |
 indeterminants are already computed and stored in the heap, the locations of which are stored in a vector of |n| addresses.
 \begin{spec}
 compile :  ∀ n → Vec Addr n → PolyNn Word → SSA (Addr × Ins)
-compile zero     addr        e = compile0 e
-compile (suc n)  (x ∷ addr)  e =
-    foldP (return (x, [])) (compile n addr) ringSSA e {-"~~,"-}
+compile zero     addr        = compile0
+compile (suc n)  (x ∷ addr)  = foldP (return (x, [])) (compile n addr) ringSSA {-"~~."-}
 \end{spec}
+%format p1 = "\Varid{p}_1"
+%format p2 = "\Varid{p}_2"
+%format m1 = "\Varid{m}_1"
+%format m2 = "\Varid{m}_2"
+%format addr1 = "\Varid{addr}_1"
+%format addr2 = "\Varid{addr}_2"
+%format ins1 = "\Varid{ins}_1"
+%format ins2 = "\Varid{ins}_2"
 In the clause for |suc n|, |x| is the address storing the value for the outermost indeterminant. To compile |Ind|, we simply return this address without generating any code. To compile |Lit e| where |e : PolyNn Word|, we inductively call |compile n addr|. The generated code is combined by |ringSSA|, defined by
 \begin{spec}
 ringSSA : Ring (SSA (Addr × Ins))
@@ -78,21 +83,19 @@ a new address |dest|, before generating a new instruction |op dest addr1 addr2|:
 biOp  : (Addr → Addr → Addr → TAC)
       → SSA (Addr × Ins) → SSA (Addr × Ins) → SSA (Addr × Ins)
 biOp op m1 m2 =  m1 >>= \ (addr1 , ins1) →
-                 m2 >>= \ (addr2 , ins2) →
-                 alloc >>= \ dest →
+                 m2 >>= \ (addr2 , ins2) → alloc >>= \ dest →
                  return (dest , ins1 ++ ins2 ++ (op dest addr1 addr2 ∷ [])) {-"~~."-}
 \end{spec}
 
 The following function compiles a polynomial, runs the program, and retrieves the resulting value from the heap:
 \begin{spec}
-compileRun : ∀ {A : Set} {n : ℕ}
-             → Vec Addr n → Addr → PolyN A n → Heap A → A
+compileRun : ∀ {n} → Vec Addr n → Addr → PolyNn Word → Heap → Word
 compileRun rs r₀ e h =
     let  ((r , ins) , _) = runSSA r₀ (compile _ rs e)
     in   runIns h ins !! r {-"~~."-}
 \end{spec}
 
-\paragraph{Correctness} Given a polynomial |e|, by correctness of compilation we intuitively mean that the compiled program computes the value which |e| would be evaluated to.
+\paragraph{Correctness} Given a polynomial |e|, by correctness we intuitively mean that the compiled program computes the value which |e| would be evaluated to.
 %
 A formal statement of correctness is complicated by the fact that |e : PolyNn A| expects, as arguments, |n| polynomials arranged as a descending chain, each of them expects arguments as well, and |ins| expects their values to be stored in the heap.
 

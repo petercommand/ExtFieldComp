@@ -27,7 +27,14 @@ of type |Poly ℕ|:
 \begin{spec}
  (Lit 2 :× Ind :× Ind) :+ (Lit 3 :× Ind) :+ Lit 1 {-"~~."-}
 \end{spec}
-Notice that the type parameter |A| is abstracted over the type of coefficients. This allows us to represent polynomials whose coefficient are of complex types --- in particular, polynomials whose coefficients are themselves polynomials. Do not confuse this with the more conventional representation of arithmetic expressions:
+Notice that the type parameter |A| is abstracted over the type of coefficients.
+%
+This allows us to represent polynomials whose coefficients have non-simple
+types --- in particular, polynomials whose coefficients are themselves
+polynomials.
+%
+Do not confuse this with the more conventional representation of arithmetic
+expressions:
 \begin{spec}
 data Expr A = Var A | Lit Int | Expr A :+ Expr A | Expr A :× Expr A {-"~~,"-}
 \end{spec}
@@ -91,8 +98,8 @@ additive identity, inverse, and distributivity, etc., to hold, we do not
 enforce them in this datatype.} We then define the fold for |Poly|:
 \begin{spec}
 foldP : ∀ {A B : Set} -> B -> (A -> B) -> Ring B -> Poly A -> B
-foldP x f rng                 Ind         = x
-foldP x f rng                 (Lit y)     = f y
+foldP x f ((oplus),(otimes))  Ind         = x
+foldP x f ((oplus),(otimes))  (Lit y)     = f y
 foldP x f ((oplus),(otimes))  (e1 :+ e2)  =  foldP x f ((oplus),(otimes)) e1 oplus
                                              foldP x f ((oplus),(otimes)) e2
 foldP x f ((oplus),(otimes))  (e1 :× e2)  =  foldP x f ((oplus),(otimes)) e1 otimes
@@ -139,8 +146,8 @@ To understand the isomorphism, consider the following expression:
 e : Poly (Poly ℕ)
 e = (Lit (Lit 3) :× Ind :× Lit (Ind :+ Lit 4)) :+ Lit Ind :+ Ind {-"~~."-}
 \end{spec}
-Note that |Lit| in the first level takes |Poly ℕ| as arguments, thus to
-represent a literal |3| we have to write |Lit (Lit 3)|. To evaluate |e| using
+Note that to represent a literal |3|, we have to write |Lit (Lit 3)|, since
+the first |Lit| takes a |Poly ℕ| as its argument. To evaluate |e| using
 |sem1|, we have to define |Ring (Poly ℕ)|. A natural choice is to connect
 two expressions using corresponding constructors:
 \begin{spec}
@@ -173,7 +180,7 @@ During evaluation, |Ind| can be instantiated to an expression |arg| of type |Pol
 %
 If |arg| contains |Ind|, it refers to the next indeterminate.
 
-What about subexpressions like |Lit (Ind :+ Lit 4)|?
+What about expressions like |Lit (Ind :+ Lit 4)|?
 %
 One can see that its semantics is the same as |Lit Ind :+ Lit (Lit 4)|, the expression we get by pushing |Lit| to the leaves.
 %
@@ -210,9 +217,9 @@ DChain : Set -> ℕ -> Set
 DChain A zero     = ⊤
 DChain A (suc n)  = PolyNn A × DChain A n {-"~~,"-}
 \end{spec}
-that is, |DChain A n| (the name standing for a ``descending chain'') is a list of |n| elements, with the first having type |PolyN (n-1) A|, the second |PolyN (n-2) A|, and so on.
+that is, |DChain A n| (the name standing for a ``descending chain'') is a list of |n| elements, with the first having type |PolyN (n-1) A|, the second |PolyN (n-2) A|, and so on. The type |⊤| denotes the ``unit'' type, inhabited by exactly one term |tt|.
 
-Given an implementation of |Ring A|, the semantics of |PolyN n A| is a function |DChain A n -> A|, defined inductively as below (where |tt| is the only term having type |⊤|):
+Given an implementation of |Ring A|, the semantics of |PolyN n A| is a function |DChain A n -> A|, defined inductively as below:
 \begin{spec}
 sem : ∀ {A} -> Ring A -> (n : ℕ) -> PolyNn A -> DChain A n -> A
 sem r zero     x  tt        = x
@@ -232,10 +239,12 @@ For |n := 2| and |3|, for example, |sem r n| expands to:
 %format t2 = "\Varid{t}_2"
 %format t2, = "\Varid{t}_2,"
 \begin{spec}
-sem r 2 e (t1, t0, tt)      = sem1 r (sem1 ringP e t1) t0 {-"~~,"-}
-sem r 3 e (t2, t1, t0, tt)  = sem1 r (sem1 ringP (sem1 ringP e t2) t1) t0 {-"~~."-}
+sem r 2 e (t1, t0, tt)      = sem1 r (sem1 ringP e t1) t0
+                            = (sem1 r . sem1 ringP e) t1 t0{-"~~,"-}
+sem r 3 e (t2, t1, t0, tt)  = sem1 r (sem1 ringP (sem1 ringP e t2) t1) t0
+                            = (sem1 r . sem1 ringP . sem1 ringP e) t2 t1 t0 {-"~~."-}
 \end{spec}
-Essentially, |sem r n| is |n|-fold composition of |sem1 (ringPS r n)|,
+Essentially, |sem r n| is |n|-fold composition of |sem1 (ringPS r _)|,
 each interpreting one level of the given expression.
 
 % \vspace{1cm}

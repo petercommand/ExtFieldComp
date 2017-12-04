@@ -1,4 +1,4 @@
-\documentclass{llncs}
+\documentclass[fleqn]{llncs}
 
 %include agda.fmt
 %include Formatting.fmt
@@ -18,6 +18,7 @@
 \let\endproof\relax
 
 \usepackage{amsmath,amsthm,xspace}
+\usepackage{url}
 
 \input{Preamble}
 \input{macros}

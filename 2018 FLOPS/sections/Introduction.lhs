@@ -79,9 +79,8 @@ using polynomial expressions over finite fields or
 $\mathbb Z/n\mathbb Z$.
 %
 
-This pearl is initially motivated by our research in cryptography.
-%
-On the one hand, we often have to deal with multivariate polynomials
+This pearl is initially motivated by our research in cryptography,
+where we often have to deal with multivariate polynomials
 over various base rings, as exemplified above.
 %
 % Complex number is just one example (todo: what else?). On the other hand, for
@@ -110,8 +109,8 @@ over various base rings, as exemplified above.
 %
 %
 %
-On the other hand, we also need to compile a polynomial expression
-into in a sequence of arithmetic expressions over its base ring.
+We also need to compile a polynomial expression
+into a sequence of arithmetic expressions over its base ring.
 %
 This is useful for, e.g., software implementation of cryptosystems on
 microprocessors with no native hardware support for arithmetic
@@ -122,22 +121,36 @@ Again using multiplication of two complex numbers as an example, we
 would need a sequence of real arithmetic expressions for implementing
 $z=z_r+iz_i=(x_r+ix_i)\times(y_r+iy_i)=xy$:
 %
-\begin{enumerate}
-  %
-\item $t_1\leftarrow x_r\times y_r$;
-  %
-\item $t_2\leftarrow x_i\times y_i$;
-  %
-\item $t_3\leftarrow x_r\times y_i$;
-  %
-\item $t_4\leftarrow x_i\times y_r$;
-  %
-\item $z_r\leftarrow t_1-t_2$;
-  %
-\item $z_i\leftarrow t_3+t_4$.
-  %
-\end{enumerate}
+% \begin{enumerate}
+%   %
+% \item $t_1\leftarrow x_r\times y_r$;
+%   %
+% \item $t_2\leftarrow x_i\times y_i$;
+%   %
+% \item $t_3\leftarrow x_r\times y_i$;
+%   %
+% \item $t_4\leftarrow x_i\times y_r$;
+%   %
+% \item $z_r\leftarrow t_1-t_2$;
+%   %
+% \item $z_i\leftarrow t_3+t_4$.
+%   %
+% \end{enumerate}
 %
+\begin{align*}
+t_1 &\leftarrow x_r\times y_r ; \\
+    %
+t_2 &\leftarrow x_i\times y_i ; \\
+    %
+t_3 &\leftarrow x_r\times y_i ; \\
+    %
+t_4 &\leftarrow x_i\times y_r ; \\
+    %
+z_r &\leftarrow t_1-t_2 ; \\
+    %
+z_i &\leftarrow t_3+t_4 \mbox{~~.}
+    %
+\end{align*}
 Furthermore, we would like to have a precision that exceeds what our
 hardware can natively support.
 %
@@ -163,24 +176,41 @@ say,
 $t_1=t_1^{(0)}+Rt_1^{(1)}+R^2t_1^{(2)}+R^3t_1^{(3)}=(x_r^{(0)}+Rx_r^{(1)})\times(y_r^{(0)}+Ry_r^{(1)})=x_r\times
 y_r$ as follows.
 %
-\begin{enumerate}
-  %
-\item $(t_1^{(0)},s_1^{(1)})\leftarrow x_r^{(0)}\times y_r^{(0)}$; // $t_1^{(0)}+Rs_1^{(1)}$
-  %
-\item $(s_2^{(0)},s_2^{(1)})\leftarrow x_r^{(0)}\times y_r^{(1)}$; // $Rs_2^{(0)}+R^2s_2^{(1)}$
-  %
-\item $(s_3^{(0)},s_3^{(1)})\leftarrow x_r^{(1)}\times y_r^{(0)}$; // $Rs_3^{(0)}+R^2s_3^{(1)}$
-  %
-\item $(s_4^{(0)},s_4^{(1)})\leftarrow x_r^{(1)}\times y_r^{(1)}$; // $R^2s_4^{(0)}+R^3s_4^{(1)}$
-  %
-\item $(t_1^{(1)},s_5^{(1)})\leftarrow s_1^{(1)}+s_2^{(0)}+s_3^{(0)}$; // $Rt_1^{(1)}+R^2s_5^{(1)}$
-  %
-\item $(t_1^{(2)},s_6^{(1)})\leftarrow s_2^{(1)}+s_3^{(1)}+s_4^{(0)}+s_5^{(1)}$; // $R^2t_1^{(2)}+R^3s_6^{(1)}$
-  %
-\item $(t_1^{(3)},\_)\leftarrow s_4^{(1)}+s_6^{(1)}$; // $R^3t_1^{(3)}$
-  %
-\end{enumerate}
+% \begin{enumerate}
+%   %
+% \item $(t_1^{(0)},s_1^{(1)})\leftarrow x_r^{(0)}\times y_r^{(0)}$; // $t_1^{(0)}+Rs_1^{(1)}$
+%   %
+% \item $(s_2^{(0)},s_2^{(1)})\leftarrow x_r^{(0)}\times y_r^{(1)}$; // $Rs_2^{(0)}+R^2s_2^{(1)}$
+%   %
+% \item $(s_3^{(0)},s_3^{(1)})\leftarrow x_r^{(1)}\times y_r^{(0)}$; // $Rs_3^{(0)}+R^2s_3^{(1)}$
+%   %
+% \item $(s_4^{(0)},s_4^{(1)})\leftarrow x_r^{(1)}\times y_r^{(1)}$; // $R^2s_4^{(0)}+R^3s_4^{(1)}$
+%   %
+% \item $(t_1^{(1)},s_5^{(1)})\leftarrow s_1^{(1)}+s_2^{(0)}+s_3^{(0)}$; // $Rt_1^{(1)}+R^2s_5^{(1)}$
+%   %
+% \item $(t_1^{(2)},s_6^{(1)})\leftarrow s_2^{(1)}+s_3^{(1)}+s_4^{(0)}+s_5^{(1)}$; // $R^2t_1^{(2)}+R^3s_6^{(1)}$
+%   %
+% \item $(t_1^{(3)},\_)\leftarrow s_4^{(1)}+s_6^{(1)}$; // $R^3t_1^{(3)}$
+%   %
+% \end{enumerate}
 %
+\begin{align*}
+(t_1^{(0)},s_1^{(1)}) &\leftarrow x_r^{(0)}\times y_r^{(0)}; &&// t_1^{(0)}+Rs_1^{(1)} \\
+    %
+(s_2^{(0)},s_2^{(1)}) &\leftarrow x_r^{(0)}\times y_r^{(1)}; &&// Rs_2^{(0)}+R^2s_2^{(1)} \\
+    %
+(s_3^{(0)},s_3^{(1)}) &\leftarrow x_r^{(1)}\times y_r^{(0)}; &&// Rs_3^{(0)}+R^2s_3^{(1)} \\
+    %
+(s_4^{(0)},s_4^{(1)}) & \leftarrow x_r^{(1)}\times y_r^{(1)}; &&// R^2s_4^{(0)}+R^3s_4^{(1)} \\
+%
+(t_1^{(1)},s_5^{(1)}) & \leftarrow s_1^{(1)}+s_2^{(0)}+s_3^{(0)}; &&// Rt_1^{(1)}+R^2s_5^{(1)} \\
+%
+(t_1^{(2)},s_6^{(1)}) & \leftarrow s_2^{(1)}+s_3^{(1)}+s_4^{(0)}+s_5^{(1)}; &&// R^2t_1^{(2)}+R^3s_6^{(1)} \\
+%
+(t_1^{(3)},\_) & \leftarrow s_4^{(1)}+s_6^{(1)}\mbox{~~.} &&// R^3t_1^{(3)}
+%
+\end{align*}
+
 It might be surprising that, with the advance of compiler technology
 today, such programs are still mostly coded and optimized manually,
 sometimes in assembly language, for maximal efficiency.
@@ -218,4 +248,4 @@ since it is essential in compilation.
 %
 In Section~\ref{sec:compilation}, we show how to compile a polynomial into an assembly program. We present a simple compilation, also defined in terms of fold, prove its correctness, while leaving further optimization to future work.
 %
-The formulation in this pearl have been implemented in both Haskell and Agda~\cite{Norell:08:Towards}, the latter also used to verify our proofs. The code is available on line at \todo{URL}.
+The formulation in this pearl have been implemented in both Haskell and Agda~\cite{Norell:08:Towards}, the latter also used to verify our proofs. The code is available on line at \url{https://github.com/petercommand/ExtFieldComp}.
