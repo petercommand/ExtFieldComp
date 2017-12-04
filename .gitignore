@@ -1,1 +1,41 @@
 *.agdai
+
+\.DS_Store
+
+*.log
+
+*.aux
+
+*.bbl
+
+*.blg
+
+*.dvi
+
+*.ptb
+
+
+2017\ PolyRing/On Paper/proofs\.pdf
+
+*.toc
+
+*.snm
+
+*.out
+
+*.nav
+
+
+2018\ FLOPS/main-flops\.pdf
+
+2018\ FLOPS/main-flops\.tex
+
+2018\ FLOPS/sections/Compilation\.tex
+
+2018\ FLOPS/sections/Conclusions\.tex
+
+2018\ FLOPS/sections/Expr\.tex
+
+2018\ FLOPS/sections/Introduction\.tex
+
+2018\ FLOPS/sections/Operations\.tex

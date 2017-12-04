@@ -1,0 +1,73 @@
+%if not lhs2tex_Formatting_fmt_read
+%let lhs2tex_Formatting_fmt_read = True
+
+%if style /= newcode
+\ReadOnlyOnce{Formatting.fmt}%
+\makeatletter
+
+\let\Varid\mathsf
+\let\Conid\mathsf
+%%subst keyword a        = "\keyw{" a "}"
+%%subst numeral a        = "\con{" a "}"
+%%subst string  a        = "\con{\text{\tt \char34 " a "\char34}}"
+%%subst char    a        = "\con{\text{\tt ''" a "''}}"
+
+%%\colorlet{identifier}{blue!45!black}
+%%\colorlet{constructor}{green!45!black}
+%%\colorlet{keyword}{red!40!black}
+%%\colorlet{darkgreen}{green!30!black}
+
+%%\newcommand{\keyw}[1]{{\color{keyword}\textsf{\textbf{#1}}}}
+\newcommand{\ty}[1]{\Conid{#1}}
+\newcommand{\con}[1]{\Conid{#1}}
+\newcommand{\id}[1]{\Varid{#1}}
+\newcommand{\cl}[1]{\Varid{#1}}
+\newcommand{\opsym}[1]{\mathrel{#1}}
+
+%%\newcommand\Keyword[1]{\textbf{\textsf{#1}}}
+\newcommand\Hide{\mathbin{\downarrow}}
+\newcommand\Reveal{\mathbin{\uparrow}}
+
+%format <=> = "\mathrel{\equiv}"
+%format <== = "\mathrel{\Leftarrow}"
+%format ==> = "\mathrel{\Rightarrow}"
+
+ %%format [] = "\lbrack\,\rbrack"
+
+%format :+ = "\mathbin{:\!\!+}"
+%format :× = "\mathbin{:\!\!\times}"
+%format × = "\times"
+%format → = "\rightarrow"
+%format ∀ = "\forall"
+%format ℕ = "\mathbb{N}"
+%format ⊤ = "\top"
+
+%format ringFn = "\Varid{ring}_{\rightarrow}"
+%format semantics1 = "\Varid{eval}_{1}"
+%format semantics2 = "\Varid{eval}_{2}"
+%format semantics = "\Varid{eval}"
+%format ExprN (n) = "\Varid{Expr}^{" n "}"
+%format LitN (n) = "\Varid{Lit}^{" n "}"
+%format ExprNn = "\Varid{Expr}^{\Varid{n}}"
+%format Expr2 = "\Varid{Expr}^{2}"
+%format ringE1 = "\Varid{ringE}_{1}"
+%format ringES = "\Varid{ringE}^{\star}"
+%format rotaExpr2 = "\Varid{rotaExpr}_{2}"
+%format rotaExpr3 = "\Varid{rotaExpr}_{3}"
+%format rotaExpr4 = "\Varid{rotaExpr}_{4}"
+%format (fmapN (n)) = "\Varid{fmap}^{" n "}"
+%format Set1 = "\Varid{Set}_{1}"
+%format Real = "{\mathbb R}"
+
+ %%format . = "\!\cdot\!"
+%format ∘ = "\!\cdot\!"
+%format . = "\cdot"
+%format ∷ = "\mathbin{::}"
+
+\def\commentbegin{\quad\{\ }
+\def\commentend{\}}
+
+\makeatother
+\EndFmtInput
+%endif
+%endif
