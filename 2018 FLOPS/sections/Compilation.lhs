@@ -1,6 +1,4 @@
- %%include lhs2TeX.fmt
 %include agda.fmt
- %%include polycode.fmt
 %include Formatting.fmt
 
 

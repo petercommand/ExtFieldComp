@@ -1,6 +1,4 @@
- %%include lhs2TeX.fmt
 %include agda.fmt
- %%include polycode.fmt
 %include Formatting.fmt
 
 \section{Univariate and Multivariate Polynomials}
@@ -23,7 +21,7 @@ data Poly (A : Set) : Set where
   (:×)  : Poly A -> Poly A -> Poly A {-"~~,"-}
 \end{spec}
 where |Ind| denotes the indeterminate, |Lit| denotes a constant (of type |A|), while |(:+)| and |(:×)| respectively denote addition and multiplication. A polynomial $2 x^2 + 3x + 1$ can be represented by the following expression
-of type |Poly ℕ|:
+of type |Poly ℤ|:
 \begin{spec}
  (Lit 2 :× Ind :× Ind) :+ (Lit 3 :× Ind) :+ Lit 1 {-"~~."-}
 \end{spec}
@@ -143,12 +141,12 @@ represented by |Poly (Poly A)|.
 
 To understand the isomorphism, consider the following expression:
 \begin{spec}
-e : Poly (Poly ℕ)
+e : Poly (Poly ℤ)
 e = (Lit (Lit 3) :× Ind :× Lit (Ind :+ Lit 4)) :+ Lit Ind :+ Ind {-"~~."-}
 \end{spec}
 Note that to represent a literal |3|, we have to write |Lit (Lit 3)|, since
-the first |Lit| takes a |Poly ℕ| as its argument. To evaluate |e| using
-|sem1|, we have to define |Ring (Poly ℕ)|. A natural choice is to connect
+the first |Lit| takes a |Poly ℤ| as its argument. To evaluate |e| using
+|sem1|, we have to define |Ring (Poly ℤ)|. A natural choice is to connect
 two expressions using corresponding constructors:
 \begin{spec}
 ringP  : ∀ {A} → Ring (Poly A)
@@ -157,13 +155,13 @@ ringP  = ((:+), (:×)) {-"~~."-}
 With |ringP| defined, |sem1 ringP e| has type |Poly A → Poly A|.
 Evaluating, for example |sem1 ringP e (Ind :+ Lit 1)|, yields
 \begin{spec}
-e' : Poly ℕ
+e' : Poly ℤ
 e' = (Lit 3 :× (Ind :+ Lit 1) :× (Ind :+ Lit 4)) :+ Ind :+ (Ind :+ Lit 1) {-"~~."-}
 \end{spec}
 Note that |Lit Ind| in |e| is replaced by the argument |Ind :+ Lit 1|.
 Furthermore, one layer of |Lit| is removed, thus both |Lit 3| and |Ind :+ Lit 4| are exposed to the outermost level.
 %
-The expression |e'| may then be evaluated by |sem1 rngℕ|, where |rngℕ : Ring ℕ|.
+The expression |e'| may then be evaluated by |sem1 rngℤ|, where |rngℤ : Ring ℤ|.
 %
 The result is a natural number.
 %
@@ -173,10 +171,10 @@ sem2 : ∀ {A} → Ring A → Poly (Poly A) → Poly A → A → A
 sem2 r e2 e1 x = sem1 r (sem1 ringP e2 e1) x {-"~~."-}
 \end{spec}
 
-This is how |Poly (Poly ℕ)| simulates bivariate polynomials: the two
+This is how |Poly (Poly ℤ)| simulates bivariate polynomials: the two
 indeterminates are respectively represented by |Ind| and |Lit Ind|.
 %
-During evaluation, |Ind| can be instantiated to an expression |arg| of type |Poly ℕ|, while |Lit Ind| can be instantiated to a |ℕ|.
+During evaluation, |Ind| can be instantiated to an expression |arg| of type |Poly ℤ|, while |Lit Ind| can be instantiated to a |ℤ|.
 %
 If |arg| contains |Ind|, it refers to the next indeterminate.
 

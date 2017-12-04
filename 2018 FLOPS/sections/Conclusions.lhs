@@ -32,7 +32,7 @@ We note that the current expansion formula is provided by the
 programmer.
 %
 For example, in order to expand a complex polynomial expression into
-two real ones, the programmer needs to provide the formula
+two real ones, the programmer needs to provide (in a |RingVec|) the formula
 $(a_1+b_1i)(a_2+b_2i)\bmod i^2+1=(a_1a_2-b_1b_2)+(a_1b_2+a_2b_1)i$.
 %
 We can see that the divisor polynomial of the modular relationship can
