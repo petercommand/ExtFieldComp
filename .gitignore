@@ -1,7 +1,5 @@
 *.agdai
 
-2017_PolyRing/\.DS_Store
-
 \.DS_Store
 
 *.log
@@ -16,30 +14,28 @@
 
 *.ptb
 
-FLOPS/exf-flops\.pdf
 
-FLOPS-multi/main-flops\.pdf
-FLOPS-multi/main-flops\.tex
-FLOPS-multi/sections/Introduction\.tex
-FLOPS-multi/sections/Datatype\.tex
-FLOPS-multi/sections/Expr\.tex
-
-2017_PolyRing/On Paper/proofs\.pdf
-
-FLOPS-multi/sections/Operations\.tex
-
-FLOPS-multi/sections/Compilation\.tex
+2017\ PolyRing/On Paper/proofs\.pdf
 
 *.toc
 
-slides 2017 wg2\.1/polypoly\.tex
-
 *.snm
-
-slides 2017 wg2\.1/polypoly\.pdf
 
 *.out
 
 *.nav
 
-FLOPS-multi/sections/Conclusions\.tex
+
+2018\ FLOPS/main-flops\.pdf
+
+2018\ FLOPS/main-flops\.tex
+
+2018\ FLOPS/sections/Compilation\.tex
+
+2018\ FLOPS/sections/Conclusions\.tex
+
+2018\ FLOPS/sections/Expr\.tex
+
+2018\ FLOPS/sections/Introduction\.tex
+
+2018\ FLOPS/sections/Operations\.tex
