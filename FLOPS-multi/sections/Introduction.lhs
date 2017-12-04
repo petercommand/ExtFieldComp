@@ -120,23 +120,66 @@ typically range from a few hundreds to a few thousands of bits.
 %
 Again using multiplication of two complex numbers as an example, we
 would need a sequence of real arithmetic expressions for implementing
-$c_1+c_2i=(a_1+b_1i)\times(a_2+b_2i)$:
+$z=z_r+iz_i=(x_r+ix_i)\times(y_r+iy_i)=xy$:
+%
 \begin{enumerate}
   %
-\item $t_1\leftarrow a_1\times a_2$;
+\item $t_1\leftarrow x_r\times y_r$;
   %
-\item $t_2\leftarrow b_1\times b_2$;
+\item $t_2\leftarrow x_i\times y_i$;
   %
-\item $t_3\leftarrow a_1\times b_2$;
+\item $t_3\leftarrow x_r\times y_i$;
   %
-\item $t_4\leftarrow b_1\times a_2$;
+\item $t_4\leftarrow x_i\times y_r$;
   %
-\item $c_1\leftarrow t_1-t_2$;
+\item $z_r\leftarrow t_1-t_2$;
   %
-\item $c_2\leftarrow t_3+t_4$.
+\item $z_i\leftarrow t_3+t_4$.
   %
 \end{enumerate}
-\todo{An example matching the description here?}
+%
+Furthermore, we would like to have a precision that exceeds what our
+hardware can natively support.
+%
+For example, let us assume that we have a machine with native support
+for an integer type $-R<x<R$.
+%
+In this case, we split each variable $\zeta$ into a low part plus a
+high part: $\zeta=\zeta^{(0)}+R\zeta^{(r)}$,
+$-R<\zeta^{(0)},\zeta^{(1)}<R$.
+%
+Now let us assume that our machine has a multiplication instruction
+$(c^{(0)},c^{(1)})\leftarrow a\times b$ such that
+$-R<a,b,c^{(0)},c^{(1)}<R$ and $ab=c^{(0)}+Rc^{(1)}$.
+%
+For simplicity, let us further assume that our machine has $n$-ary
+addition instructions for $n=2,3,4$:
+$(c^{(0)},c^{(1)})\leftarrow a_1+\cdots+a_n$ such that
+$-R<a_1,\ldots,a_n,c^{(0)},c^{(1)}<R$ and
+$a_1+\cdots+a_n=c^{(0)}+Rc^{(1)}$.
+%
+We can then have a suboptimal yet straightforward implementation of,
+say,
+$t_1=t_1^{(0)}+Rt_1^{(1)}+R^2t_1^{(2)}+R^3t_1^{(3)}=(x_r^{(0)}+Rx_r^{(1)})\times(y_r^{(0)}+Ry_r^{(1)})=x_r\times
+y_r$ as follows.
+%
+\begin{enumerate}
+  %
+\item $(t_1^{(0)},s_1^{(1)})\leftarrow x_r^{(0)}\times y_r^{(0)}$; // $t_1^{(0)}+Rs_1^{(1)}$
+  %
+\item $(s_2^{(0)},s_2^{(1)})\leftarrow x_r^{(0)}\times y_r^{(1)}$; // $Rs_2^{(0)}+R^2s_2^{(1)}$
+  %
+\item $(s_3^{(0)},s_3^{(1)})\leftarrow x_r^{(1)}\times y_r^{(0)}$; // $Rs_3^{(0)}+R^2s_3^{(1)}$
+  %
+\item $(s_4^{(0)},s_4^{(1)})\leftarrow x_r^{(1)}\times y_r^{(1)}$; // $R^2s_4^{(0)}+R^3s_4^{(1)}$
+  %
+\item $(t_1^{(1)},s_5^{(1)})\leftarrow s_1^{(1)}+s_2^{(0)}+s_3^{(0)}$; // $Rt_1^{(1)}+R^2s_5^{(1)}$
+  %
+\item $(t_1^{(2)},s_6^{(1)})\leftarrow s_2^{(1)}+s_3^{(1)}+s_4^{(0)}+s_5^{(1)}$; // $R^2t_1^{(2)}+R^3s_6^{(1)}$
+  %
+\item $(t_1^{(3)},\_)\leftarrow s_4^{(1)}+s_6^{(1)}$; // $R^3t_1^{(3)}$
+  %
+\end{enumerate}
 %
 It might be surprising that, with the advance of compiler technology
 today, such programs are still mostly coded and optimized manually,
