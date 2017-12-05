@@ -215,7 +215,7 @@ sometimes in assembly language, for maximal efficiency.
 %
 Naturally, we would like to automate this process as much as possible.
 %
-Furthermore, with such safety-critical application we would like to
+Furthermore, with such security-critical applications, we would like to
 have machine-verified proofs that the compilation and optimizations are
 correct.
 
@@ -246,4 +246,8 @@ since it is essential in compilation.
 %
 In Section~\ref{sec:compilation}, we show how to compile a polynomial into an assembly program. We present a simple compilation, also defined in terms of fold, prove its correctness, while leaving further optimization to future work.
 %
+<<<<<<< HEAD
 The formulation in this pearl have been implemented in both Haskell and Agda~\cite{Norell:08:Towards}, the latter also used to verify our proofs. The code is available on line at \url{https://github.com/petercommand/ExtFieldComp}.
+=======
+The formulation in this pearl have been implemented in both Haskell and Agda~\cite{Norell:08:Towards}, the latter also used to verify our proofs. The code is available on line at \url{https://github.com/petercommand/ExtFieldComp}.
+>>>>>>> Compile-Correct

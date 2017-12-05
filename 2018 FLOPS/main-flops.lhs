@@ -51,9 +51,9 @@
   sequence of arithmetic expressions in the base ring and prove the
   correctness of this compilation in Agda.
   %
-  As a demonstration, we show how to recursively compile polynomial
-  expressions over a tower of finite fields into scalar expressions
-  over the ground field.
+  Combined with our recursive construction, this allows for compiling
+  polynomial expressions over a tower of extension fields into scalar
+  expressions over the ground field, for example.
   %
   Such a technique is not only interesting in its own right but also
   finds plentiful application in research areas such as cryptography.
