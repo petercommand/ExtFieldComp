@@ -23,7 +23,7 @@ and $R[X_m,X_1,\ldots,X_{m-2}][X_{m-1}]$.
 It is instructive comparing it with |litDist|.
 \begin{spec}
 rotaPoly2 : ∀ {A} → Poly2 A → Poly2 A
-rotaPoly2 = foldP (Lit Ind) (foldP Ind (Lit ∘ Lit) ringP) ringP {-"~~."-}
+rotaPoly2 = foldP (Lit Ind) (foldP Ind (Lit ∘ Lit) ((:+), (:×))) ((:+), (:×)) {-"~~."-}
 \end{spec}
 In |rotaPoly2|, the outermost |Ind| is replaced by |Lit Ind|. When
 encountering |Lit e|, the inner |e| is lifted to |Poly2 A|. The |Ind| inside
@@ -83,15 +83,15 @@ Given an expression |e|, how do we substitute, for each occurrence of |Ind|, ano
 %
 Noticing that the type of |sem1| can be instantiated to |PolyN 2 A → Poly A → Poly A|, we may lift |e| to |PolyN 2 A| by wrapping it with |Lit|, do a |rotaPoly2| to swap the |Ind| in |e| to the outermost position, and use |sem1| to perform the substitution:
 \begin{spec}
-substitute1 : ∀ {A} → Poly A → Poly A → Poly A
-substitute1 e e' = sem1 ringP (rotaPoly2 (Lit e)) e' {-"~~."-}
+substitute1 : ∀ {A} → Ring A → Poly A → Poly A → Poly A
+substitute1 r e e' = sem1 (ringP r) (rotaPoly2 (Lit e)) e' {-"~~."-}
 \end{spec}
 What about |e : Poly2 A|? We may lift it to |PolyN 4 A|, perform two
 |rotaPoly4| to expose its two indeterminates, before using |sem2|:
 \begin{spec}
-substitute2 :: ∀ {A} → Poly2 A -> Poly2 A -> Poly2 A -> Poly2 A
-substitute2 e e' e'' =
-  sem2 ringP (rotaPoly4 (rotaPoly4 Lit (Lit e))) (Lit e') e'' {-"~~."-}
+substitute2 :: ∀ {A} → Ring A -> Poly2 A -> Poly2 A -> Poly2 A -> Poly2 A
+substitute2 r e e' e'' =
+  sem2 (ringP (ringP r)) (rotaPoly4 (rotaPoly4 Lit (Lit e))) (Lit e') e'' {-"~~."-}
 \end{spec}
 
 Consider the general case with substituting the |n| indeterminates in |e : PolyNn A| for |n| expressions, each of type |PolyN n A|.
@@ -209,7 +209,7 @@ Secondly, |liftVal : ∀ {A} n → A → PolyNn A| lifts |A| to |PolyNn A| by |n
 Expansion can now be defined by:
 \begin{spec}
 expand : ∀ {A} n → Ring (Vec (PolyN A n) n) → Poly (Vec A n) → Vec (PolyN A n) n
-expand n rv = foldP (genInd n) (map (liftVal n)) rv
+expand n rv = foldP (genInd n) (map (liftVal n)) (fst rv)
 \end{spec}
 For the |Ind| case, one indeterminant is expanded to |n| using |genInd|.
 %
@@ -219,7 +219,7 @@ For the |Lit xs| case, |xs : Vec A n| can be lifted to |Vec (PolyN n A) n| by
 For addition and multiplication, we let |rv| decide how to combine vectors
 of expressions.
 
-The function |expand| alone does not say much --- all the complex work is done in |rv : Ring (Vec (PolyN A n) n)|. To generate |rv|, we define the type of operations that, given arithmetic operators for |A|, define arithmetic operators for vectors of |A|:
+The function |expand| alone does not say much --- all the complex work is done in |rv : Ring (Vec (PolyN A n) n)|. To generate |rv|, we define the type of operations that, given arithmetic operators for |A|, define ring instance for vectors of |A|:
 \begin{spec}
 RingVec : ℕ -> Set1
 RingVec n = ∀ {A} -> Ring A -> Ring (Vec A n) {-"~~."-}
@@ -228,26 +228,26 @@ RingVec n = ∀ {A} -> Ring A -> Ring (Vec A n) {-"~~."-}
 %format `addC` = "\mathbin{+_c}"
 %format mulC = "(\mathbin{\times_c})"
 %format `mulC` = "\mathbin{\times_c}"
+%format ringP2 = "\Varid{ringP}^2"
 For example, |rComplex| lifts arithmetic operations on |A| to
 that of complex numbers over |A|:
 \begin{spec}
 rComplex : RingVec 2
-rComplex ((+),(×)) = (addC , mulC)
+rComplex ((+),(×), 𝟎 , 𝟏 , neg) = (addC , mulC , [𝟎, 𝟎], [𝟏 , 𝟎], negC)
   where  [ x1, y1 ] `addC` [ x2, y2 ] = [ x1 + x2, y1 + y2 ]
-         [ x1, y1 ] `mulC` [ x2, y2 ] = [ x1 × x2 - y1 × y2 ,  x1 × y2 + x2 × y1 ]{-"~~."-}
+         [ x1, y1 ] `mulC` [ x2, y2 ] = [ x1 × x2 - y1 × y2 ,  x1 × y2 + x2 × y1 ]
+         x - y = x + neg 𝟏 × y
+         negC [ x, y ] = [ neg 𝟏 × x1, neg 𝟏 × y ] {-"~~."-}
 \end{spec}
-% where  (x1 ∷ y1 ∷ []) `addC` (x2 ∷ y2 ∷ []) = (x1 + x2) ∷ (y1 + y2) ∷ []
-%        (x1 ∷ y1 ∷ []) `mulC` (x2 ∷ y2 ∷ []) =
-%          (x1 × x2 - y1 × y2) ∷ (x1 × y2 + x2 × y1) ∷ []{-"~~."-}
-To expand a polynomial of complex numbers |Poly (Vec A 2)|, |expand| demands an instance of |Ring (Vec (PolyN 2 A) 2)|. One may thus call |expand 2 (rComplex ringP)|, that is, we use |rComplex| to combine a pair of polynomials, designating |((:+) , (:×))| as addition and multipliation.
+To expand a polynomial of complex numbers |Poly (Vec A 2)|, |expand| demands an instance of |Ring (Vec (PolyN 2 A) 2)|. One may thus call |expand 2 (rComplex (ringP2 r)|, where |r : Ring A|. That is, we use |rComplex| to combine a pair of polynomials, designating |((:+) , (:×))| as addition and multiplication.
 
 \paragraph{Correctness.} Intuitively, |expand| is correct if the expanded
 polynomial evaluates to the same value as that of the original. To
 formally state the property, we have to properly supply all the needed ingredients. Consider |e : Poly (Vec A n)| --- a polynomial whose coefficients are vectors of length |n|. Let |r : Ring A| define arithmetic operators for |A|, and let |ringVec : RingVec n| define how arithmetic operators for elements are lifted to vectors. We say that |expand| is correct if, for all |xs : Vec A n|:
 \begin{equation}
 \begin{split}
-  &|sem1 (ringVec r) e xs =|\\
-  &\quad  |map (\ e → sem r n e (toDChain xs)) (expand n (ringVec (ringPS r n)) e)| \mbox{~~.}
+  |sem1 (ringVec r) e xs =|~ & |map (\ e → sem r n e (toDChain xs))|\\
+  &\qquad  |(expand n (ringVec (ringPS r n)) e)| \mbox{~~.}
 \end{split}
 \label{eq:expand-correct}
 \end{equation}
@@ -271,7 +271,7 @@ Interestingly, it turns out that |expand| is correct if |ringVec| is polymorphic
 Induction on |e|. For the base cases we need two lemmas:
 \begin{itemize}
 %\begin{lemma}\label{lma:sem-liftVal}
-\item for all |n|, |x|, |es : DChain A n|, and |r : Ring A|,
+\item for all |n|, |x|, |es : DChain A n|, and |r|,
 we have |sem r n (liftVal n x) es = x|;
 %\end{lemma}
 %\begin{lemma} \label{lma:sem-genInd}
@@ -289,10 +289,9 @@ that (abbreviating |\ e → sem r n e (toDChain xs)| to |sem'|):
 map sem' (expand ringVec n e1) `addA` map sem' (expand ringVec n e2) =
   map sem' (expand ringVec n e1 `addP` expand ringVec n e2)
 \end{spec}
-where |addA = fst (ringVec r)| defines addition on vectors of |A|'s, and |addP = fst (ringVec (ringPS r n))| on vectors of polynomials. But this is implied by the free theorem of |ringVec|. Specifically, |fst . ringVec| has type
+where |addA = fst (fst (ringVec r))| defines addition on vectors of |A|'s, and |addP = fst (fst (ringVec (ringPS r n)))| on vectors of polynomials. But this is implied by the free theorem of |ringVec|. Specifically, |fst . fst . ringVec| has type
 \begin{spec}
-  {A : Set}  -> (A -> A -> A) × (A -> A -> A)
-             -> (Vec A n -> Vec A n -> Vec A n) {-"~~."-}
+  {A : Set}  -> Ring A -> (Vec A n -> Vec A n -> Vec A n) {-"~~."-}
 \end{spec}
 The free theorem it induces is
 %format add1 = "({+_1})"
@@ -307,13 +306,14 @@ The free theorem it induces is
 %format `mul1` = "\mathbin{×_1}"
 %format mul2 = "({×_2})"
 %format `mul2` = "\mathbin{×_2}"
+%format ring1 = "\Varid{ring}_1"
+%format ring2 = "\Varid{ring}_2"
 \begin{spec}
 ∀ (X Y : Set) n ->
-  ∀ (f : X -> Y)  (add1 : X -> X -> X) (mul1 : X -> X -> X)
-                  (add2 : Y -> Y -> Y) (mul2 : Y -> Y -> Y) ->
+  ∀ (f : X -> Y) (ring1 : Ring X) (ring2 : Ring Y) ->
   ∀ (xs ys : Vec X n) ->
-    let  addV1 = fst (ringVec (add1 , mul1))
-         addV2 = fst (ringVec (add2 , mul2))
+    let  addV1 = fst (fst (ringVec ring1))
+         addV2 = fst (fst (ringVec ring2))
     in map f (xs `addV1` ys) = map f xs `addV2` map f ys {-"~~,"-}
 \end{spec}
 which is exactly what we need. The case for |e := e1 :× e2| is similar.

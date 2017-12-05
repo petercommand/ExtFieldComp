@@ -85,17 +85,12 @@ In the categorical style outlined by Bird and de Moor~\cite{DBLP:books/daglib/00
 %
 The type |Poly| induces a fold that, conventionally, takes four arguments, each replacing one of its four constructors.
 %
-To facilitate our discussion later, we group the last two arguments together and define:
+To facilitate our discussion later, we group the last two arguments together.
+%
+The fold for |Poly| is thus given by:
 \begin{spec}
-Ring : Set -> Set
-Ring A = (A -> A -> A) × (A -> A -> A) {-"~~."-}
-\end{spec}
-The intention is that |Ring A| is a pair of binary operators that defines addition and multiplication for values of type |A|.%
-\footnote{While we do expect all the ring properties such as existence of
-additive identity, inverse, and distributivity, etc., to hold, we do not
-enforce them in this datatype.} We then define the fold for |Poly|:
-\begin{spec}
-foldP : ∀ {A B : Set} -> B -> (A -> B) -> Ring B -> Poly A -> B
+foldP :  {A B : Set} -> B -> (A -> B) ->
+         ((B -> B -> B) × (B -> B -> B)) -> Poly A -> B
 foldP x f ((oplus),(otimes))  Ind         = x
 foldP x f ((oplus),(otimes))  (Lit y)     = f y
 foldP x f ((oplus),(otimes))  (e1 :+ e2)  =  foldP x f ((oplus),(otimes)) e1 oplus
@@ -103,26 +98,40 @@ foldP x f ((oplus),(otimes))  (e1 :+ e2)  =  foldP x f ((oplus),(otimes)) e1 opl
 foldP x f ((oplus),(otimes))  (e1 :× e2)  =  foldP x f ((oplus),(otimes)) e1 otimes
                                              foldP x f ((oplus),(otimes)) e2 {-"~~."-}
 \end{spec}
-In our Haskell implementation, |Ring| is a type class for types whose addition and multiplication are defined. When |foldP| is called, it can usually be inferred what instance of |Ring| to use.
+
+\paragraph{Evaluation.} To evaluate a polynomial of type |Poly A|, we have to
+know how to perform arithetic operations for type |A|. Define
+\begin{spec}
+Ring : Set -> Set
+Ring A =  ((A -> A -> A) × (A -> A -> A)) × A × A × (A -> A) {-"~~,"-}
+\end{spec}
+the intention is that the tuple |Ring A| defines addition, multiplication, zero, one, and negation for |A|
+%
+(addition and multiplication are grouped together, for our convenience later).
+%
+% \footnote{While we do expect all the ring properties such as existence of
+% additive identity, inverse, and distributivity, etc., to hold, we do not
+% enforce them in this datatype.}
+%
+In our Haskell implementation, |Ring| is a type class for types whose addition and multiplication are defined.
+%
+It can usually be inferred what instance of |Ring| to use.
 %
 When proving properties about |foldP|, however, it is
 clearer to make the construction of |Ring| instances explicit.
 
-\paragraph{Evaluation.} Assuming a base type |A| for which |Ring A| is defined,
-consider evaluating a polynomial of type |Poly A|.
-%
 With the presence of |Ind|, the semantics of |Poly A| should be |A → A| --- a function that takes the value of the indeterminate and returns a value.
-
+%
 We define the following operation that lifts pointwise the addition and multiplication of some type |B| to |A → B|:
 \begin{spec}
 ring→ : ∀ {A B} → Ring B → Ring (A → B)
-ring→ ((+),(×)) = (  \ f g x -> f x + g x,
-                     \ f g x -> f x × g x) {-"~~."-}
+ring→ (((+),(×)),𝟎,𝟏,neg) =
+  ((\ f g x -> f x + g x, \ f g x -> f x × g x), const 𝟎, const 𝟏, (neg .)) {-"~~."-}
 \end{spec}
 The semantics of a univariate polynomial is thus given by:
 \begin{spec}
 sem1 : ∀ {A} → Ring A → Poly A → A → A
-sem1 rng = foldP id const (ring→ rng) {-"~~."-}
+sem1 rng = foldP id const (fst (ring→ rng)) {-"~~."-}
 \end{spec}
 
 %format Ind1 = "\Conid{Ind}_{1}"
@@ -149,11 +158,11 @@ the first |Lit| takes a |Poly ℤ| as its argument. To evaluate |e| using
 |sem1|, we have to define |Ring (Poly ℤ)|. A natural choice is to connect
 two expressions using corresponding constructors:
 \begin{spec}
-ringP  : ∀ {A} → Ring (Poly A)
-ringP  = ((:+), (:×)) {-"~~."-}
+ringP  : ∀ {A} → Ring A → Ring (Poly A)
+ringP (_ , 𝟎 , 𝟏 , neg) = (((:+), (:×)) , Lit 𝟎 , Lit 𝟏 , (Lit (neg 𝟏) :x)) {-"~~."-}
 \end{spec}
-With |ringP| defined, |sem1 ringP e| has type |Poly A → Poly A|.
-Evaluating, for example |sem1 ringP e (Ind :+ Lit 1)|, yields
+With |ringP| defined, |sem1 (ringP r) e| has type |Poly A → Poly A|.
+Evaluating, for example |sem1 (ringP r) e (Ind :+ Lit 1)|, yields
 \begin{spec}
 e' : Poly ℤ
 e' = (Lit 3 :× (Ind :+ Lit 1) :× (Ind :+ Lit 4)) :+ Ind :+ (Ind :+ Lit 1) {-"~~."-}
@@ -168,7 +177,7 @@ The result is a natural number.
 In general, the function |sem2| that evalulates |Poly (Poly A)| can be defined by:
 \begin{spec}
 sem2 : ∀ {A} → Ring A → Poly (Poly A) → Poly A → A → A
-sem2 r e2 e1 x = sem1 r (sem1 ringP e2 e1) x {-"~~."-}
+sem2 r e2 e1 x = sem1 r (sem1 (ringP r) e2 e1) x {-"~~."-}
 \end{spec}
 
 This is how |Poly (Poly ℤ)| simulates bivariate polynomials: the two
@@ -185,7 +194,7 @@ One can see that its semantics is the same as |Lit Ind :+ Lit (Lit 4)|, the expr
 In general, define the following function:
 \begin{spec}
 litDist : ∀ {A} → Poly (Poly A) → Poly (Poly A)
-litDist = foldP Ind (foldP (Lit Ind) (Lit ∘ Lit) ringP) ringP {-"~~."-}
+litDist = foldP Ind (foldP (Lit Ind) (Lit ∘ Lit) ((:+), (:×))) ((:+), (:×)) {-"~~."-}
 \end{spec}
 The function traverses through the given expression and, upon encountering
 a subtree |Lit e|, lifts |e| to |Poly (Poly A)| while distributing |Lit| inwards |e|.
@@ -221,13 +230,13 @@ Given an implementation of |Ring A|, the semantics of |PolyN n A| is a function 
 \begin{spec}
 sem : ∀ {A} -> Ring A -> (n : ℕ) -> PolyNn A -> DChain A n -> A
 sem r zero     x  tt        = x
-sem r (suc n)  e  (t , es)  = sem r n (sem1 (ringPS r) e t) es {-"~~,"-}
+sem r (suc n)  e  (t , es)  = sem r n (sem1 (ringPS r n) e t) es {-"~~,"-}
 \end{spec}
 where |ringPS| delivers the |Ring (PolyN n A)| instance for all |n|:
 \begin{spec}
 ringPS : ∀ {A} → Ring A → ∀ n → Ring (PolyN n A)
-ringPS r zero   = r
-ringPS r (suc n)  = ringP {-"~~."-}
+ringPS r zero     = r
+ringPS r (suc n)  = ringP (ringPS r n) {-"~~."-}
 \end{spec}
 For |n := 2| and |3|, for example, |sem r n| expands to:
 %format t0 = "\Varid{t}_0"
@@ -236,13 +245,15 @@ For |n := 2| and |3|, for example, |sem r n| expands to:
 %format t1, = "\Varid{t}_1,"
 %format t2 = "\Varid{t}_2"
 %format t2, = "\Varid{t}_2,"
+%format ringP2 = "\Varid{ringP}^2"
+%format ringPi = "\Varid{ringP}^i"
 \begin{spec}
-sem r 2 e (t1, t0, tt)      = sem1 r (sem1 ringP e t1) t0
-                            = (sem1 r . sem1 ringP e) t1 t0{-"~~,"-}
-sem r 3 e (t2, t1, t0, tt)  = sem1 r (sem1 ringP (sem1 ringP e t2) t1) t0
-                            = (sem1 r . sem1 ringP . sem1 ringP e) t2 t1 t0 {-"~~."-}
+sem r 2 e (t1, t0, tt)      = sem1 r (sem1 (ringP r) e t1) t0
+                            = (sem1 r . sem1 (ringP r) e) t1 t0{-"~~,"-}
+sem r 3 e (t2, t1, t0, tt)  = sem1 r (sem1 (ringP r) (sem1 (ringP2 r) e t2) t1) t0
+                            = (sem1 r . sem1 (ringP r) . sem1 (ringP2 r) e) t2 t1 t0 {-"~~."-}
 \end{spec}
-Essentially, |sem r n| is |n|-fold composition of |sem1 (ringPS r _)|,
+Essentially, |sem r n| is |n|-fold composition of |sem1 (ringPi r)|,
 each interpreting one level of the given expression.
 
 % \vspace{1cm}

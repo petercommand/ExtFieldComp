@@ -8,10 +8,7 @@ open import Data.Unit hiding (_≤_)
 open import Relation.Binary.PropositionalEquality
 open import Data.Nat.Properties.Simple
 
-
 -- ≤ utility
-
-
 
 ≤-refl : ∀ {a} -> a ≤ a
 ≤-refl {zero} = z≤n
@@ -50,10 +47,8 @@ ex1 : Poly ℕ
 ex1 = (Lit 2 :x Ind :x Ind) :+ (Lit 3 :x Ind) :+ Lit 1
 
 
-Ring : Set → Set
-Ring A = (A → A → A) × (A → A → A)
-
-foldP : ∀ {A B : Set} → B → (A → B) → Ring B → Poly A → B
+foldP : ∀ {A B : Set} → B → (A → B)
+        → (B → B → B) × (B → B → B) → Poly A → B
 foldP x f rng Ind = x
 foldP x f rng (Lit y) = f y
 foldP x f (_+_ , _×_) (e₁ :+ e₂) = foldP x f (_+_ , _×_) e₁ +
@@ -61,35 +56,43 @@ foldP x f (_+_ , _×_) (e₁ :+ e₂) = foldP x f (_+_ , _×_) e₁ +
 foldP x f (_+_ , _×_) (e₁ :x e₂) = foldP x f (_+_ , _×_) e₁ ×
                                    foldP x f (_+_ , _×_) e₂
 
+Ring : Set → Set
+Ring A = ((A → A → A) × (A → A → A)) × A × A × (A → A)
 
 ring→ : ∀ {A B : Set} → Ring B → Ring (A → B)
-ring→ (_+_ , _×_) = (λ f g x → f x + g x) , (λ f g x → f x × g x)
+ring→ ((_+_ , _×_) , 𝟎 , 𝟏 , neg) =
+   ((λ f g x → f x + g x) , (λ f g x → f x × g x)) ,
+   const 𝟎 , const 𝟏 , (_∘_ neg)
+
+-- ev : ∀ {A} → Ring A → (B → B → B) × (B → B → B)
+-- ev (_+_ , _×_ , 𝟎 , 𝟏 , neg) = (_+_ , _×_ )
+
 
 sem₁ : ∀ {A} → Ring A → Poly A → A → A
-sem₁ rng = foldP id const (ring→ rng)
+sem₁ rng = foldP id const (proj₁ (ring→ rng))
 
 
 e : Poly (Poly ℕ)
 e = (Lit (Lit 3) :x Ind :x Lit (Ind :+ Lit 4)) :+ Lit Ind :+ Ind
 
 
-ringP : ∀ {A} → Ring (Poly A)
-ringP = (_:+_ , _:x_)
-
+ringP : ∀ {A} → Ring A → Ring (Poly A)
+ringP (_ , 𝟎 , 𝟏 , neg) =
+  (_:+_ , _:x_) , Lit 𝟎 , Lit 𝟏 , _:x_ (Lit (neg 𝟏))
 
 -- evaluating - sem₁ ringP e (Ind :+ Lit 1) - yields
 
 e' : Poly ℕ
 e' = Lit 3 :x (Ind :+ Lit 1) :x (Ind :+ Lit 4) :+ Ind :+ (Ind :+ Lit 1)
 
-e'ₑ : sem₁ ringP e (Ind :+ Lit 1) ≡ e'
-e'ₑ = refl
+-- e'ₑ : sem₁ (ringP) e (Ind :+ Lit 1) ≡ e'
+-- e'ₑ = refl
 
 sem₂ : ∀ {A} → Ring A → Poly (Poly A) → Poly A → A → A
-sem₂ r e₂ e₁ x = sem₁ r (sem₁ ringP e₂ e₁) x
+sem₂ r e₂ e₁ x = sem₁ r (sem₁ (ringP r) e₂ e₁) x
 
 litDist : ∀ {A} → Poly (Poly A) → Poly (Poly A)
-litDist = foldP Ind (foldP (Lit Ind) (Lit ∘ Lit) ringP) ringP
+litDist = foldP Ind (foldP (Lit Ind) (Lit ∘ Lit) (_:+_ , _:x_)) (_:+_ , _:x_)
 
 PolyN : Set → ℕ → Set
 PolyN A zero = A
@@ -101,18 +104,17 @@ DChain A (suc n) = PolyN A n × DChain A n
 
 
 --
---
 
-ringP* : ∀ {A} → Ring A → ∀ {n} → Ring (PolyN A n)
-ringP* r {zero} = r
-ringP* r {suc n} = ringP
+ringP* : ∀ {A} → Ring A → ∀ n → Ring (PolyN A n)
+ringP* r zero    = r
+ringP* r (suc n) = ringP (ringP* r n)
 
 sem : ∀ {A} → Ring A → (n : ℕ) → PolyN A n → DChain A n → A
 sem r zero x tt = x
-sem r (suc n) e (t , es) = sem r n (sem₁ (ringP* r {n}) e t) es
+sem r (suc n) e (t , es) = sem r n (sem₁ (ringP* r n) e t) es
 
 rotaPoly₂ : ∀ {A} → PolyN A 2 → PolyN A 2
-rotaPoly₂ = foldP (Lit Ind) (foldP Ind (Lit ∘ Lit) ringP) ringP
+rotaPoly₂ = foldP (Lit Ind) (foldP Ind (Lit ∘ Lit) (_:+_ , _:x_)) (_:+_ , _:x_)
 
 fmap : ∀ {A B} → (A → B) → Poly A → Poly B
 fmap f Ind = Ind
@@ -173,16 +175,15 @@ rotaOuter : ∀ {A : Set} (n m : ℕ) → PolyN A n → PolyN A n
 rotaOuter n zero = id
 rotaOuter n (suc m) = rotaOuter n m ∘ rotaPoly n
 
+substitute₁ : ∀ {A} → Ring A → Poly A → Poly A → Poly A
+substitute₁ r e e' = sem₁ (ringP r) (rotaPoly₂ (Lit e)) e'
 
-substitute₁ : ∀ {A} → Poly A → Poly A → Poly A
-substitute₁ e e' = sem₁ ringP (rotaPoly₂ (Lit e)) e'
-
-substitute₂ : ∀ {A} → PolyN A 2 → PolyN A 2 → PolyN A 2 → PolyN A 2
-substitute₂ e e' e'' = sem₂ ringP (rotaPoly₄ ∘ rotaPoly₄ $ Lit (Lit e)) (Lit e') e''
+substitute₂ : ∀ {A} → Ring A → PolyN A 2 → PolyN A 2 → PolyN A 2 → PolyN A 2
+substitute₂ r e e' e'' = sem₂ (ringP (ringP r)) (rotaPoly₄ ∘ rotaPoly₄ $ Lit (Lit e)) (Lit e') e''
 
 substitute : ∀ {A} n → Ring A → PolyN A n → Vec (PolyN A n) n → PolyN A n
 substitute {A} n r e e'
-  = sem (ringP* r {n}) n
+  = sem (ringP* r n) n
         (subst id (sym (PolyN-comb {A} n n))
           (rotaOuter (n ℕ+ n) n
              (liftPoly {_} {n} {n ℕ+ n} ≤-prf e)))
@@ -198,7 +199,6 @@ genInd (suc (suc n)) = Ind ∷ map Lit (genInd (suc n))
 
 RingVec : ℕ → Set₁
 RingVec n = ∀ {A} → Ring A → Ring (Vec A n)
-
 
 -- we don't have minus here, is this a problem?
 
@@ -218,16 +218,16 @@ postulate rComplex : RingVec 2
 --   foldP (genInd n) (map (liftVal n)) (ringVec (ringP* ringA {n}))
 
 expand : ∀ {A} n → Ring (Vec (PolyN A n) n) → Poly (Vec A n) → Vec (PolyN A n) n
-expand n rv = foldP (genInd n) (map (liftVal n)) rv
+expand n rv = foldP (genInd n) (map (liftVal n)) (proj₁ rv)
 
 expandComplex : ∀ {A} → Ring A → Poly (Vec A 2) → Vec (PolyN A 2) 2
-expandComplex r = expand 2 (rComplex ringP)
+expandComplex r = expand 2 (rComplex (ringP (ringP r)))
 
 expandCorrect : ∀ {A} n → Ring A → RingVec n → Poly (Vec A n) → Vec A n → Set
 expandCorrect n r ringVec e xs =
   sem₁ (ringVec r) e xs ≡
     map (λ e → sem r n e (toDChain _ xs))
-      (expand n (ringVec (ringP* r {n})) e)
+      (expand n (ringVec (ringP* r n)) e)
 
 postulate
   Word : Set
@@ -274,10 +274,10 @@ biOp op m1 m2 = m1 >>= λ x →
                     (addr2 , ins2) = y
                 in return (dest , ins1 ++ ins2 ++ (op dest addr1 addr2 ∷ []))
 
-ringSSA : Ring (SSA (Addr × Ins))
-ringSSA = biOp Add , biOp Mul
+-- ringSSA : Ring (SSA (Addr × Ins))
+-- ringSSA = biOp Add , biOp Mul
 
 compile : ∀ n → Vec Addr n → PolyN Word n → SSA (Addr × Ins)
-compile zero addr e = compile₀ e
-compile (suc n) (x ∷ addr) e
-  = foldP (return (x , [])) (compile n addr) ringSSA e
+compile zero addr = compile₀
+compile (suc n) (x ∷ addr)
+  = foldP (return (x , [])) (compile n addr) (biOp Add , biOp Mul)

@@ -60,7 +60,8 @@ indeterminants are already computed and stored in the heap, the locations of whi
 \begin{spec}
 compile :  ∀ n → Vec Addr n → PolyNn Word → SSA (Addr × Ins)
 compile zero     addr        = compile0
-compile (suc n)  (x ∷ addr)  = foldP (return (x, [])) (compile n addr) ringSSA {-"~~."-}
+compile (suc n)  (x ∷ addr)  =
+    foldP (return (x, [])) (compile n addr) (biOp Add, biOp Mul) {-"~~."-}
 \end{spec}
 %format p1 = "\Varid{p}_1"
 %format p2 = "\Varid{p}_2"
@@ -70,12 +71,7 @@ compile (suc n)  (x ∷ addr)  = foldP (return (x, [])) (compile n addr) ringSSA
 %format addr2 = "\Varid{addr}_2"
 %format ins1 = "\Varid{ins}_1"
 %format ins2 = "\Varid{ins}_2"
-In the clause for |suc n|, |x| is the address storing the value for the outermost indeterminant. To compile |Ind|, we simply return this address without generating any code. To compile |Lit e| where |e : PolyNn Word|, we inductively call |compile n addr|. The generated code is combined by |ringSSA|, defined by
-\begin{spec}
-ringSSA : Ring (SSA (Addr × Ins))
-ringSSA = (biOp Add, biOp Mul) {-"~~,"-}
-\end{spec}
-where |biOp op p1 p2| runs |p1| and |p2| to obtain the compiled code, allocate
+In the clause for |suc n|, |x| is the address storing the value for the outermost indeterminant. To compile |Ind|, we simply return this address without generating any code. To compile |Lit e| where |e : PolyNn Word|, we inductively call |compile n addr|. The generated code is combined by |biOp op p1 p2|, which runs |p1| and |p2| to obtain the compiled code, allocate
 a new address |dest|, before generating a new instruction |op dest addr1 addr2|:
 \begin{spec}
 biOp  : (Addr → Addr → Addr → TAC)
