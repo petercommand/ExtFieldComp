@@ -295,26 +295,43 @@ where |addA = fst (fst (ringVec r))| defines addition on vectors of |A|'s, and |
 \end{spec}
 The free theorem it induces is
 %format add1 = "({+_1})"
-%format `add1` = "\mathbin{+_1}"
+%format `add1` = "\!\mathbin{+_1}\!"
 %format add2 = "({+_2})"
-%format `add2` = "\mathbin{+_2}"
+%format `add2` = "\!\mathbin{+_2}\!"
 %format addV1 = "({+_{\Conid{V}1}})"
-%format `addV1` = "\mathbin{+_{\Conid{V}1}}"
+%format `addV1` = "\!\mathbin{+_{\Conid{V}1}}\!"
 %format addV2 = "({+_{\Conid{V}2}})"
-%format `addV2` = "\mathbin{+_{\Conid{V}2}}"
+%format `addV2` = "\!\mathbin{+_{\Conid{V}2}}\!"
 %format mul1 = "({×_1})"
-%format `mul1` = "\mathbin{×_1}"
+%format `mul1` = "\!\mathbin{×_1}\!"
 %format mul2 = "({×_2})"
-%format `mul2` = "\mathbin{×_2}"
+%format `mul2` = "\!\mathbin{×_2}\!"
+%format z1 = "\Varid{𝟎}_1"
+%format z2 = "\Varid{𝟎}_2"
+%format one1 = "\Varid{𝟏}_1"
+%format one2 = "\Varid{𝟏}_2"
+%format neg1 = "\Varid{neg}_1"
+%format neg2 = "\Varid{neg}_2"
+%format x1 = "\Varid{x}_1"
+%format x2 = "\Varid{x}_2"
+%format y1 = "\Varid{y}_1"
+%format y2 = "\Varid{y}_2"
 %format ring1 = "\Varid{ring}_1"
 %format ring2 = "\Varid{ring}_2"
 \begin{spec}
 ∀ (X Y : Set) n ->
-  ∀ (f : X -> Y) (ring1 : Ring X) (ring2 : Ring Y) ->
+  ∀ (f : X -> Y) (ring1 : Ring X) (ring2 : Ring Y) -> P f ring1 ring2 ->
   ∀ (xs ys : Vec X n) ->
     let  addV1 = fst (fst (ringVec ring1))
          addV2 = fst (fst (ringVec ring2))
-    in map f (xs `addV1` ys) = map f xs `addV2` map f ys {-"~~,"-}
+    in map f (xs `addV1` ys) = map f xs `addV2` map f ys {-"~~."-}
 \end{spec}
-which is exactly what we need. The case for |e := e1 :× e2| is similar.
+The conclusion is exactly what we need, while |P| is given by:
+\begin{spec}
+P f (add1 , mul1 , z1 , one1 , neg1) (add2 , mul2 , z2 , one2 , neg2) =
+  ∀ x1 x2 y1 y2 ->  f (x1 `add1` x2) = f x1 `add2` f x2  &&
+                    f (x1 `mul1` x2) = f x1 `mul2` f x2 &&
+                    f z1 = z2 && f one1 = one2 && f (neg1 x1) = neg2 (f x2) {-"~~."-}
+\end{spec}
+The case for |e := e1 :× e2| is similar.
 \end{proof}
