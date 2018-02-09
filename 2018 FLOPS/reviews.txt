@@ -1,0 +1,243 @@
+From: FLOPS 2018 <flops2018@easychair.org>
+Subject: FLOPS 2018 notification for paper 18
+Date: 22 January 2018 at 7:33:13 PM GMT+8
+To: Shin-Cheng Mu <scm@iis.sinica.edu.tw>
+
+Dear Shin-Cheng Mu,
+
+we are pleased to inform you that your paper 
+
+Functional Pearl: Folding Polynomials of Polynomials:
+
+has been accepted for FLOPS 2018.
+
+The reviews for the paper are included below.  Please read them carefully,
+and follow the reviewers' recommendations when revising your paper.
+
+The proceedings will be produced by Springer. The deadline for the camera-ready
+version will be approximately four weeks from now.  We will send detailed instructions
+with deadlines in a future email.
+
+Congratulations, and we look forward to meeting you in Japan!
+
+Best regards
+
+Martin Sulzmann and John Gallagher
+Program Committee Co-Chairs
+
+
+----------------------- REVIEW 1 ---------------------
+PAPER: 18
+TITLE: Functional Pearl: Folding Polynomials of Polynomials
+AUTHORS: Chen-Mou Cheng, Ruey-Lin Hsu and Shin-Cheng Mu
+
+Overall evaluation: 1 (weak accept)
+
+----------- Overall evaluation -----------
+The paper describes routines for multi-variate polynomials in Haskell/Agda.
+Central observations are to exploit algebraic properties that
+that multi-variate polynomials can be represented
+as iterates over univariate polynomials over a base or extension field,
+and that variables ranging over finite fields can themselves be
+represented as polynomials producing isomorphisms such as
+(Poly Word^n) == (Poly Word)^n that are instrumental for realizing
+arithmetic over large polynomials.
+
+Apart getting past some fst fst projections, the paper appears as a
+mostly reasonable Pearl as polynomials are generally pleasing algebraic
+structures.
+The question of whether distinct advantages were achieved remain:
+- Given the importance of fixed precision multiplication, does
+ this approach buy anything in relation to formal efforts
+ such as Fiat Cryptography that is part of the BoringSSL library in
+ Chrome or the use of Everest cryptography in Firefox? There is a fair
+ amount of work that should be related to this, but the discussion of
+ this is too limited. How does Axiom handle polynomials in comparison?
+- A basic compiler is given. It seems entirely naïve as it does not
+ consider common sub-expressions or optimizations that one can find
+ in main references (e.g., as covered in textbooks, such as Knuth's
+ volume on numerical algorithms).
+
+
+Notes.
+
+Page 2: superscript (r) should be (1).
+Page 4: it will be useful to use multi-variate polynomials in conventional
+  syntax to illustrate the nested polynomials.
+Page 5: arithetic
+Section 4: "useful for software implementation cryptosystems" missing "of"?
+
+
+----------------------- REVIEW 2 ---------------------
+PAPER: 18
+TITLE: Functional Pearl: Folding Polynomials of Polynomials
+AUTHORS: Chen-Mou Cheng, Ruey-Lin Hsu and Shin-Cheng Mu
+
+Overall evaluation: 1 (weak accept)
+
+----------- Overall evaluation -----------
+================================
+
+SUMMARY:
+
+This functional pearl presents an interesting implementation of an Agda library
+that supports the manipulation of a generic data structure representing
+polynomial over a base ring. Given that the standard libraries of declarative
+languages often focus on popular data structures like list, tree, graph, etc., I
+believe that this paper's idea of implementing a polynomial library is
+worthwhile to be presented to the community.
+
+However, there are some points that I believe the paper need to elaborate more
+carefully before it can be accepted for publication:
+
+- There is no discussion about related works.
+
+- The authors mixed the syntax of Agda and Haskell, and also used external
+ functions such as "id, const, fst", without necessary description, which makes
+ the non-experience readers hard to follow the paper.
+
+- No illustration of how the proposed functions like foldP, sem, rotaPoly,
+ substitute, genInd, compile... is used to manipulate the running examples in
+ Section 1.
+
+- No comments or illustrations about how to use the released source code in
+ GitHub.
+
+In summary, I would like to suggest a weak acceptance. The paper needs to be
+revised to address all comments before being accepted for publication.
+
++ Overall evaluation: 1 (weak accept)
++ Reviewer's confidence: 4 (high)
+
+================================
+
+MAJOR COMMENTS:
+
+- There is no page number!
+
+- There is no related work!
+
+- The paper mixes Agda's and Haskell's syntax when presenting illustrating
+ examples. This makes the audience hard to follow the code written in the
+ paper.
+
+ Also, the author should explain or describe external functions used in the
+ paper, such as "id, const, fst" in the implementation of sem_1 in Section
+ 2.1,. I expect that the authors should provide a short description so that the
+ audience can easily follow the paper.
+
+- I would expect the authors explain intuitively about the role of 4 arguments
+ "x, f, \oplus, \otimes" in the implementation of "foldP" in Section 2.1. Here,
+ I understood that \oplus, \otimes represent some additive and multiplicative
+ operators, but there are other non-trivial like:
+
+ + what do "f" and "x" represent?
+ + why in "foldP x f ((\oplus), (\otimes)) Ind = x", f is not used?
+ + why in "foldP x f ((\oplus), (\otimes)) (Lit y) = f y", x is not used?
+
+ Without further explanations on this implementation, I believe it is hard for
+ audiences to learn from this functional pearl.
+
+- Because the paper aims to compile a polynomial express into a sequence of
+ arithmetic expressions, I wonder how the authors handle the "overflow" and
+ "underflow" issues
+
+- I don't understand what the second example (page 3). What do the authors mean
+ when writing the underscore in the lower part of the number on the left-hand
+ side?
+
+ (t^{(3)}_1, \_) <- s^{(1)}_4 + s^{(1)}_6 ?
+
+ I would expect the authors explain clear in this example, how the value t_1,
+ which is equal to t^{(0)}_1 + R t^{(1)}_1 + R^2 t^{(2)}_1 + R^3 t^{(3)}_1,
+ is represented in the implementation, after a sequence of transformation in
+ page 3.
+
+- Please compare your approach with the standard "fold_left, fold_right, map"
+ operator in functional programming languages.
+
+ My concern is: can the folding operator provided in this paper be implemented
+ using the fold_left, fold_right, map in the following library:
+ https://github.com/josh-hs-ko/Thesis/blob/master/Relation/Fold.agda
+
+ If yes, is the code written using the polynomial folding functions simpler or
+ more general than the fold_left, fold_right, map?
+
+- I also check the AGDA source code at
+ https://github.com/petercommand/ExtFieldComp/blob/master/2018%20FLOPS/type-check/Ext.agda
+ but have no idea how to run the provided functions on the motivating examples.
+ Also, the author should provide a Readme so that we can run and test the code
+
+- Please compare with the normalization functions in
+ https://github.com/agda/agda-stdlib/blob/master/src/Algebra/RingSolver.agda
+
+- The paper presents some examples of the complex numbers (page 2), and the
+ example with a naive support for an integer type (page 3). However, I don't
+ see in the main part of the paper, how these examples can be handled by the
+ "fold" operator.
+
+ It would be more intuitive if the author can demonstrate by a running example
+ on the simple example of the complex number, how these folding, rotation,
+ substitution functions work.
+
+================================
+
+MINOR COMMENTS:
+
+- Page 2, line 2 from the bottom: should it be: \zeta = \zeta^{(0)} +
+ R\zeta^{(1)} ? (currently, it is: \zeta = \zeta^{(0)} + R\zeta^{(r)})
+
+- There is no proof of Theorem 1?
+
+
+----------------------- REVIEW 3 ---------------------
+PAPER: 18
+TITLE: Functional Pearl: Folding Polynomials of Polynomials
+AUTHORS: Chen-Mou Cheng, Ruey-Lin Hsu and Shin-Cheng Mu
+
+Overall evaluation: 2 (accept)
+
+----------- Overall evaluation -----------
+This pearl is concerned with representing, manipulating, and
+evaluating polynomials -- both univariate (single variable) and
+multivariate (multi variable) ones -- over a base ring.
+
+The introduction starts by recalling the relevant background
+material. It then goes on to define (in Agda) a datatype of univariate
+polynomials, along with a fold operation, and an evaluation operation
+(sem_1). It then pedagogically lifts sem_1 first to the bivariate (two
+variable) case and eventually to the multivariate case.
+It goes on to express a number of operations over polynomials
+(rotation, subst, expansion), also proving the correctness of the
+expansion operation.
+
+Finally the paper considers how to compile the polynomials
+to a simple register-machine architecture without explicit support for
+aritmetic over polynomials and proves correctness of the translation.
+
+
+
+Overall, this is a well-written paper. It has a nice, pearlish feel to
+it, as the Agda formulation (and its types) brings out the essence of
+the polynomial manipulation.
+
+The isomorphism between multivariate polynomials and univariate
+polynomials that the paper hinges on, seems both a strength and a
+weakness of the current formulation:
+- it is certainly elegant
+- the rotation that it gives rise to (and which the substitution
+ depends on) however makes the approach appear less practical (due to
+ the heavy symbolic 'Ind' manipulation)
+
+----
+
+p.3
+  can defined either
+-> can be defined either
+
+p.10
+  Shouldn't  'Poly^{A} n'  be  'Poly^{n} A'?  (3 occurrences)
+
+p.13
+  allocate a new cell and stores the
+-> allocate a new cell and store the

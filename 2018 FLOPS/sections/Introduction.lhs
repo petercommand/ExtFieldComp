@@ -156,7 +156,7 @@ For example, let us assume that we have a machine with native support
 for an integer type $-R<x<R$.
 %
 In this case, we split each variable $\zeta$ into a low part plus a
-high part: $\zeta=\zeta^{(0)}+R\zeta^{(r)}$,
+high part: $\zeta=\zeta^{(0)}+R\zeta^{(1)}$,
 $-R<\zeta^{(0)},\zeta^{(1)}<R$.
 %
 Now let us assume that our machine has a multiplication instruction
@@ -233,7 +233,7 @@ This allows us to define a datatype |Poly| for univariate polynomials, and
 reuse it inductively to define multivariate polynomials --- an |n|-variate
 polynomial can be represented by |PolyN n| (|Poly| applied |n| times).
 %
-Most operations on the polynomials can defined either in terms of the {\em fold}
+Most operations on the polynomials can be defined either in terms of the {\em fold}
 induced by |Poly|, or by induction on |n|, hence the title.
 
 We explore the use of |PolyN n| and its various implications in depth in

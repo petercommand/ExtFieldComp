@@ -208,7 +208,7 @@ Secondly, |liftVal : ∀ {A} n → A → PolyNn A| lifts |A| to |PolyNn A| by |n
 
 Expansion can now be defined by:
 \begin{spec}
-expand : ∀ {A} n → Ring (Vec (PolyN A n) n) → Poly (Vec A n) → Vec (PolyN A n) n
+expand : ∀ {A} n → Ring (Vec (PolyNn A) n) → Poly (Vec A n) → Vec (PolyNn A) n
 expand n rv = foldP (genInd n) (map (liftVal n)) (fst rv)
 \end{spec}
 For the |Ind| case, one indeterminant is expanded to |n| using |genInd|.
@@ -219,7 +219,7 @@ For the |Lit xs| case, |xs : Vec A n| can be lifted to |Vec (PolyN n A) n| by
 For addition and multiplication, we let |rv| decide how to combine vectors
 of expressions.
 
-The function |expand| alone does not say much --- all the complex work is done in |rv : Ring (Vec (PolyN A n) n)|. To generate |rv|, we define the type of operations that, given arithmetic operators for |A|, define ring instance for vectors of |A|:
+The function |expand| alone does not say much --- all the complex work is done in |rv : Ring (Vec (PolyNn A) n)|. To generate |rv|, we define the type of operations that, given arithmetic operators for |A|, define ring instance for vectors of |A|:
 \begin{spec}
 RingVec : ℕ -> Set1
 RingVec n = ∀ {A} -> Ring A -> Ring (Vec A n) {-"~~."-}

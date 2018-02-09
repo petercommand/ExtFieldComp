@@ -100,7 +100,7 @@ foldP x f ((oplus),(otimes))  (e1 :× e2)  =  foldP x f ((oplus),(otimes)) e1 ot
 \end{spec}
 
 \paragraph{Evaluation.} To evaluate a polynomial of type |Poly A|, we have to
-know how to perform arithetic operations for type |A|. Define
+know how to perform arithmetic operations for type |A|. Define
 \begin{spec}
 Ring : Set -> Set
 Ring A =  ((A -> A -> A) × (A -> A -> A)) × A × A × (A -> A) {-"~~,"-}

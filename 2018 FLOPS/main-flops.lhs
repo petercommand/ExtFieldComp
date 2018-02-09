@@ -30,7 +30,7 @@
 %
 \maketitle          % for the preliminaries
 %
-%\pagestyle{headings}  % switches on printing of running heads
+\pagestyle{headings}  % switches on printing of running heads
 \begin{abstract}
   %
   Polynomials are a central concept to many branches in mathematics

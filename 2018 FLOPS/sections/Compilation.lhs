@@ -9,7 +9,7 @@ A potentially complex polynomial can be expanded, in several passes,
 to a vector of polynomial over |Word|, which can be compiled separately.
 %
 As we have mentioned, such compilation is useful for software
-implementation cryptosystems.
+implementation of cryptosystems.
 %
 Furthermore, even for hardware implementation, such compilation can be
 useful, as we can break down a complicated polynomial expression into
@@ -49,7 +49,7 @@ result and the new state.
 
 Compilation of a polynomial yields |SSA (Addr × Ins)|, where the second component of the pair is an assembly program, and the first component is the address where the program, once run, stores the value of the polynomial.
 %
-We define compilation of |PolyN n Word| by induction on |n|. For the base case |PolyN 0 Word = Word|, we simply allocate a new cell and stores the given value there using |Const|:
+We define compilation of |PolyN n Word| by induction on |n|. For the base case |PolyN 0 Word = Word|, we simply allocate a new cell and store the given value there using |Const|:
 \begin{spec}
 compile0 : Word → SSA (Addr × Ins)
 compile0 v =  alloc >>= \ addr →
