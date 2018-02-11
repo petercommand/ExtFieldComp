@@ -77,13 +77,11 @@ expand'-aux {A} n (suc (suc k)) F {{func}} {{ext}} numAn numE base e
 expand' : ∀ {A : Set} (n : ℕ) (F : Set → Set)
   → {{func : Functor F}}
   → {{num : Num A}} → {{ext : Extended F n}}
-  → {{numAn : Num (ExprN A n)}}
-  → {{numE' : Num (F (ExprN (ExprN A n) n))}}
   → (∀ m → Num (F (ExprN A m)))
   → ∀ k
   → ExprN (F A) k
   → F (ExprN A (k * n))
-expand' {A} n F {{func}} {{numi}} {{ext}} {{numAn}} {{numE'}} num k
+expand' {A} n F {{func}} num k
      = expand'-aux n k F {{_}} {{_}} (λ n₁ → toExprNumN {A} n₁) num 
          (λ {A} num' ext' numE' → expand {A} n F {{func}} {{num'}} {{ext'}} {{numE'}})
   where
