@@ -96,8 +96,9 @@ foldP x f ((oplus),(otimes))  (Lit y)     = f y
 foldP x f ((oplus),(otimes))  (e1 :+ e2)  =  foldP x f ((oplus),(otimes)) e1 oplus
                                              foldP x f ((oplus),(otimes)) e2
 foldP x f ((oplus),(otimes))  (e1 :× e2)  =  foldP x f ((oplus),(otimes)) e1 otimes
-                                             foldP x f ((oplus),(otimes)) e2 {-"~~."-}
+                                             foldP x f ((oplus),(otimes)) e2 {-"~~,"-}
 \end{spec}
+where arguments |x|, |f|, |(oplus)|, and |(otimes)| respectively replace constructors |Ind|, |Lit|, |(:+)|, and |(:×)|.
 
 \paragraph{Evaluation.} To evaluate a polynomial of type |Poly A|, we have to
 know how to perform arithmetic operations for type |A|. Define
@@ -126,13 +127,15 @@ We define the following operation that lifts pointwise the addition and multipli
 \begin{spec}
 ring→ : ∀ {A B} → Ring B → Ring (A → B)
 ring→ (((+),(×)),𝟎,𝟏,neg) =
-  ((\ f g x -> f x + g x, \ f g x -> f x × g x), const 𝟎, const 𝟏, (neg .)) {-"~~."-}
+  ((\ f g x -> f x + g x, \ f g x -> f x × g x), const 𝟎, const 𝟏, (neg .)) {-"~~,"-}
 \end{spec}
+where |const x y = x|.
 The semantics of a univariate polynomial is thus given by:
 \begin{spec}
 sem1 : ∀ {A} → Ring A → Poly A → A → A
-sem1 rng = foldP id const (fst (ring→ rng)) {-"~~."-}
+sem1 rng = foldP id const (fst (ring→ rng)) {-"~~,"-}
 \end{spec}
+where |id x = x| and |fst| retrieves the left component of a pair.
 
 %format Ind1 = "\Conid{Ind}_{1}"
 %format Ind2 = "\Conid{Ind}_{2}"
