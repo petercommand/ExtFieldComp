@@ -125,7 +125,7 @@ runCompile {n = n} rs r₀ e h =
    runSSA {n = n} (compile n rs e) r₀ h
 
 data HeapCons {A : Set} (h : Heap A) :
-        ∀ {n : ℕ} → Nest A n → Vec Addr n → Set where
+        ∀ {n : ℕ} → DChain A n → Vec Addr n → Set where
   [] : HeapCons h tt []
   _∷_ : ∀ {n : ℕ} {es rs e r}
          → ((num : Num A) → getHeap r h ≡ semantics {{num}} n e es)
@@ -356,7 +356,7 @@ comp-irrelevance (suc n) n₀ n₁ p (x₁ ∷ env) (Mul expr expr₁)
       = LAll++ irre1 (LAll++ irre2 (a<c->¬a≡c n₀ n₃
           (≤-trans p (≤-trans heapInc1 heapInc2)) ∷ []))
 cons-run : ∀ {A} {{num : Num A}} n n₀
-   → (es : Nest A n)
+   → (es : DChain A n)
    → (rs : Vec Addr n)
    → (h : Heap A)
    → (ins : Ins A)
@@ -424,7 +424,7 @@ ret<st (suc n) n₀ (x ∷ env) (Mul expr expr₁) all
   -- sem-lem+ : ∀ {A : Set} {{num : Num A}} (n : ℕ)
   --   → (e e₁ : ExprN A (suc n))
   --   → (en : ExprN A n)
-  --   → (es : Nest A n)
+  --   → (es : DChain A n)
   --   → let instance ins = toExprNumN {A} n
   --     in Num._+_ num (semantics n (foldExpr id const e en) es)
   --        (semantics n (foldExpr id const e₁ en) es)
@@ -434,7 +434,7 @@ ret<st (suc n) n₀ (x ∷ env) (Mul expr expr₁) all
   -- sem-lem- : ∀ {A : Set} {{num : Num A}} (n : ℕ)
   --   → (e e₁ : ExprN A (suc n))
   --   → (en : ExprN A n)
-  --   → (es : Nest A n)
+  --   → (es : DChain A n)
   --   → let instance ins = toExprNumN {A} n
   --     in Num._-_ num (semantics n (foldExpr id const e en) es)
   --        (semantics n (foldExpr id const e₁ en) es)
@@ -444,7 +444,7 @@ ret<st (suc n) n₀ (x ∷ env) (Mul expr expr₁) all
   -- sem-lem* : ∀ {A : Set} {{num : Num A}} (n : ℕ)
   --   → (e e₁ : ExprN A (suc n))
   --   → (en : ExprN A n)
-  --   → (es : Nest A n)
+  --   → (es : DChain A n)
   --   → let instance ins = toExprNumN {A} n
   --     in Num._*_ num (semantics n (foldExpr id const e en) es)
   --        (semantics n (foldExpr id const e₁ en) es)
@@ -454,7 +454,7 @@ ret<st (suc n) n₀ (x ∷ env) (Mul expr expr₁) all
 
 comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (e : ExprN A n)
-  → (es : Nest A n)
+  → (es : DChain A n)
   → {h : Heap A}
   → (rs : Vec Addr n) → (r₀ : Addr)
   → HeapCons h es rs

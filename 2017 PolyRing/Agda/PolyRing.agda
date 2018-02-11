@@ -44,9 +44,9 @@ ExprN A (suc n) = Expr (ExprN A n)
 Expr2 : ∀ {l} (A : Set l) -> Set l
 Expr2 A = ExprN A (suc (suc zero))
 
-Nest : Set -> ℕ -> Set
-Nest A zero = ⊤
-Nest A (suc n) = ExprN A n × Nest A n
+DChain : Set -> ℕ -> Set
+DChain A zero = ⊤
+DChain A (suc n) = ExprN A n × DChain A n
 
 liftExpr : ∀ {l} {A : Set l} {m n : ℕ} → m ≤′ n → ExprN A m → ExprN A n
 liftExpr {m = m} {.m} ≤′-refl e = e
@@ -104,14 +104,14 @@ toExprNumN {A} (suc n) {{num}} =
 semantics1 : ∀ {A : Set} {{num : Num A}} → Expr A → A → A
 semantics1 = foldExpr id const
 
-semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → Nest A n → A
+semantics : ∀ {A : Set}{{num : Num A}} (n : ℕ) → ExprN A n → DChain A n → A
 semantics zero x tt = x
 semantics {A} (suc n) e (t , es) =
     semantics n (semantics1 {{toExprNumN n}} e t) es
 
 sem-lem+ : ∀ {A : Set} {{num : Num A}} (n : ℕ)
   → (e₁ e₂ : ExprN A n)
-  → (es : Nest A n)
+  → (es : DChain A n)
   → semantics n (Num._+_ (toExprNumN n) e₁ e₂) es ≡
     Num._+_ num (semantics n e₁ es)
                 (semantics n e₂ es)
@@ -122,7 +122,7 @@ sem-lem+ {{num}} (suc n) e₁ e₂ (en , es) =
 
 sem-lem- : ∀ {A : Set} {{num : Num A}} (n : ℕ)
   → (e₁ e₂ : ExprN A n)
-  → (es : Nest A n)
+  → (es : DChain A n)
   → semantics n (Num._-_ (toExprNumN n) e₁ e₂) es ≡
     Num._-_ num (semantics n e₁ es)
                 (semantics n e₂ es)
@@ -133,7 +133,7 @@ sem-lem- {{num}} (suc n) e₁ e₂ (en , es) =
 
 sem-lem* : ∀ {A : Set} {{num : Num A}} (n : ℕ)
   → (e₁ e₂ : ExprN A n)
-  → (es : Nest A n)
+  → (es : DChain A n)
   → semantics n (Num._*_ (toExprNumN n) e₁ e₂) es ≡
     Num._*_ num (semantics n e₁ es)
                 (semantics n e₂ es)
@@ -164,9 +164,9 @@ rotaExprN-m n zero e = e
 rotaExprN-m n (suc m) e = rotaExprN-m n m (rotaExprN n e)
 
 
-Vec→Nest : ∀ {A : Set} (n : ℕ) → Vec A n → Nest A n
-Vec→Nest zero [] = tt
-Vec→Nest (suc n) (x ∷ xs) = liftVal n x , Vec→Nest n xs
+Vec→DChain : ∀ {A : Set} (n : ℕ) → Vec A n → DChain A n
+Vec→DChain zero [] = tt
+Vec→DChain (suc n) (x ∷ xs) = liftVal n x , Vec→DChain n xs
 
 substitute : ∀ {A : Set}{{num : Num A}} (n : ℕ) -> ExprN A n -> Vec (ExprN A n) n -> ExprN A n
 substitute {A} n e e'
@@ -175,4 +175,4 @@ substitute {A} n e e'
           (rotaExprN-m (n + n) n
              (liftExpr {_} {_} {n} {n + n}
                (≤→≤′ n (n + n) (≤-weakening n n n ≤-refl)) e)))
-        (Vec→Nest n e')
+        (Vec→DChain n e')
