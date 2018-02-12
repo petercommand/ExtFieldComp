@@ -1,1 +1,0 @@
-This project uses Agda 2.5.2

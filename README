@@ -1,0 +1,16 @@
+This project uses Agda 2.5.2 with agda stdlib version 0.13.
+
+Directory Structure:
+
+|-- 2017 PolyRing
+|   |-- Agda -- the main Agda code
+|      |-- Tests -- examples on how to run the agda code
+|   |-- Haskell -- the main Haskell code
+|   `-- On Paper
+|-- 2018 FLOPS -- the main paper
+               -- do not run the code in the subdirectory type-check, it is used to check that the code in the paper can properly type check
+|-- README -- README
+`-- obsolete -- obsolete files
+
+
+See "2017 PolyRing/Agda/Tests" for examples on how to run the agda code.
