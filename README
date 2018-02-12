@@ -13,4 +13,4 @@ Directory Structure:
 `-- obsolete -- obsolete files
 
 
-See "2017 PolyRing/Agda/Tests" for examples on how to run the agda code.
+See the code examples in "2017 PolyRing/Agda/Tests" for examples on how to run the agda code.
