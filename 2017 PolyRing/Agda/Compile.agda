@@ -113,7 +113,7 @@ runIns {{num}} h (MulI x₁ x₂ x₃ ∷ ins)
         _*_ = Num._*_ num
     in runIns (putHeap x₁ (a₂ * a₃) h) ins
 
-runSSA : ∀ {A : Set} {{_ : Num A}} {n : ℕ}
+runSSA : ∀ {A : Set} {{_ : Num A}}
        → SSA (Addr × Ins A) → Addr → Heap A → A
 runSSA (ssa m) r₀ h =
   let ((r , ins) , _) = m r₀
@@ -122,7 +122,7 @@ runSSA (ssa m) r₀ h =
 runCompile : ∀ {A : Set} {{_ : Num A}} {n : ℕ}
            → Vec Addr n → Addr → ExprN A n → Heap A → A
 runCompile {n = n} rs r₀ e h =
-   runSSA {n = n} (compile n rs e) r₀ h
+   runSSA (compile n rs e) r₀ h
 
 data HeapCons {A : Set} (h : Heap A) :
         ∀ {n : ℕ} → DChain A n → Vec Addr n → Set where
