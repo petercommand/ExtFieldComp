@@ -420,38 +420,6 @@ ret<st (suc n) n₀ (x ∷ env) (Mul expr expr₁) all
     = ≤-refl
 
 
--- postulate
-  -- sem-lem+ : ∀ {A : Set} {{num : Num A}} (n : ℕ)
-  --   → (e e₁ : ExprN A (suc n))
-  --   → (en : ExprN A n)
-  --   → (es : DChain A n)
-  --   → let instance ins = toExprNumN {A} n
-  --     in Num._+_ num (semantics n (foldExpr id const e en) es)
-  --        (semantics n (foldExpr id const e₁ en) es)
-  --     ≡
-  --     semantics n (((Num._+_ (toExprNumN n)) (foldExpr id const e en))
-  --                  (foldExpr id const e₁ en)) es
-  -- sem-lem- : ∀ {A : Set} {{num : Num A}} (n : ℕ)
-  --   → (e e₁ : ExprN A (suc n))
-  --   → (en : ExprN A n)
-  --   → (es : DChain A n)
-  --   → let instance ins = toExprNumN {A} n
-  --     in Num._-_ num (semantics n (foldExpr id const e en) es)
-  --        (semantics n (foldExpr id const e₁ en) es)
-  --     ≡
-  --     semantics n (((Num._-_ (toExprNumN n)) (foldExpr id const e en))
-  --                  (foldExpr id const e₁ en)) es
-  -- sem-lem* : ∀ {A : Set} {{num : Num A}} (n : ℕ)
-  --   → (e e₁ : ExprN A (suc n))
-  --   → (en : ExprN A n)
-  --   → (es : DChain A n)
-  --   → let instance ins = toExprNumN {A} n
-  --     in Num._*_ num (semantics n (foldExpr id const e en) es)
-  --        (semantics n (foldExpr id const e₁ en) es)
-  --     ≡
-  --     semantics n (((Num._*_ (toExprNumN n)) (foldExpr id const e en))
-  --                  (foldExpr id const e₁ en)) es
-
 comp-sem : ∀ {A : Set} {{_ : Num A}} (n : ℕ)
   → (e : ExprN A n)
   → (es : DChain A n)
