@@ -324,14 +324,15 @@ The free theorem it induces is
   ∀ (xs ys : Vec X n) ->
     let  addV1 = fst (fst (ringVec ring1))
          addV2 = fst (fst (ringVec ring2))
-    in map f (xs `addV1` ys) = map f xs `addV2` map f ys {-"~~."-}
+    in map f (xs `addV1` ys) = map f xs `addV2` map f ys {-"~~,"-}
 \end{spec}
-The conclusion is exactly what we need, while |P| is given by:
+where |P| is given by:
 \begin{spec}
 P f (add1 , mul1 , z1 , one1 , neg1) (add2 , mul2 , z2 , one2 , neg2) =
   ∀ x1 x2 y1 y2 ->  f (x1 `add1` x2) = f x1 `add2` f x2  &&
                     f (x1 `mul1` x2) = f x1 `mul2` f x2 &&
                     f z1 = z2 && f one1 = one2 && f (neg1 x1) = neg2 (f x2) {-"~~."-}
 \end{spec}
-The case for |e := e1 :× e2| is similar.
+The conclusion of the free theorem is exactly what we need, while proving
+the premise is routine. The case for |e := e1 :× e2| is similar.
 \end{proof}

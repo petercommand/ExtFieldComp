@@ -1,11 +1,11 @@
 %include agda.fmt
 %include Formatting.fmt
 
-\section{Conclusions}
+\section{Conclusions and Related Work}
 \label{sec:conclusions}
 
 In dependently typed programming, a typical choice in implementing
-multivariate polynomials is to represent de Bruin indices using |Fin n|, the type having exactly |n| members.
+multivariate polynomials is to represent de Bruin indices using |Fin n|, the type having exactly |n| members. This is done in, for example, the |RingSolver| in the Agda standard library~\cite{Danielsson:17:Ring}, among many.
 %
 The tagless-final representation~\cite{Carette:09:Finally} is another alternative.
 %
@@ -42,7 +42,10 @@ multiple of the polynomial $i^2+1$.
 %
 In the future, we would like to further automate the derivation of
 this formula, so the programmer will only need to give us the
-definition of the equational types under consideration.
+definition of the equational types under consideration. The |RingSolver|~\cite{Danielsson:17:Ring} manipulates equations into normal
+forms to solve them, and the solution can be used in Agda programs by
+reflection. It is interesting to explore whether a similar approach may
+work for our purpose.
 
 
 % This is our first step toward studying the interplay between type
