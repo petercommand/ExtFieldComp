@@ -4,8 +4,8 @@
 \section{Univariate and Multivariate Polynomials}
 \label{sec:expressions}
 
-In this section we present our representation for univariate and
-multivariate polynomials, and their semantics.
+In this section, we present our representation for univariate and
+multivariate polynomials, as well as their semantics.
 %
 The following Agda datatype denotes a univariate polynomial whose coefficients are of type |A|:%
 \footnote{We use Haskell convention that infix data constructors start with

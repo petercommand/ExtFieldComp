@@ -14,8 +14,8 @@ $R[X]$.
 We can allow two or more indeterminates $X_1,X_2,\ldots,X_m$ and thus
 arrive at a \emph{multivariate polynomial}, a finite sum of the form
 \[ \sum_{i}a_iX_1^{e_1^{(i)}}X_2^{e_2^{(i)}}\cdots X_m^{e_m^{(i)}}, \]
-where $a_i\in R$ are coefficients, and $e_j^{(i)}$ are nonnegative
-integers.
+where $a_i\in R$ are the coefficients, and the nonnegative integers
+$e_j^{(i)}$ are the exponents.
 %
 The set of $m$-variate polynomials over $R$, denoted as
 $R[X_1,X_2,\ldots,X_m]$, also forms a ring, referred to as a
@@ -107,7 +107,7 @@ over various base rings, as exemplified above.
 %
 %
 %
-We also need to compile a polynomial expression
+We also need to transform a polynomial expression
 into a sequence of arithmetic expressions over its base ring.
 %
 This is useful for, e.g., software implementation of cryptosystems on
@@ -216,12 +216,12 @@ sometimes in assembly language, for maximal efficiency.
 Naturally, we would like to automate this process as much as possible.
 %
 Furthermore, with such security-critical applications, we would like to
-have machine-verified proofs that the compilation and optimizations are
+have machine-verified proofs that the transformation and optimizations are
 correct.
 
 In attempting toward this goal, we have come up with this pearl.
 %
-It is not yet practical but, we think, is neat and worth writing about.
+It is not yet practical but, we think, is neat and worth documenting.
 %
 A key observation is that there is an
 isomorphism between multivariate polynomial ring
@@ -242,8 +242,18 @@ Section~\ref{sec:expressions}.
 Then in Section~\ref{sec:operations}, we present implementations of common polynomial operations such as evaluation, substitution, etc.
 %
 We pay special attention to an operation |expand| and prove its correctness,
-since it is essential in compilation.
+since it is essential in transforming polynomial into scalar expressions.
 %
-In Section~\ref{sec:compilation}, we show how to compile a polynomial into an assembly program. We present a simple compilation, also defined in terms of fold, prove its correctness, while leaving further optimization to future work.
+In Section~\ref{sec:compilation}, we show how to compile a polynomial
+function into an assembly program that computes it.
 %
-The formulation in this pearl have been implemented in both Haskell and Agda~\cite{Norell:08:Towards}, the latter also used to verify our proofs. The code is available on line at \url{https://github.com/petercommand/ExtFieldComp}.
+We present a simple compilation, also defined in terms of fold, and
+prove its correctness, while leaving further optimization to future
+work.
+%
+The formulation in this pearl have been implemented in both Haskell
+and Agda~\cite{Norell:08:Towards}, the latter also used to verify our
+proofs.
+%
+The code is available on line at
+\url{https://github.com/petercommand/ExtFieldComp}.

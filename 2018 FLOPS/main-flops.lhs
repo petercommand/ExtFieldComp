@@ -47,9 +47,9 @@
   polynomial operations such as arithmetic, evaluation, substitution,
   etc.
   %
-  Furthermore, we can compile a polynomial expression into in a
+  Furthermore, we can transform a polynomial expression into in a
   sequence of arithmetic expressions in the base ring and prove the
-  correctness of this compilation in Agda.
+  correctness of this transformation in Agda.
   %
   Combined with our recursive construction, this allows for compiling
   polynomial expressions over a tower of extension fields into scalar
