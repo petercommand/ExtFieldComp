@@ -107,7 +107,7 @@ substitute {A} n r e es =
 \end{spec}
 where |liftPoly n m| (with |n{-"\!"-}<={-"\!"-}m|) lifts a |PolyN n A| to |PolyN m A| by applying |Lit|;
 %
-|rotaOuter (n + n) n|, as defined in Section \ref{sec:rotation}, composes |rotaPoly (n+n)| with itself |n| times, thereby moving the |n| original indeterminates of |e| to outermost positions;
+|rotaOuter (n + n) n|, as defined in Section~\ref{sec:rotation}, composes |rotaPoly (n+n)| with itself |n| times, thereby moving the |n| original indeterminates of |e| to outermost positions;
 %
 the function |toDChain : ∀ {A} n -> Vec A n -> DChain A n| converts a vector to a descending chain, informally,
 %
@@ -169,12 +169,12 @@ operations defined for |Word|.
 %
 Now that each polynomial is defined over |Word|, whose arithmetic
 operations are natively supported, we may compile the expressions,
-in ways discussed in the next section, into a sequence of operations
+in ways discussed in Section~\ref{sec:compilation}, into a sequence of operations
 in assembly language.
 %
 We also note that the roles played by the indeterminates $x$ and $i$
 are of fundamental difference: $x$ might just represent the input of
-the computation modeled by the polynomial expression, which will be
+the computation modelled by the polynomial expression, which will be
 substituted by some values at runtime, whereas $i$ intends to model
 some internal (algebraic) structures and is never substituted
 throughout the whole computation.

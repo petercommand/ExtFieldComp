@@ -177,7 +177,7 @@ The expression |e'| may then be evaluated by |sem1 rngℤ|, where |rngℤ : Ring
 %
 The result is a natural number.
 %
-In general, the function |sem2| that evalulates |Poly (Poly A)| can be defined by:
+In general, the function |sem2| that evaluates |Poly (Poly A)| can be defined by:
 \begin{spec}
 sem2 : ∀ {A} → Ring A → Poly (Poly A) → Poly A → A → A
 sem2 r e2 e1 x = sem1 r (sem1 (ringP r) e2 e1) x {-"~~."-}
@@ -258,109 +258,3 @@ sem r 3 e (t2, t1, t0, tt)  = sem1 r (sem1 (ringP r) (sem1 (ringP2 r) e t2) t1) 
 \end{spec}
 Essentially, |sem r n| is |n|-fold composition of |sem1 (ringPi r)|,
 each interpreting one level of the given expression.
-
-% \vspace{1cm}
-% {\bf Old contents below}
-%
-% For example, it is natural to define the semantics of a polynomial
-% $f\in R[X]$ as the corresponding \emph{polynomial function}
-% $\tilde f:R\rightarrow R$ that sends $x\in R$ to $f(x)\in R$.
-% %
-% In this case, we let $S=R\rightarrow R$ in
-% Equation~\ref{eq:catamorphism}:
-% \[ semantics = fold\ (id_R,const_R,+,\times), \] where
-% $+ : (R\rightarrow R)\rightarrow (R\rightarrow R)\rightarrow
-% (R\rightarrow R)$ sums two polynomial functions point-wise, and
-% similarly $\times$, multiplies point-wise.
-% %
-% From here, we can see that in general, it is nature to require the
-% datatype $S$ to behave like a ring in order to have a ``reasonably
-% natural'' catamorphism.
-% %
-%
-% %
-% The situation for multivariate polynomials is similar but a bit more
-% complicated.
-% %
-% Ideally, the semantics of a bivariate polynomial should be a (curried)
-% function of type $R\rightarrow R\rightarrow R$, i.e., the semantics
-% function should have the type
-% $expr\ (expr\ R)\rightarrow R\rightarrow R\rightarrow R$.
-% %
-% Now if we apply the $semantics$ function for univariate polynomials to
-% something of type $expr\ (expr\ R)$, we get something of type
-% $expr\ R\rightarrow expr\ R$.
-% %
-% Intuitively, this says that the ``semantics'' of $f(X,Y)\in R[X][Y]$
-% is a \emph{polynomial-valued} function
-% $f(X,\cdot) : R[X]\rightarrow R[X]$ that maps a polynomial
-% $g(X))\in R[X]$ to $f(X,g(X))\in R[X]$.
-% %
-% Then the semantics of $f(X,g(X))$ is of type $R\rightarrow R$,
-% suggesting that $semantics\circ (semantics\ f)$ may be a good starting
-% point for defining the semantics of a bivariate polynomial $f$.
-% %
-%
-% %
-% Let us denote $expr\ (expr\ R)$ as $expr^2\ R$ and
-% $semantics\circ (semantics\ f)$ as $semantics_2\ f$.
-% %
-% Then from the above discussion, $semantics_2\ f$ is of type
-% $expr\ R\rightarrow R\rightarrow R$, which is strictly more than what
-% we want because $R$ is a proper subset of $expr\ R$.
-% %
-% Therefore, when we ``evaluate'' the semantics of a bivariate
-% polynomial $f\in R[X,Y]$ as a bivariate polynomial function (they
-% are!) at a point, we would need to ``lift'' one of the coordinates and
-% regard it as a univariate polynomial.
-% %
-% Another minor nuisance is that we would need to feed the arguments to
-% $semantics_2\ f$ in an order \emph{opposite} to the natural order.
-% %
-% That is, to evaluate the (ideal) semantics of a bivariate polynomial
-% $f(X,Y)\in R[X,Y]$, we would need to compute
-% $semantics_2\ f\ (lit\ y)\ x$.
-% %
-%
-% %
-% In general, we can recursively define $semantics_{n+1}\ f$ as
-% \[ semantics\circ(semantics_n\ f) \] for $n\geq 1$.
-% %
-% Again we would need appropriate lifting and order reversing when
-% evaluating the semantics of a multivariate polynomial
-% $f(X_1,\ldots,X_n)\in R[X_1,\ldots,X_n]$ at a point
-% $(x_1,\ldots,x_n)\in R^n$ by computing
-% $semantics_n\ f\ (lit^{n-1}\ x_n)\ \cdots\ x_1$.
-% %
-%
-% %
-% We can also define
-% $substitute : expr\ R\rightarrow expr\ R\rightarrow expr\ R$ in a
-% similar way using $fold$.
-% %
-% Intuitively, it should take two polynomials $f(X),g(X)\in R[X]$ and
-% substitute say $g(X)$ into $f(X)$ by replacing every occurence of $X$
-% in $f$ with $g(X)$.
-% %
-% If we ``inject'' $f(X)$ into $R[\_,X]$ and regard it as a bivariate
-% polynomial $f'(\_,X)$ in which the other indeterminate never occurs,
-% then the polynomial-valued function
-% $semantics\ f' : expr\ R\rightarrow expr\ R$ seems useful now.
-% %
-% That is, $semantics\ f'\ g$ would compute $f(g(X))$, which is
-% precisely what we want as $substitute\ f\ g$.
-% %
-% The only thing we need here is the ``injection'' function that, in
-% this case, injects univariate polynomials into a bivariate polynomial
-% ring.
-% %
-% Similar to $semantics$, we can also generalize $substitute$ to
-% $substitute_n : expr^n\ R\rightarrow\cdots\rightarrow expr^n R$ for
-% $n>1$ by appropriately injection and lifting.
-% %
-% Take $n=2$ as an example: to get $f(g_1(X,Y),g_2(X,Y))$ for
-% $f,g_1,g_2\in R[X,Y]$, we can compute
-% $substitute_2\ f\ g_1\ g_2=semantics_2\ f'\ g_2'\ g_1$, where
-% $f'\in R[\_,\_,X,Y]$ is the injection of $f$, and $g_2'=lit\ g_2$ is
-% the lifting of $g_2$ as discussed earlier in this section.
-% %
