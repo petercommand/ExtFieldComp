@@ -50,3 +50,5 @@ work for our purpose.
 
 % This is our first step toward studying the interplay between type
 % systems and cryptography.
+
+\paragraph{Acknowledgements} The authors would like to thank the members of IFIP Working Group 2.1 for their valuable comments on the first presentation of this work.

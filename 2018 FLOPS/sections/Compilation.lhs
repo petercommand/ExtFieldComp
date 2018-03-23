@@ -2,7 +2,7 @@
 %include Formatting.fmt
 
 
-\section{Compiling Polynominal}
+\section{Compiling Polynomials}
 \label{sec:compilation}
 
 A potentially complex polynomial can be expanded, in several passes,
