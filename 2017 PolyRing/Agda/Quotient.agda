@@ -16,6 +16,11 @@ open import Num
 
 
 open Reveal_·_is_ hiding (eq)
+
+bot : ∀ {A : Set} (x : A) (xs : List A) → (x ∷ xs) ≡ [] → ⊥
+bot x xs ()
+
+
 data All {A} (P : A → Set) : List A → Set where
   [] : All P []
   _∷_ : ∀ {x xs} → P x → All P xs → All P (x ∷ xs)
@@ -29,6 +34,8 @@ Atail (x₁ ∷ all₁) = all₁
 ∃₃ : ∀ {a b c d} {A : Set a} {B : A → Set b} {C : (x : A) → B x → Set c}
      (D : (x : A) → (y : B x) → (z : C x y) → Set d) → Set (a ⊔ b ⊔ c ⊔ d)
 ∃₃ C = ∃ λ a → ∃ λ b → ∃ λ c → C a b c
+
+
 
 module Quotient (A : Set) (p : List A)
      (num : AddMul A)
@@ -67,10 +74,20 @@ module Quotient (A : Set) (p : List A)
   rev [] = []
   rev (x ∷ p₁) = rev p₁ ++ (x ∷ [])
 
-  rev-empty : (p : Poly) → rev p ≡ [] → p ≡ []
+  rev-empty : (p : Poly) → p ≡ [] → rev p ≡ []
   rev-empty [] x = refl
-  rev-empty (x ∷ p₁) x₁ = {!!}
+  rev-empty (x ∷ p₁) ()
 
+  list-non-empty : ∀ (p : Poly) → (x : A) → ∃₂ (λ (t : A) (ts : Poly) → p ++ x ∷ [] ≡ t ∷ ts)
+  list-non-empty [] x = x , [] , refl
+  list-non-empty (x ∷ p₁) x₁ = x , p₁ ++ (x₁ ∷ []) , refl
+
+  rev-empty' : (p : Poly) → rev p ≡ [] → p ≡ []
+  rev-empty' [] x = refl
+  rev-empty' (x ∷ p₁) x₁ with list-non-empty (rev p₁) x
+  rev-empty' (x ∷ p₁) x₁ | proj₃ , proj₄ , proj₅ rewrite proj₅ = ⊥-elim (bot _ _ x₁)
+       
+         
   rev-rev-aux : ∀ t x → rev (t ++ (x ∷ [])) ≡ x ∷ rev t
   rev-rev-aux [] x = refl
   rev-rev-aux (x ∷ t) x₁
@@ -148,11 +165,23 @@ module Quotient (A : Set) (p : List A)
                   | +-cancellation (+-ε * a) +-ε (+-ε * a) p''
                   = refl
 
+  +-ε-mult' : ∀ a → (a * +-ε) ≡ +-ε
+  +-ε-mult' a with +-ε-mult a
+  ... | p with *-comm a +-ε
+  ... | p' = trans p' p
+
 
   _+P'_ : Poly → Poly → Poly
   [] +P' b = b
   (x ∷ a) +P' [] = x ∷ a
   (x ∷ a) +P' (x₁ ∷ b) = x + x₁ ∷ a +P' b
+
+  +P'-comm : ∀ (a b : Poly) → a +P' b ≡ b +P' a
+  +P'-comm [] [] = refl
+  +P'-comm [] (x ∷ b) = refl
+  +P'-comm (x ∷ a) [] = refl
+  +P'-comm (x ∷ a) (x₁ ∷ b) rewrite +-comm x x₁
+      = cong (_∷_ (_+_ x₁ x)) (+P'-comm a b)
 
   _+P_ : Poly → Poly → Poly
   a +P b = norm (a +P' b)
@@ -168,8 +197,8 @@ module Quotient (A : Set) (p : List A)
   _*P'_ : Poly → Poly → Poly
   [] *P' b = []
   (x ∷ a) *P' [] = []
-  (x ∷ a) *P' (x₁ ∷ b) = (map (_*_ x) (x₁ ∷ b) +P
-                        map (_*_ x₁) (x ∷ a)) +P
+  (x ∷ a) *P' (x₁ ∷ b) = (map (_*_ x) (x₁ ∷ b) +P'
+                        map (_*_ x₁) (x ∷ a)) +P'
                         (+-ε ∷ a *P' b)
   _*P_ : Poly → Poly → Poly
   a *P b = norm (a *P' b)
@@ -177,22 +206,58 @@ module Quotient (A : Set) (p : List A)
   addMulPoly : AddMul Poly
   addMulPoly = record { _+_ = _+P_ ; _*_ = _*P_ }
 
+  +-ε-left-+P : ∀ m → ((+-ε ∷ []) +P m) ≡ norm m
+  +-ε-left-+P [] with decEq +-ε +-ε
+  ... | yes p = refl
+  ... | no ¬p = refl
+  +-ε-left-+P (x ∷ m) rewrite trans (+-comm +-ε x) (+-id x)
+      = refl
+
+  lem-+- : ∀ k m → norm m ≡ k +P (m -P k)
+  lem-+- k m = {!!}
+
+  map-*-+-ε : ∀ (a : Poly) → map (_*_ +-ε) a ++ +-ε ∷ [] ≡ +-ε ∷ map (_*_ +-ε) a
+  map-*-+-ε [] = refl
+  map-*-+-ε (x ∷ a) rewrite +-ε-mult x = cong (_∷_ +-ε) (map-*-+-ε a)
+  
+  rev-+-ε : ∀ (a : Poly) → rev (map (_*_ +-ε) a) ≡ map (_*_ +-ε) a
+  rev-+-ε [] = refl
+  rev-+-ε (x ∷ a) rewrite +-ε-mult x
+                        | rev-+-ε a = map-*-+-ε a
+
   *P-left : ∀ n → length n > 0 → (+-ε ∷ []) *P n ≡ (+-ε ∷ [])
   *P-left [] ()
-  *P-left (x ∷ n) p rewrite +-ε-mult x = {!!}
+  *P-left (x ∷ []) (s≤s p₁) rewrite +-ε-mult x
+                                  | +-ε-mult' x
+                                  | +-id +-ε
+                                  | +-id +-ε
+     with decEq +-ε +-ε
+  ... | yes p = refl
+  ... | no ¬p = refl
+  *P-left (x₁ ∷ x ∷ n) (s≤s p₁) rewrite +-ε-mult x₁
+                                      | +-ε-mult' x₁
+                                      | +-id +-ε = {!*P-left (x ∷ n) ? !}
 
-  +-ε-left-+P : ∀ m → ((+-ε ∷ []) +P m) ≡ m
-  +-ε-left-+P m = {!!}
-
-  lem-+- : ∀ k m → m ≡ k +P (m -P k)
-  lem-+- k m = {!!}
+{-
+                         rewrite +-ε-mult x
+                          | +-ε-mult' x
+                          | +-id +-ε
+                          | +-id +-ε
+                          | +P'-comm (map (_*_ +-ε) n) []
+                          | +P'-comm (map (_*_ +-ε) n) []
+                          | rev-+-ε n
+                          | map-*-+-ε n
+   with decEq +-ε +-ε
+  ... | yes p₀ = {!!}
+  ... | no p₀ = ⊥-elim (p₀ refl)
+-}
 
   divMod : (m n : Poly)
        → length m > 0 → (p : length n > 0)
        → ¬ (lead n p ≡ +-ε)
        → Acc (deg m)
        → ∃₂ λ q r →
-            m ≡ (q *P n) +P r ×
+            norm m ≡ (q *P n) +P r ×
             deg r < deg n ×
             length q > 0 ×
             length r > 0
@@ -207,17 +272,16 @@ module Quotient (A : Set) (p : List A)
                              s≤s (≤-weakening (deg m) (deg m) k ≤-refl) ,
                              ≤-refl ,
                              p1
-  ... | (equal .dm) = {!!}
-  {-
+  ... | (equal .dm) =
            let
                lm = lead m p1
                ln = lead n p2
-               inv = *-inv ln
-           in lm * (proj₁ inv) ∷ [] ,
-              (m -P ((lm * (proj₁ inv) ∷ []) *P n)) ,
+               inv , invp = *-inv ln
+           in lm * inv ∷ [] ,
+              (m -P ((lm * inv ∷ []) *P n)) ,
               lem-+- (((lead m p1 * proj₁ (*-inv (lead n p2))) ∷ []) *P n) m ,
               {!!} , ≤-refl , {!!}
-  -}
+
   ... | (greater .dn k) = {!!}
 {-
   data Quotient (p : Poly) : Set where
